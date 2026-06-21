@@ -1,0 +1,4 @@
+# Única dependência externa — rich (Textualize, amplamente auditada, >50M downloads/mês)
+# Verificar hash antes de instalar em produção:
+#   pip download rich==13.9.4 && sha256sum rich-13.9.4-py3-none-any.whl
+rich>=13.7.0,<14.0.0
