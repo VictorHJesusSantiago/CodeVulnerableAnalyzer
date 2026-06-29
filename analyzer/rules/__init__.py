@@ -3,7 +3,7 @@ from typing import List
 from analyzer.models import Language
 from analyzer.rules.base import Rule
 
-# ── Segurança por linguagem ────────────────────────────────────────────────
+# ── Segurança por linguagem (originais) ───────────────────────────────────────
 from analyzer.rules.generic import GENERIC_RULES
 from analyzer.rules.python_rules import PYTHON_RULES
 from analyzer.rules.javascript_rules import JAVASCRIPT_RULES
@@ -17,7 +17,7 @@ from analyzer.rules.sql_rules import SQL_RULES
 from analyzer.rules.cobol_rules import COBOL_RULES
 from analyzer.rules.shell_rules import SHELL_RULES
 
-# ── Novas linguagens ───────────────────────────────────────────────────────
+# ── Linguagens Batch 1 ────────────────────────────────────────────────────────
 from analyzer.rules.rust_rules import RUST_RULES
 from analyzer.rules.swift_rules import SWIFT_RULES
 from analyzer.rules.dart_rules import DART_RULES
@@ -31,14 +31,44 @@ from analyzer.rules.vb_rules import VB_RULES
 from analyzer.rules.r_rules import R_RULES
 from analyzer.rules.config_rules import CONFIG_RULES
 
-# ── Qualidade de código ────────────────────────────────────────────────────
+# ── Linguagens Batch 2 — JVM / Funcionais ─────────────────────────────────────
+from analyzer.rules.scala_rules import SCALA_RULES
+from analyzer.rules.groovy_rules import GROOVY_RULES
+from analyzer.rules.elixir_rules import ELIXIR_RULES
+from analyzer.rules.erlang_rules import ERLANG_RULES
+from analyzer.rules.haskell_rules import HASKELL_RULES
+from analyzer.rules.clojure_rules import CLOJURE_RULES
+from analyzer.rules.fsharp_rules import FSHARP_RULES
+
+# ── Linguagens Batch 3 — Scripting / Legado ────────────────────────────────────
+from analyzer.rules.lua_rules import LUA_RULES
+from analyzer.rules.perl_rules import PERL_RULES
+from analyzer.rules.julia_rules import JULIA_RULES
+from analyzer.rules.coffee_rules import COFFEE_RULES
+from analyzer.rules.elm_rules import ELM_RULES
+
+# ── Linguagens Batch 4 — Sistemas / Low-level ─────────────────────────────────
+from analyzer.rules.nim_rules import NIM_RULES
+from analyzer.rules.zig_rules import ZIG_RULES
+from analyzer.rules.crystal_rules import CRYSTAL_RULES
+from analyzer.rules.objc_rules import OBJC_RULES
+
+# ── Linguagens Batch 5 — Enterprise ───────────────────────────────────────────
+from analyzer.rules.apex_rules import APEX_RULES
+from analyzer.rules.abap_rules import ABAP_RULES
+
+# ── Dados / Schema ────────────────────────────────────────────────────────────
+from analyzer.rules.graphql_rules import GRAPHQL_RULES
+from analyzer.rules.proto_rules import PROTO_RULES
+
+# ── Qualidade de código ────────────────────────────────────────────────────────
 from analyzer.rules.quality_generic import QUALITY_GENERIC_RULES
 from analyzer.rules.quality_python import QUALITY_PYTHON_RULES
 from analyzer.rules.quality_javascript import QUALITY_JS_RULES
 from analyzer.rules.quality_java import QUALITY_JAVA_RULES
 from analyzer.rules.quality_csharp import QUALITY_CSHARP_RULES
 
-# ── SOLID / Performance / Arquitetura / Concorrência ──────────────────────
+# ── SOLID / Performance / Arquitetura / Concorrência ──────────────────────────
 from analyzer.rules.solid_rules import SOLID_RULES
 from analyzer.rules.performance_rules import PERFORMANCE_RULES
 from analyzer.rules.architecture_rules import ARCHITECTURE_RULES
@@ -49,7 +79,7 @@ def _for_lang(rules: List[Rule], *langs: Language) -> List[Rule]:
     return [r for r in rules if r.language in langs or r.language == Language.GENERIC]
 
 
-# Regras aplicadas a TODOS os arquivos
+# ── Regras aplicadas a TODOS os arquivos ──────────────────────────────────────
 CROSS_LANGUAGE_RULES: List[Rule] = (
     GENERIC_RULES
     + QUALITY_GENERIC_RULES
@@ -59,7 +89,7 @@ CROSS_LANGUAGE_RULES: List[Rule] = (
     + [r for r in CONFIG_RULES       if r.language == Language.GENERIC]
 )
 
-# Partições por linguagem das regras mistas
+# ── Partições por linguagem de regras mistas ──────────────────────────────────
 _ARCH_PYTHON  = [r for r in ARCHITECTURE_RULES if r.language == Language.PYTHON]
 _PERF_PYTHON  = [r for r in PERFORMANCE_RULES  if r.language == Language.PYTHON]
 _PERF_JAVA    = [r for r in PERFORMANCE_RULES  if r.language == Language.JAVA]
@@ -75,39 +105,90 @@ _CFG_TOML     = [r for r in CONFIG_RULES if r.language == Language.TOML]
 _CFG_INI      = [r for r in CONFIG_RULES if r.language == Language.INI]
 _CFG_JSON     = [r for r in CONFIG_RULES if r.language == Language.JSON]
 
+# ── F# e OCaml separados da mesma lista de regras ─────────────────────────────
+_FS_ONLY  = [r for r in FSHARP_RULES if r.language == Language.FSHARP]
+_ML_ONLY  = [r for r in FSHARP_RULES if r.language == Language.OCAML]
+
+# ── Dicionário principal: linguagem → regras específicas ─────────────────────
 LANGUAGE_RULES: dict[Language, List[Rule]] = {
-    Language.PYTHON:     PYTHON_RULES + QUALITY_PYTHON_RULES + _PERF_PYTHON + _CONC_PYTHON + _ARCH_PYTHON,
-    Language.JAVASCRIPT: JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS,
-    Language.TYPESCRIPT: JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS,
-    Language.JAVA:       JAVA_RULES + QUALITY_JAVA_RULES + _PERF_JAVA + _CONC_JAVA,
-    Language.KOTLIN:     JAVA_RULES + QUALITY_JAVA_RULES + _CONC_JAVA + KOTLIN_RULES,
-    Language.SCALA:      JAVA_RULES + QUALITY_JAVA_RULES,
-    Language.CSHARP:     CSHARP_RULES + QUALITY_CSHARP_RULES + _PERF_CSHARP + _CONC_CSHARP,
-    Language.VBNET:      VB_RULES,
-    Language.PHP:        PHP_RULES,
-    Language.GO:         GO_RULES + _CONC_GO,
-    Language.RUBY:       RUBY_RULES,
-    Language.C:          C_CPP_RULES,
-    Language.CPP:        C_CPP_RULES,
-    Language.SQL:        SQL_RULES + _PERF_SQL,
-    Language.PLSQL:      SQL_RULES,
-    Language.TSQL:       SQL_RULES,
-    Language.COBOL:      COBOL_RULES,
-    Language.SHELL:      SHELL_RULES,
-    Language.BASH:       SHELL_RULES,
-    Language.POWERSHELL: POWERSHELL_RULES,
-    Language.RUST:       RUST_RULES,
-    Language.SWIFT:      SWIFT_RULES,
-    Language.DART:       DART_RULES,
-    Language.TERRAFORM:  TERRAFORM_RULES,
-    Language.DOCKERFILE: DOCKER_RULES,
-    Language.SOLIDITY:   SOLIDITY_RULES,
-    Language.HTML:       HTML_RULES,
-    Language.YAML:       _CFG_YAML,
-    Language.TOML:       _CFG_TOML,
-    Language.INI:        _CFG_INI,
-    Language.JSON:       _CFG_JSON,
-    Language.R:          R_RULES,
+    # ── JVM / .NET ─────────────────────────────────────────────────────────────
+    Language.PYTHON:       PYTHON_RULES + QUALITY_PYTHON_RULES + _PERF_PYTHON + _CONC_PYTHON + _ARCH_PYTHON,
+    Language.JAVASCRIPT:   JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS,
+    Language.TYPESCRIPT:   JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS,
+    Language.COFFEESCRIPT: COFFEE_RULES + JAVASCRIPT_RULES + QUALITY_JS_RULES,
+    Language.JAVA:         JAVA_RULES + QUALITY_JAVA_RULES + _PERF_JAVA + _CONC_JAVA,
+    Language.KOTLIN:       JAVA_RULES + QUALITY_JAVA_RULES + _CONC_JAVA + KOTLIN_RULES,
+    Language.SCALA:        JAVA_RULES + QUALITY_JAVA_RULES + SCALA_RULES,
+    Language.GROOVY:       JAVA_RULES + GROOVY_RULES,
+    Language.CLOJURE:      JAVA_RULES + CLOJURE_RULES,
+    Language.CSHARP:       CSHARP_RULES + QUALITY_CSHARP_RULES + _PERF_CSHARP + _CONC_CSHARP,
+    Language.FSHARP:       _FS_ONLY,
+    Language.OCAML:        _ML_ONLY,
+    Language.VBNET:        VB_RULES,
+
+    # ── Web / Backend ─────────────────────────────────────────────────────────
+    Language.PHP:          PHP_RULES,
+    Language.RUBY:         RUBY_RULES,
+    Language.GO:           GO_RULES + _CONC_GO,
+    Language.PERL:         PERL_RULES,
+    Language.ELM:          ELM_RULES,
+
+    # ── Sistemas ──────────────────────────────────────────────────────────────
+    Language.C:            C_CPP_RULES,
+    Language.CPP:          C_CPP_RULES,
+    Language.RUST:         RUST_RULES,
+    Language.ZIG:          ZIG_RULES,
+    Language.NIM:          NIM_RULES,
+    Language.CRYSTAL:      CRYSTAL_RULES,
+    Language.OBJECTIVEC:   OBJC_RULES,
+
+    # ── Mobile ────────────────────────────────────────────────────────────────
+    Language.SWIFT:        SWIFT_RULES,
+    Language.DART:         DART_RULES,
+    Language.KOTLIN:       JAVA_RULES + QUALITY_JAVA_RULES + _CONC_JAVA + KOTLIN_RULES,
+
+    # ── Scripting ─────────────────────────────────────────────────────────────
+    Language.LUA:          LUA_RULES,
+    Language.JULIA:        JULIA_RULES,
+    Language.SHELL:        SHELL_RULES,
+    Language.BASH:         SHELL_RULES,
+    Language.POWERSHELL:   POWERSHELL_RULES,
+
+    # ── Funcionais / Académicas ───────────────────────────────────────────────
+    Language.ELIXIR:       ELIXIR_RULES,
+    Language.ERLANG:       ERLANG_RULES,
+    Language.HASKELL:      HASKELL_RULES,
+
+    # ── DB / Query ────────────────────────────────────────────────────────────
+    Language.SQL:          SQL_RULES + _PERF_SQL,
+    Language.PLSQL:        SQL_RULES,
+    Language.TSQL:         SQL_RULES,
+    Language.COBOL:        COBOL_RULES,
+    Language.GRAPHQL:      GRAPHQL_RULES,
+    Language.PROTOBUF:     PROTO_RULES,
+
+    # ── Enterprise ────────────────────────────────────────────────────────────
+    Language.APEX:         APEX_RULES,
+    Language.ABAP:         ABAP_RULES,
+
+    # ── IaC / DevOps ─────────────────────────────────────────────────────────
+    Language.TERRAFORM:    TERRAFORM_RULES,
+    Language.DOCKERFILE:   DOCKER_RULES,
+
+    # ── Blockchain ────────────────────────────────────────────────────────────
+    Language.SOLIDITY:     SOLIDITY_RULES,
+
+    # ── Web / Frontend ───────────────────────────────────────────────────────
+    Language.HTML:         HTML_RULES,
+
+    # ── Dados / Config ────────────────────────────────────────────────────────
+    Language.YAML:         _CFG_YAML,
+    Language.TOML:         _CFG_TOML,
+    Language.INI:          _CFG_INI,
+    Language.JSON:         _CFG_JSON,
+
+    # ── Científico ───────────────────────────────────────────────────────────
+    Language.R:            R_RULES,
 }
 
 
