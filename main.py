@@ -31,6 +31,11 @@ sys.path.insert(0, str(Path(__file__).parent))
 from rich.console import Console
 from rich.progress import Progress
 from rich.text import Text
+from rich.table import Table
+from rich.panel import Panel
+from rich.align import Align
+from rich import box as rbox
+from rich.prompt import Prompt
 
 from analyzer import __version__
 from analyzer.models import Severity, Language, ScanResult
@@ -67,8 +72,8 @@ Examples:
     p.add_argument(
         "target",
         nargs="?",
-        default=".",
-        help="File or directory to scan (default: current directory)",
+        default=None,
+        help="Arquivo ou diretório a analisar (padrão: modo interativo)",
     )
     p.add_argument(
         "--severity", "-s",
@@ -115,7 +120,19 @@ Examples:
     p.add_argument(
         "--rules",
         action="store_true",
-        help="List all available rules and exit",
+        help="Listar todas as regras disponíveis e sair",
+    )
+    p.add_argument(
+        "--list-langs", "--langs",
+        action="store_true",
+        dest="list_langs",
+        help="Listar todas as 100 linguagens suportadas e sair",
+    )
+    p.add_argument(
+        "--interactive", "-i",
+        action="store_true",
+        dest="interactive",
+        help="Abre a interface TUI interativa (padrão quando nenhum alvo é passado)",
     )
     p.add_argument(
         "--version",
@@ -123,6 +140,44 @@ Examples:
         version=f"%(prog)s {__version__}",
     )
     return p
+
+
+# ── List languages ────────────────────────────────────────────────────────────
+
+def cmd_list_langs() -> None:
+    from analyzer.models import Language
+    from analyzer.rules import LANGUAGE_RULES
+
+    categories = Language.by_category()
+
+    console.print()
+    console.print(Panel(
+        Text("  Linguagens Suportadas  ", style="bold bright_white", justify="center"),
+        border_style="#444466",
+        box=rbox.DOUBLE_EDGE,
+    ))
+    console.print()
+
+    for cat_name, langs in categories.items():
+        t = Table(
+            title=f"[bold bright_cyan]{cat_name}[/]",
+            box=rbox.SIMPLE,
+            show_header=True,
+            header_style="bold bright_white",
+            padding=(0, 2),
+            border_style="#333355",
+        )
+        t.add_column("Linguagem", min_width=20)
+        t.add_column("ID Interno", style="dim", min_width=16)
+        t.add_column("Regras Específicas", justify="right", min_width=8)
+
+        for lang in langs:
+            specific = len(LANGUAGE_RULES.get(lang, []))
+            badge = f"[bold {lang.color()}]{lang.value}[/]"
+            t.add_row(badge, lang.name, str(specific) if specific else "[dim]—[/dim]")
+
+        console.print(t)
+        console.print()
 
 
 # ── List rules ────────────────────────────────────────────────────────────────
@@ -240,11 +295,23 @@ def main() -> int:
         cmd_list_rules()
         return 0
 
+    if args.list_langs:
+        cmd_list_langs()
+        return 0
+
     target = args.target
+
+    # ── TUI interativo ────────────────────────────────────────────────────────
+    if target is None or args.interactive:
+        from analyzer.tui import run_tui
+        start = Path(target) if target else None
+        run_tui(start)
+        return 0
+
     target_path = Path(target)
 
     if not target_path.exists():
-        print_error(f"Target not found: {target}")
+        print_error(f"Alvo não encontrado: {target}")
         return 2
 
     min_severity = Severity[args.severity]
