@@ -122,6 +122,25 @@ def _from_go_mod(content: str) -> List[Component]:
     return components
 
 
+def _from_csproj(content: str) -> List[Component]:
+    """Projetos .NET: <PackageReference Include="X" Version="Y" /> → NuGet."""
+    components: List[Component] = []
+    for m in re.finditer(
+        r'<PackageReference\b[^>]*?\bInclude\s*=\s*"([^"]+)"[^>]*?'
+        r'(?:\bVersion\s*=\s*"([^"]+)"|/?>(?:\s*<Version>\s*([^<]+)\s*</Version>)?)',
+        content, re.IGNORECASE | re.DOTALL,
+    ):
+        name = m.group(1).strip()
+        ver  = re.sub(r"[^\d.].*$", "", (m.group(2) or m.group(3) or "").strip())
+        if name and ver:
+            components.append(Component(
+                name=name, version=ver,
+                purl=_make_purl("nuget", name, ver),
+                package_type="nuget",
+            ))
+    return components
+
+
 _MANIFEST_MAP = {
     "requirements.txt":      _from_requirements,
     "requirements-dev.txt":  _from_requirements,
@@ -137,16 +156,24 @@ def collect_components(directory: str) -> List[Component]:
     """Coleta todos os componentes de dependência de um diretório."""
     components: List[Component] = []
     seen: set[str] = set()
+
+    def _add(parser, content: str) -> None:
+        for c in parser(content):
+            if c.purl not in seen:
+                seen.add(c.purl)
+                components.append(c)
+
     for fname, parser in _MANIFEST_MAP.items():
         for mpath in Path(directory).rglob(fname):
             try:
-                content = mpath.read_text(encoding="utf-8", errors="replace")
-                for c in parser(content):
-                    if c.purl not in seen:
-                        seen.add(c.purl)
-                        components.append(c)
+                _add(parser, mpath.read_text(encoding="utf-8", errors="replace"))
             except (OSError, PermissionError):
                 pass
+    for mpath in Path(directory).rglob("*.csproj"):
+        try:
+            _add(_from_csproj, mpath.read_text(encoding="utf-8", errors="replace"))
+        except (OSError, PermissionError):
+            pass
     return components
 
 

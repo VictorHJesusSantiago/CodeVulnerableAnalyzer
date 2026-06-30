@@ -196,6 +196,25 @@ LOCAL_CVE_DB: Dict[str, List[Tuple[str, str, str, str]]] = {
     "hyper": [
         ("CVE-2023-45405", "HIGH",     "0.14.28","HTTP/2 rapid reset vulnerability"),
     ],
+    # ── .NET (NuGet) ────────────────────────────────────────────────────────────
+    "newtonsoft.json": [
+        ("CVE-2024-21907", "HIGH",     "13.0.1", "DoS via StackOverflow ao desserializar JSON profundamente aninhado"),
+    ],
+    "system.text.encodings.web": [
+        ("CVE-2021-26701", "CRITICAL", "4.5.1",  "RCE via encoding malformado em System.Text.Encodings.Web"),
+    ],
+    "system.net.http": [
+        ("CVE-2018-8292",  "HIGH",     "4.3.4",  "Vazamento de informações via tratamento de credenciais"),
+    ],
+    "microsoft.data.sqlclient": [
+        ("CVE-2024-0056",  "HIGH",     "5.1.3",  "MITM / spoofing via validação de certificado TLS"),
+    ],
+    "bootstrap": [
+        ("CVE-2024-6531",  "MEDIUM",   "5.3.3",  "XSS via atributos data-* em componentes carousel"),
+    ],
+    "jquery": [
+        ("CVE-2020-11023", "MEDIUM",   "3.5.0",  "XSS via manipulação de elementos HTML com <option>"),
+    ],
 }
 
 
@@ -322,6 +341,23 @@ def _parse_go_mod(content: str, filepath: str) -> List[DepVuln]:
     return vulns
 
 
+def _parse_csproj(content: str, filepath: str) -> List[DepVuln]:
+    """Projetos .NET: <PackageReference Include="X" Version="Y" />."""
+    vulns: List[DepVuln] = []
+    # Atributos podem vir em qualquer ordem; também suporta <Version> como elemento filho.
+    for m in re.finditer(
+        r'<PackageReference\b[^>]*?\bInclude\s*=\s*"([^"]+)"[^>]*?'
+        r'(?:\bVersion\s*=\s*"([^"]+)"|/?>(?:\s*<Version>\s*([^<]+)\s*</Version>)?)',
+        content, re.IGNORECASE | re.DOTALL,
+    ):
+        pkg = m.group(1).strip().lower()
+        ver = (m.group(2) or m.group(3) or "").strip()
+        ver = re.sub(r"[^\d.].*$", "", ver)  # remove sufixos ([..], -beta, etc.)
+        if pkg and ver:
+            vulns.extend(_check(pkg, ver, filepath, 0))
+    return vulns
+
+
 _PARSERS: dict[str, object] = {
     "requirements.txt":      _parse_requirements,
     "requirements-dev.txt":  _parse_requirements,
@@ -338,6 +374,8 @@ def scan_dependencies(file_path: str, content: str) -> List[DepVuln]:
     """Escaneia um arquivo de manifesto e retorna vulnerabilidades conhecidas."""
     fname = Path(file_path).name
     parser = _PARSERS.get(fname)
+    if parser is None and fname.lower().endswith(".csproj"):
+        parser = _parse_csproj
     if parser is None:
         return []
     return parser(content, file_path)  # type: ignore[call-arg]
@@ -353,4 +391,154 @@ def scan_manifest_dir(directory: str) -> List[DepVuln]:
                 all_vulns.extend(scan_dependencies(str(mpath), content))
             except (OSError, PermissionError):
                 pass
+    for mpath in Path(directory).rglob("*.csproj"):
+        try:
+            content = mpath.read_text(encoding="utf-8", errors="replace")
+            all_vulns.extend(_parse_csproj(content, str(mpath)))
+        except (OSError, PermissionError):
+            pass
     return all_vulns
+
+
+# ── Enriquecimento online via OSV.dev (stdlib urllib, opt-in) ──────────────────
+# Mapeia o package_type do SBOM para o ecossistema esperado pela API OSV.
+_OSV_ECOSYSTEM = {
+    "pypi":  "PyPI",
+    "npm":   "npm",
+    "maven": "Maven",
+    "cargo": "crates.io",
+    "go":    "Go",
+    "nuget": "NuGet",
+}
+
+
+def _cvss_v3_base(vector: str) -> Optional[float]:
+    """Calcula o CVSS v3.x base score a partir de um vetor (FIRST.org spec)."""
+    import math
+    m = dict(p.split(":", 1) for p in vector.split("/") if ":" in p)
+    if "AV" not in m or "C" not in m:
+        return None
+    av = {"N": 0.85, "A": 0.62, "L": 0.55, "P": 0.2}.get(m.get("AV"), 0.85)
+    ac = {"L": 0.77, "H": 0.44}.get(m.get("AC"), 0.77)
+    ui = {"N": 0.85, "R": 0.62}.get(m.get("UI"), 0.85)
+    scope_changed = m.get("S") == "C"
+    if scope_changed:
+        pr = {"N": 0.85, "L": 0.68, "H": 0.5}.get(m.get("PR"), 0.85)
+    else:
+        pr = {"N": 0.85, "L": 0.62, "H": 0.27}.get(m.get("PR"), 0.85)
+    cia = {"H": 0.56, "L": 0.22, "N": 0.0}
+    c = cia.get(m.get("C"), 0.0); i = cia.get(m.get("I"), 0.0); a = cia.get(m.get("A"), 0.0)
+
+    isc_base = 1 - (1 - c) * (1 - i) * (1 - a)
+    if scope_changed:
+        impact = 7.52 * (isc_base - 0.029) - 3.25 * (isc_base - 0.02) ** 15
+    else:
+        impact = 6.42 * isc_base
+    if impact <= 0:
+        return 0.0
+    exploitability = 8.22 * av * ac * pr * ui
+    raw = (1.08 if scope_changed else 1.0) * (impact + exploitability)
+    score = min(raw, 10.0)
+    return math.ceil(score * 10) / 10.0   # roundup para 1 casa decimal
+
+
+def _label_from_score(f: float) -> str:
+    if f >= 9.0: return "CRITICAL"
+    if f >= 7.0: return "HIGH"
+    if f >= 4.0: return "MEDIUM"
+    if f > 0.0:  return "LOW"
+    return "MEDIUM"
+
+
+def _osv_severity(vuln: dict) -> str:
+    """Extrai um rótulo de severidade de uma entrada OSV (CVSS ou texto)."""
+    # 1) Campo de texto em database_specific (comum em GHSA)
+    ds = vuln.get("database_specific") or {}
+    txt = str(ds.get("severity", "")).upper()
+    if txt in ("CRITICAL", "HIGH", "MEDIUM", "MODERATE", "LOW"):
+        return "MEDIUM" if txt == "MODERATE" else txt
+    # 2) CVSS: o campo 'score' do OSV é o vetor (ex.: "CVSS:3.1/AV:N/.../A:H")
+    for sv in vuln.get("severity", []) or []:
+        score = str(sv.get("score", ""))
+        if score.upper().startswith("CVSS:"):
+            base = _cvss_v3_base(score)
+            if base is not None:
+                return _label_from_score(base)
+        else:
+            m = re.search(r"(\d+\.\d+)", score)   # alguns formatos trazem número puro
+            if m:
+                return _label_from_score(float(m.group(1)))
+    return "MEDIUM"
+
+
+def _osv_fixed_version(vuln: dict) -> str:
+    """Tenta extrair a primeira versão corrigida a partir dos ranges OSV."""
+    for aff in vuln.get("affected", []) or []:
+        for rng in aff.get("ranges", []) or []:
+            for ev in rng.get("events", []) or []:
+                if "fixed" in ev:
+                    return str(ev["fixed"])
+    return "—"
+
+
+def query_osv(name: str, version: str, ecosystem: str, timeout: float = 8.0) -> List[DepVuln]:
+    """
+    Consulta a API pública OSV.dev para um pacote/versão. Usa apenas urllib
+    (stdlib). Em caso de erro de rede, retorna lista vazia (degradação graciosa).
+    """
+    import urllib.request
+
+    payload = json.dumps({
+        "version": version,
+        "package": {"name": name, "ecosystem": ecosystem},
+    }).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.osv.dev/v1/query",
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+    except Exception:
+        return []
+
+    results: List[DepVuln] = []
+    for v in data.get("vulns", []) or []:
+        aliases = v.get("aliases") or []
+        cve_id  = next((a for a in aliases if a.startswith("CVE-")), v.get("id", ""))
+        desc    = v.get("summary") or (v.get("details", "") or "")[:160] or "Vulnerabilidade reportada no OSV"
+        results.append(DepVuln(
+            package=name,
+            installed_version=version,
+            cve_id=cve_id,
+            description=desc,
+            severity=_osv_severity(v),
+            fixed_version=_osv_fixed_version(v),
+            manifest_file="(OSV.dev)",
+            line_number=0,
+        ))
+    return results
+
+
+def scan_manifest_dir_osv(directory: str, timeout: float = 8.0) -> List[DepVuln]:
+    """
+    Cruza todas as dependências do diretório com a base online OSV.dev.
+    Reutiliza o coletor de componentes do SBOM (que conhece o ecossistema).
+    Retorna [] silenciosamente se não houver rede.
+    """
+    from analyzer.sbom import collect_components
+
+    out: List[DepVuln] = []
+    seen: set = set()
+    for c in collect_components(directory):
+        eco = _OSV_ECOSYSTEM.get(c.package_type)
+        if not eco:
+            continue
+        for dv in query_osv(c.name, c.version, eco, timeout):
+            key = (dv.package, dv.cve_id)
+            if key not in seen:
+                seen.add(key)
+                out.append(dv)
+    return out
