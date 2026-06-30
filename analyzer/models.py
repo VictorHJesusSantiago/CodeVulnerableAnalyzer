@@ -170,6 +170,9 @@ class Language(Enum):
 
     # ── Blockchain ────────────────────────────────────────────────────────────
     SOLIDITY    = "Solidity"
+    VYPER       = "Vyper"
+    MOVE        = "Move"
+    CAIRO       = "Cairo"
 
     # ── Científicas / Acadêmicas ──────────────────────────────────────────────
     MATLAB      = "MATLAB"
@@ -278,6 +281,9 @@ class Language(Enum):
             Language.DOCKERFILE:  "bright_cyan",
             # Blockchain
             Language.SOLIDITY:    "bright_yellow",
+            Language.VYPER:       "bright_green",
+            Language.MOVE:        "bright_cyan",
+            Language.CAIRO:       "bright_magenta",
             # Científicas
             Language.MATLAB:      "bright_red",
             Language.R:           "bright_blue",
@@ -300,7 +306,7 @@ class Language(Enum):
             "Funcionais":              [cls.HASKELL, cls.ERLANG, cls.ELIXIR, cls.CLOJURE, cls.OCAML, cls.FSHARP, cls.SCHEME, cls.LISP, cls.PROLOG, cls.JULIA, cls.ELM, cls.COFFEESCRIPT],
             "Dados / Config":          [cls.SQL, cls.PLSQL, cls.TSQL, cls.JSON, cls.YAML, cls.TOML, cls.XML, cls.INI, cls.PROTOBUF, cls.GRAPHQL, cls.SPARQL, cls.MQL, cls.MARKDOWN],
             "IaC / DevOps":            [cls.TERRAFORM, cls.DOCKERFILE],
-            "Blockchain":              [cls.SOLIDITY],
+            "Blockchain":              [cls.SOLIDITY, cls.VYPER, cls.MOVE, cls.CAIRO],
             "Enterprise / Legado":     [cls.COBOL, cls.ABAP, cls.APEX, cls.PASCAL, cls.PLI, cls.RPG, cls.MODULA2, cls.SMALLTALK, cls.ACTIONSCRIPT, cls.COLDFUSION],
             "Científicas":             [cls.MATLAB, cls.R, cls.JULIA, cls.SCRATCH],
         }
@@ -404,6 +410,7 @@ class Vulnerability:
     snippet: List[str] = field(default_factory=list)
     snippet_start_line: int = 0
     in_comment: bool = False
+    function_context: Optional[str] = None
 
 
 @dataclass
