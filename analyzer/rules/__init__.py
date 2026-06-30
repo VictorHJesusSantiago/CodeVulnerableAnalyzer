@@ -74,6 +74,41 @@ from analyzer.rules.performance_rules import PERFORMANCE_RULES
 from analyzer.rules.architecture_rules import ARCHITECTURE_RULES
 from analyzer.rules.concurrency_rules import CONCURRENCY_RULES
 
+# ── IaC Security (Batch 6) ────────────────────────────────────────────────────
+from analyzer.rules.k8s_rules import K8S_RULES
+from analyzer.rules.gha_rules import GHA_RULES
+from analyzer.rules.gitlab_ci_rules import GITLAB_CI_RULES
+from analyzer.rules.cloudformation_rules import CFN_RULES
+from analyzer.rules.arm_rules import ARM_RULES
+from analyzer.rules.ansible_rules import ANSIBLE_RULES
+from analyzer.rules.pulumi_rules import PULUMI_RULES
+
+# ── API Security (Batch 6) ────────────────────────────────────────────────────
+from analyzer.rules.openapi_rules import OPENAPI_RULES
+from analyzer.rules.grpc_rules import GRPC_RULES
+from analyzer.rules.graphql_security_rules import GRAPHQL_SECURITY_RULES
+
+# ── Database DDL Security (Batch 6) ──────────────────────────────────────────
+from analyzer.rules.pg_ddl_rules import PG_DDL_RULES
+from analyzer.rules.mysql_ddl_rules import MYSQL_DDL_RULES
+from analyzer.rules.tsql_proc_rules import TSQL_PROC_RULES
+from analyzer.rules.plsql_rules import PLSQL_RULES
+
+# ── Mobile Security (Batch 6) ─────────────────────────────────────────────────
+from analyzer.rules.android_manifest_rules import ANDROID_MANIFEST_RULES
+from analyzer.rules.ios_plist_rules import IOS_PLIST_RULES
+from analyzer.rules.react_native_rules import REACT_NATIVE_RULES
+from analyzer.rules.flutter_rules import FLUTTER_RULES
+
+# ── Blockchain (Batch 6) ──────────────────────────────────────────────────────
+from analyzer.rules.vyper_rules import VYPER_RULES
+from analyzer.rules.move_rules import MOVE_RULES
+from analyzer.rules.cairo_rules import CAIRO_RULES
+
+# ── AI/ML Security (Batch 6) ─────────────────────────────────────────────────
+from analyzer.rules.ml_security_rules import ML_SECURITY_RULES
+from analyzer.rules.notebook_rules import NOTEBOOK_RULES
+
 
 def _for_lang(rules: List[Rule], *langs: Language) -> List[Rule]:
     return [r for r in rules if r.language in langs or r.language == Language.GENERIC]
@@ -112,9 +147,9 @@ _ML_ONLY  = [r for r in FSHARP_RULES if r.language == Language.OCAML]
 # ── Dicionário principal: linguagem → regras específicas ─────────────────────
 LANGUAGE_RULES: dict[Language, List[Rule]] = {
     # ── JVM / .NET ─────────────────────────────────────────────────────────────
-    Language.PYTHON:       PYTHON_RULES + QUALITY_PYTHON_RULES + _PERF_PYTHON + _CONC_PYTHON + _ARCH_PYTHON,
-    Language.JAVASCRIPT:   JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS,
-    Language.TYPESCRIPT:   JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS,
+    Language.PYTHON:       PYTHON_RULES + QUALITY_PYTHON_RULES + _PERF_PYTHON + _CONC_PYTHON + _ARCH_PYTHON + ML_SECURITY_RULES + NOTEBOOK_RULES + PULUMI_RULES,
+    Language.JAVASCRIPT:   JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS + REACT_NATIVE_RULES,
+    Language.TYPESCRIPT:   JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS + REACT_NATIVE_RULES,
     Language.COFFEESCRIPT: COFFEE_RULES + JAVASCRIPT_RULES + QUALITY_JS_RULES,
     Language.JAVA:         JAVA_RULES + QUALITY_JAVA_RULES + _PERF_JAVA + _CONC_JAVA,
     Language.KOTLIN:       JAVA_RULES + QUALITY_JAVA_RULES + _CONC_JAVA + KOTLIN_RULES,
@@ -144,8 +179,7 @@ LANGUAGE_RULES: dict[Language, List[Rule]] = {
 
     # ── Mobile ────────────────────────────────────────────────────────────────
     Language.SWIFT:        SWIFT_RULES,
-    Language.DART:         DART_RULES,
-    Language.KOTLIN:       JAVA_RULES + QUALITY_JAVA_RULES + _CONC_JAVA + KOTLIN_RULES,
+    Language.DART:         DART_RULES + FLUTTER_RULES,
 
     # ── Scripting ─────────────────────────────────────────────────────────────
     Language.LUA:          LUA_RULES,
@@ -160,12 +194,12 @@ LANGUAGE_RULES: dict[Language, List[Rule]] = {
     Language.HASKELL:      HASKELL_RULES,
 
     # ── DB / Query ────────────────────────────────────────────────────────────
-    Language.SQL:          SQL_RULES + _PERF_SQL,
-    Language.PLSQL:        SQL_RULES,
-    Language.TSQL:         SQL_RULES,
+    Language.SQL:          SQL_RULES + _PERF_SQL + PG_DDL_RULES + MYSQL_DDL_RULES,
+    Language.PLSQL:        SQL_RULES + PLSQL_RULES,
+    Language.TSQL:         SQL_RULES + TSQL_PROC_RULES,
     Language.COBOL:        COBOL_RULES,
-    Language.GRAPHQL:      GRAPHQL_RULES,
-    Language.PROTOBUF:     PROTO_RULES,
+    Language.GRAPHQL:      GRAPHQL_RULES + GRAPHQL_SECURITY_RULES,
+    Language.PROTOBUF:     PROTO_RULES + GRPC_RULES,
 
     # ── Enterprise ────────────────────────────────────────────────────────────
     Language.APEX:         APEX_RULES,
@@ -177,15 +211,19 @@ LANGUAGE_RULES: dict[Language, List[Rule]] = {
 
     # ── Blockchain ────────────────────────────────────────────────────────────
     Language.SOLIDITY:     SOLIDITY_RULES,
+    Language.VYPER:        VYPER_RULES,
+    Language.MOVE:         MOVE_RULES,
+    Language.CAIRO:        CAIRO_RULES,
 
     # ── Web / Frontend ───────────────────────────────────────────────────────
     Language.HTML:         HTML_RULES,
+    Language.XML:          ANDROID_MANIFEST_RULES + IOS_PLIST_RULES,
 
     # ── Dados / Config ────────────────────────────────────────────────────────
-    Language.YAML:         _CFG_YAML,
+    Language.YAML:         _CFG_YAML + K8S_RULES + GHA_RULES + GITLAB_CI_RULES + CFN_RULES + ANSIBLE_RULES + OPENAPI_RULES,
     Language.TOML:         _CFG_TOML,
     Language.INI:          _CFG_INI,
-    Language.JSON:         _CFG_JSON,
+    Language.JSON:         _CFG_JSON + ARM_RULES,
 
     # ── Científico ───────────────────────────────────────────────────────────
     Language.R:            R_RULES,
