@@ -1,0 +1,65 @@
+#!/usr/bin/env sh
+# vulnscan pre-commit hook — bloqueia commits com CRITICAL ou HIGH
+# Instalação: python main.py --install-hook
+# Ou manualmente: cp scripts/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
+MAIN="$SCRIPT_DIR/main.py"
+
+# Verifica se o python existe
+if ! command -v python3 >/dev/null 2>&1 && ! command -v python >/dev/null 2>&1; then
+    echo "[vulnscan] ERRO: python não encontrado. Instale Python 3.8+." >&2
+    exit 1
+fi
+
+PYTHON="python3"
+if ! command -v python3 >/dev/null 2>&1; then
+    PYTHON="python"
+fi
+
+# Coleta apenas arquivos staged (adicionados/modificados)
+STAGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null || true)
+
+if [ -z "$STAGED" ]; then
+    echo "[vulnscan] Nenhum arquivo staged para verificar."
+    exit 0
+fi
+
+echo "[vulnscan] Verificando arquivos staged..."
+echo ""
+
+# Escreve lista de arquivos em arquivo temporário
+TMP_LIST=$(mktemp)
+echo "$STAGED" > "$TMP_LIST"
+
+# Executa scan somente nas linhas do diff staged (--diff HEAD)
+EXIT_CODE=0
+"$PYTHON" "$MAIN" \
+    --min-severity HIGH \
+    --no-color \
+    --summary-only \
+    $STAGED 2>&1 || EXIT_CODE=$?
+
+rm -f "$TMP_LIST"
+
+if [ "$EXIT_CODE" -eq 1 ]; then
+    echo ""
+    echo "╔══════════════════════════════════════════════════════════╗"
+    echo "║  ⛔  COMMIT BLOQUEADO — Vulnerabilidades CRITICAL/HIGH   ║"
+    echo "║                                                          ║"
+    echo "║  Corrija os problemas acima antes de commitar.          ║"
+    echo "║  Para ver detalhes: python main.py <arquivo>            ║"
+    echo "║  Para suprimir: # vulnscan: ignore RULE-ID              ║"
+    echo "╚══════════════════════════════════════════════════════════╝"
+    exit 1
+fi
+
+if [ "$EXIT_CODE" -eq 2 ]; then
+    echo "[vulnscan] ERRO interno ao executar o scanner. Verificação ignorada." >&2
+    exit 0
+fi
+
+echo "[vulnscan] ✅ Nenhuma vulnerabilidade CRITICAL/HIGH encontrada."
+exit 0

@@ -1,0 +1,133 @@
+name: "CodeVulnerableAnalyzer"
+description: "Análise estática de segurança com publicação de SARIF para GitHub Code Scanning"
+author: "victor santiago"
+
+branding:
+  icon: "shield"
+  color: "red"
+
+inputs:
+  path:
+    description: "Caminho a ser escaneado (padrão: raiz do repositório)"
+    required: false
+    default: "."
+  min-severity:
+    description: "Severidade mínima para reportar (INFO, LOW, MEDIUM, HIGH, CRITICAL)"
+    required: false
+    default: "LOW"
+  sarif-output:
+    description: "Caminho do arquivo SARIF de saída"
+    required: false
+    default: "vulnscan-results.sarif"
+  fail-on:
+    description: "Nível de severidade que causa falha no workflow (HIGH ou CRITICAL)"
+    required: false
+    default: "HIGH"
+  upload-sarif:
+    description: "Enviar SARIF para GitHub Code Scanning (true/false)"
+    required: false
+    default: "true"
+  python-version:
+    description: "Versão do Python a usar"
+    required: false
+    default: "3.11"
+
+outputs:
+  sarif-file:
+    description: "Caminho do arquivo SARIF gerado"
+    value: ${{ steps.scan.outputs.sarif-file }}
+  total-findings:
+    description: "Total de vulnerabilidades encontradas"
+    value: ${{ steps.scan.outputs.total-findings }}
+  critical-count:
+    description: "Número de vulnerabilidades CRITICAL"
+    value: ${{ steps.scan.outputs.critical-count }}
+  high-count:
+    description: "Número de vulnerabilidades HIGH"
+    value: ${{ steps.scan.outputs.high-count }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+        cache: "pip"
+
+    - name: Instalar dependências
+      shell: bash
+      run: |
+        python -m pip install --upgrade pip
+        pip install "rich>=13.7.0,<14.0.0"
+
+    - name: Executar scan de vulnerabilidades
+      id: scan
+      shell: bash
+      run: |
+        set +e
+        python "${{ github.action_path }}/main.py" \
+          "${{ inputs.path }}" \
+          --min-severity "${{ inputs.min-severity }}" \
+          --sarif "${{ inputs.sarif-output }}" \
+          --summary-only \
+          --no-color
+        EXIT_CODE=$?
+
+        echo "sarif-file=${{ inputs.sarif-output }}" >> "$GITHUB_OUTPUT"
+
+        # Extrair contagens do SARIF
+        if [ -f "${{ inputs.sarif-output }}" ]; then
+          TOTAL=$(python3 -c "
+        import json, sys
+        try:
+            d = json.load(open('${{ inputs.sarif-output }}'))
+            runs = d.get('runs', [])
+            total = sum(len(r.get('results', [])) for r in runs)
+            crit  = sum(1 for r in runs for res in r.get('results', [])
+                        if res.get('level') == 'error' and
+                           res.get('properties', {}).get('severity') == 'CRITICAL')
+            high  = sum(1 for r in runs for res in r.get('results', [])
+                        if res.get('level') == 'error' and
+                           res.get('properties', {}).get('severity') == 'HIGH')
+            print(f'{total},{crit},{high}')
+        except Exception:
+            print('0,0,0')
+        " 2>/dev/null || echo "0,0,0")
+          IFS=',' read -r TOTAL_V CRIT HIGH <<< "$TOTAL"
+        else
+          TOTAL_V=0; CRIT=0; HIGH=0
+        fi
+
+        echo "total-findings=$TOTAL_V" >> "$GITHUB_OUTPUT"
+        echo "critical-count=$CRIT"    >> "$GITHUB_OUTPUT"
+        echo "high-count=$HIGH"        >> "$GITHUB_OUTPUT"
+
+        echo "## 🛡️ VulnScan Results" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Métrica | Valor |" >> "$GITHUB_STEP_SUMMARY"
+        echo "|---------|-------|" >> "$GITHUB_STEP_SUMMARY"
+        echo "| Total de achados | $TOTAL_V |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| CRITICAL         | $CRIT    |" >> "$GITHUB_STEP_SUMMARY"
+        echo "| HIGH             | $HIGH    |" >> "$GITHUB_STEP_SUMMARY"
+
+        # Determinar se o build deve falhar
+        FAIL_ON="${{ inputs.fail-on }}"
+        if [ "$FAIL_ON" = "CRITICAL" ] && [ "$CRIT" -gt 0 ]; then
+          echo "❌ Build falhou: $CRIT vulnerabilidades CRITICAL encontradas." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+        elif [ "$FAIL_ON" = "HIGH" ] && [ $((CRIT + HIGH)) -gt 0 ]; then
+          echo "❌ Build falhou: vulnerabilidades CRITICAL/HIGH encontradas." >> "$GITHUB_STEP_SUMMARY"
+          exit 1
+        fi
+
+        echo "✅ Nenhuma vulnerabilidade de severidade $FAIL_ON+ encontrada." >> "$GITHUB_STEP_SUMMARY"
+        exit 0
+
+    - name: Upload SARIF para GitHub Code Scanning
+      if: ${{ inputs.upload-sarif == 'true' && always() }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-output }}
+        category: "vulnscan"
+      continue-on-error: true
