@@ -37,9 +37,9 @@ echo "$STAGED" > "$TMP_LIST"
 # Executa scan somente nas linhas do diff staged (--diff HEAD)
 EXIT_CODE=0
 "$PYTHON" "$MAIN" \
-    --min-severity HIGH \
-    --no-color \
+    --severity HIGH \
     --summary-only \
+    --quiet \
     $STAGED 2>&1 || EXIT_CODE=$?
 
 rm -f "$TMP_LIST"

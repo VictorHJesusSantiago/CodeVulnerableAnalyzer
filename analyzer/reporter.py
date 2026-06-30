@@ -633,6 +633,7 @@ def export_sarif(report: ScanReport, output_path: str) -> None:
                     "vulnscan/v1": f"{v.rule_id}:{v.file_path}:{v.line_number}",
                 },
                 "properties": {
+                    "severity":   v.severity.name,
                     "confidence": v.confidence.name,
                     "category":   v.category.value,
                     "in_comment": v.in_comment,

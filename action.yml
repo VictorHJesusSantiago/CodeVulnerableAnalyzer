@@ -68,10 +68,10 @@ runs:
         set +e
         python "${{ github.action_path }}/main.py" \
           "${{ inputs.path }}" \
-          --min-severity "${{ inputs.min-severity }}" \
+          --severity "${{ inputs.min-severity }}" \
           --sarif "${{ inputs.sarif-output }}" \
           --summary-only \
-          --no-color
+          --quiet
         EXIT_CODE=$?
 
         echo "sarif-file=${{ inputs.sarif-output }}" >> "$GITHUB_OUTPUT"

@@ -351,7 +351,7 @@ class ScanEngine:
 
                 # Taint: elevar confiança se var tainted num sink
                 snk = _TAINT_SINK_RE.search(line)
-                if snk and snk.group(2) in tainted:
+                if snk and snk.group(1) in tainted:
                     conf = Confidence.HIGH
 
                 sc = max(0, li - CONTEXT_LINES)
