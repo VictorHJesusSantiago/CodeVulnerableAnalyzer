@@ -179,6 +179,10 @@ EXTENSION_MAP: dict[str, Language] = {
     ".tf": Language.TERRAFORM, ".tfvars": Language.TERRAFORM, ".hcl": Language.TERRAFORM,
     # ── Solidity ──────────────────────────────────────────────────────────────
     ".sol": Language.SOLIDITY,
+    # ── Blockchain adicionais ──────────────────────────────────────────────────
+    ".vy": Language.VYPER, ".vyi": Language.VYPER,
+    ".move": Language.MOVE,
+    ".cairo": Language.CAIRO,
     # ── MATLAB ────────────────────────────────────────────────────────────────
     ".mat": Language.MATLAB, ".mlx": Language.MATLAB, ".mlapp": Language.MATLAB,
     # ── R ─────────────────────────────────────────────────────────────────────
@@ -344,6 +348,9 @@ def get_comment_prefix(language: Language) -> tuple[str, str, str]:
         Language.INI:         (";", "", ""),
         Language.TERRAFORM:   ("//", "/*", "*/"),
         Language.SOLIDITY:    c_style,
+        Language.VYPER:       hash_style,
+        Language.MOVE:        ("//", "/*", "*/"),
+        Language.CAIRO:       ("//", "/*", "*/"),
         Language.ASSEMBLY:    (";", "", ""),
         Language.FORTRAN:     ("!", "", ""),
         Language.ADA:         ("--", "", ""),
