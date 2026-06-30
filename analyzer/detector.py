@@ -187,6 +187,69 @@ EXTENSION_MAP: dict[str, Language] = {
     ".mat": Language.MATLAB, ".mlx": Language.MATLAB, ".mlapp": Language.MATLAB,
     # ── R ─────────────────────────────────────────────────────────────────────
     ".r": Language.R, ".R": Language.R, ".rmd": Language.R, ".Rmd": Language.R,
+
+    # ══════════════════════════════════════════════════════════════════════════
+    #  EXPANSÃO — novas linguagens (chaves duplicadas sobrescrevem as anteriores)
+    # ══════════════════════════════════════════════════════════════════════════
+    # ── Hardware Description ──────────────────────────────────────────────────
+    ".vhd": Language.VHDL, ".vhdl": Language.VHDL,
+    ".sv": Language.VERILOG, ".svh": Language.VERILOG, ".vh": Language.VERILOG,
+    # ── Build ─────────────────────────────────────────────────────────────────
+    ".cmake": Language.CMAKE,
+    ".bzl": Language.BAZEL, ".bazel": Language.BAZEL, ".star": Language.BAZEL, ".starlark": Language.BAZEL,
+    ".sed": Language.SED,
+    # ── Lisp family / Lógica ──────────────────────────────────────────────────
+    ".rkt": Language.RACKET, ".rktl": Language.RACKET,
+    ".fth": Language.FORTH, ".4th": Language.FORTH, ".forth": Language.FORTH,
+    ".apl": Language.APL, ".ijs": Language.APL, ".k": Language.APL,
+    # ── Scripting de automação ────────────────────────────────────────────────
+    ".ahk": Language.AUTOHOTKEY,
+    ".applescript": Language.APPLESCRIPT, ".scpt": Language.APPLESCRIPT,
+    ".fish": Language.FISH,                       # sobrescreve SHELL
+    ".zsh": Language.ZSH,                          # sobrescreve SHELL
+    # ── IaC / Config avançada ─────────────────────────────────────────────────
+    ".bicep": Language.BICEP,
+    ".jsonnet": Language.JSONNET, ".libsonnet": Language.JSONNET,
+    ".dhall": Language.DHALL,
+    ".cue": Language.CUE,
+    ".nix": Language.NIX,
+    ".pp": Language.PUPPET,                        # sobrescreve PASCAL (Pascal usa .pas/.dpr)
+    ".sls": Language.SALTSTACK,                    # sobrescreve SCHEME (Scheme usa .scm/.ss)
+    # ── Blockchain (extensão) ──────────────────────────────────────────────────
+    ".yul": Language.YUL,
+    ".huff": Language.HUFF,
+    ".cdc": Language.CADENCE,
+    ".clar": Language.CLARITY,
+    ".tz": Language.MICHELSON,
+    ".sw": Language.SWAY,
+    ".ride": Language.RIDE,
+    ".teal": Language.TEAL,
+    # ── GPU / Shaders ──────────────────────────────────────────────────────────
+    ".glsl": Language.GLSL, ".vert": Language.GLSL, ".frag": Language.GLSL,
+    ".comp": Language.GLSL, ".geom": Language.GLSL, ".tesc": Language.GLSL, ".tese": Language.GLSL,
+    ".hlsl": Language.HLSL, ".fx": Language.HLSL, ".hlsli": Language.HLSL,
+    ".wgsl": Language.WGSL,
+    ".cu": Language.CUDA, ".cuh": Language.CUDA,
+    ".cl": Language.OPENCL,                        # sobrescreve LISP (Lisp usa .lisp/.lsp)
+    ".metal": Language.METAL,
+    # ── Sistemas modernos / Funcionais novas ──────────────────────────────────
+    ".mojo": Language.MOJO,
+    ".carbon": Language.CARBON,
+    ".vale": Language.VALE,
+    ".odin": Language.ODIN,
+    ".ha": Language.HARE,
+    ".gleam": Language.GLEAM,
+    ".roc": Language.ROC,
+    ".u": Language.UNISON,
+    ".res": Language.RESCRIPT, ".resi": Language.RESCRIPT,
+    ".purs": Language.PURESCRIPT,
+    # ── Provas / Dependently-typed ─────────────────────────────────────────────
+    ".idr": Language.IDRIS, ".lidr": Language.IDRIS,
+    ".lean": Language.LEAN,
+    ".agda": Language.AGDA,
+    # ── Quântica ────────────────────────────────────────────────────────────────
+    ".qs": Language.QSHARP,
+    ".qasm": Language.OPENQASM,
 }
 
 CONTENT_SIGNATURES: list[tuple[Language, re.Pattern]] = [
@@ -221,6 +284,10 @@ CONTENT_SIGNATURES: list[tuple[Language, re.Pattern]] = [
     (Language.ERLANG,     re.compile(r'^-module\s*\(|^-export\s*\(\[|^\s*->|:-\s*\w+')),
     (Language.GROOVY,     re.compile(r'^\s*def\s+\w+\s*\(|import\s+groovy\.|@\w+\s+class\s+')),
     (Language.GRAPHQL,    re.compile(r'^\s*(?:type|query|mutation|subscription|fragment|schema)\s+\w+\s*[\{(]', re.MULTILINE)),
+    (Language.INK,        re.compile(r'#\[ink::contract\]|use\s+ink_lang|#\[ink\(')),
+    (Language.COQ,        re.compile(r'^\s*(?:Theorem|Lemma|Definition|Inductive|Fixpoint)\s+\w+|^\s*Qed\.', re.MULTILINE)),
+    (Language.NIX,        re.compile(r'\bwith\s+import\b|\bpkgs\.\w+|\{\s*stdenv|mkDerivation\b')),
+    (Language.PUPPET,     re.compile(r'^\s*(?:class|define|node)\s+[\w:]+\s*[\({]|\bensure\s*=>', re.MULTILINE)),
 ]
 
 BINARY_EXTENSIONS = {
@@ -255,8 +322,16 @@ def detect_language(file_path: str, content: str = "") -> Language:
     # Arquivos sem extensão reconhecidos por nome
     if name in ("dockerfile", "containerfile"):
         return Language.DOCKERFILE
-    if name in ("makefile", "gnumakefile", "bsdmakefile"):
-        return Language.SHELL
+    if name in ("makefile", "gnumakefile", "bsdmakefile") or name.endswith(".mk") or name.endswith(".mak"):
+        return Language.MAKEFILE
+    if name == "cmakelists.txt":
+        return Language.CMAKE
+    if name in ("build", "build.bazel", "workspace", "workspace.bazel", ".bazelrc"):
+        return Language.BAZEL
+    if name.endswith(".gradle.kts") or name.endswith(".gradle"):
+        return Language.GRADLE
+    if name in ("berksfile", "metadata.rb") or name == "policyfile.rb":
+        return Language.CHEF
     if name in ("jenkinsfile", "groovyfile"):
         return Language.GROOVY
     if name in (".bashrc", ".bash_profile", ".profile", ".zshrc"):

@@ -179,6 +179,79 @@ class Language(Enum):
     R           = "R"
     SCRATCH     = "Scratch"
 
+    # ── Hardware Description ──────────────────────────────────────────────────
+    VHDL        = "VHDL"
+    VERILOG     = "Verilog/SystemVerilog"
+
+    # ── Build / Automação de Build ────────────────────────────────────────────
+    MAKEFILE    = "Makefile"
+    CMAKE       = "CMake"
+    BAZEL       = "Bazel/Starlark"
+    GRADLE      = "Gradle"
+    SED         = "sed"
+
+    # ── Lisp family / Lógica ──────────────────────────────────────────────────
+    RACKET      = "Racket"
+    FORTH       = "Forth"
+    APL         = "APL/J/K"
+
+    # ── Scripting de Automação ────────────────────────────────────────────────
+    AUTOHOTKEY  = "AutoHotkey"
+    APPLESCRIPT = "AppleScript"
+    FISH        = "Fish"
+    ZSH         = "Zsh"
+
+    # ── IaC / Config avançada ─────────────────────────────────────────────────
+    BICEP       = "Bicep"
+    JSONNET     = "Jsonnet"
+    DHALL       = "Dhall"
+    CUE         = "CUE"
+    NIX         = "Nix"
+    PUPPET      = "Puppet"
+    CHEF        = "Chef"
+    SALTSTACK   = "SaltStack"
+
+    # ── Blockchain / Smart Contracts (extensão) ───────────────────────────────
+    YUL         = "Yul"
+    HUFF        = "Huff"
+    CADENCE     = "Cadence"
+    CLARITY     = "Clarity"
+    MICHELSON   = "Michelson"
+    INK         = "Ink!"
+    SWAY        = "Sway"
+    RIDE        = "Ride"
+    TEAL        = "TEAL"
+
+    # ── GPU / Shaders ──────────────────────────────────────────────────────────
+    GLSL        = "GLSL"
+    HLSL        = "HLSL"
+    WGSL        = "WGSL"
+    CUDA        = "CUDA"
+    OPENCL      = "OpenCL"
+    METAL       = "Metal"
+
+    # ── Sistemas modernos / Funcionais novas ──────────────────────────────────
+    MOJO        = "Mojo"
+    CARBON      = "Carbon"
+    VALE        = "Vale"
+    ODIN        = "Odin"
+    HARE        = "Hare"
+    GLEAM       = "Gleam"
+    ROC         = "Roc"
+    UNISON      = "Unison"
+    RESCRIPT    = "ReScript"
+    PURESCRIPT  = "PureScript"
+
+    # ── Provas / Dependently-typed ─────────────────────────────────────────────
+    IDRIS       = "Idris"
+    LEAN        = "Lean"
+    COQ         = "Coq"
+    AGDA        = "Agda"
+
+    # ── Quântica ──────────────────────────────────────────────────────────────
+    QSHARP      = "Q#"
+    OPENQASM    = "OpenQASM"
+
     # ── Meta ──────────────────────────────────────────────────────────────────
     GENERIC     = "Generic"
     UNKNOWN     = "Unknown"

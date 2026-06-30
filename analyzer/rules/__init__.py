@@ -109,6 +109,9 @@ from analyzer.rules.cairo_rules import CAIRO_RULES
 from analyzer.rules.ml_security_rules import ML_SECURITY_RULES
 from analyzer.rules.notebook_rules import NOTEBOOK_RULES
 
+# ── Expansão de cobertura de linguagens (Batch 7) ─────────────────────────────
+from analyzer.rules.expansion_rules import EXPANSION_RULES
+
 
 def _for_lang(rules: List[Rule], *langs: Language) -> List[Rule]:
     return [r for r in rules if r.language in langs or r.language == Language.GENERIC]
@@ -228,6 +231,10 @@ LANGUAGE_RULES: dict[Language, List[Rule]] = {
     # ── Científico ───────────────────────────────────────────────────────────
     Language.R:            R_RULES,
 }
+
+# ── Expansão (Batch 7): mescla preservando regras já existentes por linguagem ──
+for _lang, _rules in EXPANSION_RULES.items():
+    LANGUAGE_RULES[_lang] = LANGUAGE_RULES.get(_lang, []) + _rules
 
 
 def get_rules(language: Language) -> List[Rule]:
