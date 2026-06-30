@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import List, Optional, Callable, Set, Dict
 
 from analyzer.models import (
-    Language, Severity, Vulnerability, ScanResult, ScanReport, Confidence
+    Language, Severity, Vulnerability, ScanResult, ScanReport, Confidence, VulnCategory
 )
 from analyzer.detector import detect_language, is_scannable, get_comment_prefix, SKIP_DIRS
 from analyzer.rules import get_rules
@@ -36,6 +36,114 @@ _TAINT_SINK_RE = re.compile(
     r'cursor\.execute|engine\.execute|render_template_string|'
     r'__import__)\s*\([^)]*\b(\w+)\b'
 )
+
+# Atribuição genérica: captura LHS e RHS para propagação de taint
+_ASSIGN_RE = re.compile(r'^\s*(\w+)\s*(?:=|\+=)\s*(.+)$')
+
+# Sinks perigosos para o analisador de taint dedicado:
+#   (regex do sink, categoria, severidade, rótulo)
+_TAINT_SINKS = [
+    (re.compile(r'\beval\s*\('),                                   VulnCategory.CODE_INJECTION,    Severity.CRITICAL, "eval()"),
+    (re.compile(r'\bexec\s*\('),                                   VulnCategory.CODE_INJECTION,    Severity.CRITICAL, "exec()"),
+    (re.compile(r'\bos\.system\s*\('),                             VulnCategory.COMMAND_INJECTION, Severity.CRITICAL, "os.system()"),
+    (re.compile(r'\bsubprocess\.(?:run|call|Popen|check_output)\s*\('), VulnCategory.COMMAND_INJECTION, Severity.HIGH, "subprocess"),
+    (re.compile(r'\brender_template_string\s*\('),                 VulnCategory.CODE_INJECTION,    Severity.HIGH,     "render_template_string()"),
+    (re.compile(r'\.execute\s*\('),                                VulnCategory.SQL_INJECTION,     Severity.HIGH,     "cursor.execute()"),
+    (re.compile(r'\bchild_process\.exec\s*\('),                    VulnCategory.COMMAND_INJECTION, Severity.HIGH,     "child_process.exec()"),
+    (re.compile(r'\b(?:shell_exec|passthru|popen|system)\s*\('),   VulnCategory.COMMAND_INJECTION, Severity.HIGH,     "shell exec (PHP)"),
+]
+
+# Fontes adicionais por linguagem (PHP/JS) além do _TAINT_SOURCE_RE (Python)
+_TAINT_SOURCE_EXTRA_RE = re.compile(
+    r'\b(\w+)\s*=\s*(?:'
+    r'\$_(?:GET|POST|REQUEST|COOKIE|SERVER)\b|'           # PHP
+    r'req\.(?:body|query|params|cookies|headers)\b|'      # Express/Node
+    r'process\.argv\b'
+    r')'
+)
+
+
+def _analyze_taint(
+    file_path: str,
+    lines: List[str],
+    language: Language,
+    restricted: Optional[Set[int]],
+) -> List[Vulnerability]:
+    """
+    Taint analysis intra-arquivo: rastreia variáveis derivadas de entrada do
+    usuário (com propagação por atribuição) e emite um achado quando uma
+    variável contaminada alcança um sink perigoso.
+    """
+    tainted: Set[str] = set()
+    findings: List[Vulnerability] = []
+    total = len(lines)
+
+    def _refs_tainted(expr: str) -> bool:
+        return any(re.search(r'\b' + re.escape(t) + r'\b', expr) for t in tainted)
+
+    for li, line in enumerate(lines):
+        if len(line) > MAX_LINE_LENGTH:
+            continue
+
+        # ── Fontes diretas ────────────────────────────────────────────────
+        src = _TAINT_SOURCE_RE.search(line) or _TAINT_SOURCE_EXTRA_RE.search(line)
+        is_source = bool(src)
+        if src:
+            tainted.add(src.group(1))
+
+        # ── Propagação por atribuição: lhs = <expr com var contaminada> ───
+        ma = _ASSIGN_RE.match(line)
+        if ma and not is_source:
+            lhs, rhs = ma.group(1), ma.group(2)
+            if _refs_tainted(rhs):
+                tainted.add(lhs)
+            elif lhs in tainted:
+                # Reatribuído a partir de algo não-contaminado → sanitizado
+                tainted.discard(lhs)
+
+        # ── Sinks ─────────────────────────────────────────────────────────
+        for sink_re, category, severity, label in _TAINT_SINKS:
+            sm = sink_re.search(line)
+            if not sm:
+                continue
+            args = line[sm.end() - 1:]  # do '(' em diante
+            used = next((t for t in tainted
+                         if re.search(r'\b' + re.escape(t) + r'\b', args)), None)
+            if not used:
+                continue
+            if restricted and (li + 1) not in restricted:
+                continue
+            sc = max(0, li - CONTEXT_LINES)
+            ec = min(total, li + CONTEXT_LINES + 1)
+            findings.append(Vulnerability(
+                rule_id="TAINT-001",
+                name=f"Fluxo de dados não-confiáveis até sink perigoso ({label})",
+                description=(
+                    f"A variável '{used}' deriva de entrada controlada pelo usuário "
+                    f"e é usada em {label} sem sanitização aparente. Isso permite "
+                    f"injeção ({category.value})."
+                ),
+                severity=severity,
+                category=category,
+                language=language,
+                file_path=file_path,
+                line_number=li + 1,
+                line_content=line.rstrip(),
+                remediation=(
+                    "Valide e sanitize a entrada antes do sink; use APIs parametrizadas "
+                    "(ex.: parâmetros de query em vez de concatenação) ou allowlists."
+                ),
+                cwe="CWE-20",
+                owasp="A03:2021 - Injection",
+                confidence=Confidence.HIGH,
+                snippet=lines[sc:ec],
+                snippet_start_line=sc + 1,
+                in_comment=False,
+                function_context=_get_function_context(lines, li),
+            ))
+            break
+
+    return findings
 
 # ── Contexto de função ────────────────────────────────────────────────────────
 
@@ -93,8 +201,57 @@ def _is_globally_suppressed(rule_id: str, file_path: str, suppressed: Set[str]) 
 
 # ── Regras customizadas ───────────────────────────────────────────────────────
 
-def _load_custom_rules() -> List:
-    """Carrega regras de ./vulnscan-rules.json ou ~/.vulnscan/rules/*.json."""
+def _coerce_scalar(raw: str):
+    """Converte um escalar YAML/texto em bool/int/None/str."""
+    s = raw.strip()
+    if (len(s) >= 2) and s[0] in "\"'" and s[-1] == s[0]:
+        return s[1:-1]
+    low = s.lower()
+    if low in ("true", "yes", "on"):
+        return True
+    if low in ("false", "no", "off"):
+        return False
+    if low in ("null", "~", "none", ""):
+        return None
+    if re.fullmatch(r"-?\d+", s):
+        return int(s)
+    return s
+
+
+def _parse_simple_yaml_rules(text: str) -> List[dict]:
+    """
+    Parser YAML mínimo para arquivos de regras (sem dependências externas).
+    Suporta lista de mapeamentos no formato:
+        - id: X
+          name: Y
+          pattern: "..."
+    ou sob a chave de topo `rules:`. Valores são escalares de uma linha.
+    """
+    items: List[dict] = []
+    current: Optional[dict] = None
+    for raw_line in text.splitlines():
+        line = raw_line.split(" #", 1)[0].rstrip() if " #" in raw_line else raw_line.rstrip()
+        if not line.strip() or line.strip().startswith("#"):
+            continue
+        stripped = line.strip()
+        if stripped in ("rules:", "---"):
+            continue
+        if stripped.startswith("- "):
+            # Início de um novo item (a parte após "- " é o primeiro par chave:valor)
+            current = {}
+            items.append(current)
+            stripped = stripped[2:].strip()
+        if current is None:
+            current = {}
+            items.append(current)
+        if ":" in stripped:
+            key, _, val = stripped.partition(":")
+            current[key.strip()] = _coerce_scalar(val)
+    return [it for it in items if it]
+
+
+def _rule_from_entry(entry: dict):
+    """Constrói um objeto Rule a partir de um dict (JSON ou YAML)."""
     from analyzer.rules.base import Rule
     from analyzer.models import Severity, Confidence, Language, VulnCategory
 
@@ -103,43 +260,67 @@ def _load_custom_rules() -> List:
     _cat_map  = {c.value: c  for c in VulnCategory}
     _lang_map = {l.value: l  for l in Language}
 
-    sources: List[Path] = []
-    cwd_file = Path("vulnscan-rules.json")
-    if cwd_file.exists():
-        sources.append(cwd_file)
+    lang_val = str(entry.get("language", "generic")).title()
+    return Rule(
+        id=entry["id"],
+        name=entry.get("name", entry["id"]),
+        description=entry.get("description", ""),
+        severity=_sev_map.get(str(entry.get("severity", "MEDIUM")).upper(), Severity.MEDIUM),
+        category=_cat_map.get(entry.get("category", "Other"), VulnCategory.OTHER),
+        language=_lang_map.get(lang_val, Language.GENERIC),
+        pattern=entry["pattern"],
+        remediation=entry.get("remediation", ""),
+        cwe=entry.get("cwe"),
+        owasp=entry.get("owasp"),
+        confidence=_conf_map.get(str(entry.get("confidence", "MEDIUM")).upper(), Confidence.MEDIUM),
+        flags=re.IGNORECASE if entry.get("ignorecase") else 0,
+        negative_pattern=entry.get("negative_pattern"),
+        multiline=bool(entry.get("multiline", False)),
+        depends_on=entry.get("depends_on"),
+    )
+
+
+def _load_custom_rules() -> List:
+    """
+    Carrega regras de ./vulnscan-rules.{json,yaml,yml} e
+    ~/.vulnscan/rules/*.{json,yaml,yml}. JSON e YAML são suportados.
+    """
+    json_sources: List[Path] = []
+    yaml_sources: List[Path] = []
+
+    for stem in ("vulnscan-rules.json",):
+        p = Path(stem)
+        if p.exists():
+            json_sources.append(p)
+    for stem in ("vulnscan-rules.yaml", "vulnscan-rules.yml"):
+        p = Path(stem)
+        if p.exists():
+            yaml_sources.append(p)
+
     home_dir = Path.home() / ".vulnscan" / "rules"
     if home_dir.is_dir():
-        sources.extend(sorted(home_dir.glob("*.json")))
+        json_sources.extend(sorted(home_dir.glob("*.json")))
+        yaml_sources.extend(sorted(home_dir.glob("*.yaml")))
+        yaml_sources.extend(sorted(home_dir.glob("*.yml")))
 
-    custom: List[Rule] = []
-    for src in sources:
+    entries: List[dict] = []
+    for src in json_sources:
         try:
-            data  = json.loads(src.read_text(encoding="utf-8"))
-            items = data if isinstance(data, list) else data.get("rules", [])
-            for entry in items:
-                try:
-                    lang_val = entry.get("language", "generic").title()
-                    rule = Rule(
-                        id=entry["id"],
-                        name=entry.get("name", entry["id"]),
-                        description=entry.get("description", ""),
-                        severity=_sev_map.get(entry.get("severity", "MEDIUM").upper(), Severity.MEDIUM),
-                        category=_cat_map.get(entry.get("category", "Other"), VulnCategory.OTHER),
-                        language=_lang_map.get(lang_val, Language.GENERIC),
-                        pattern=entry["pattern"],
-                        remediation=entry.get("remediation", ""),
-                        cwe=entry.get("cwe"),
-                        owasp=entry.get("owasp"),
-                        confidence=_conf_map.get(entry.get("confidence", "MEDIUM").upper(), Confidence.MEDIUM),
-                        flags=re.IGNORECASE if entry.get("ignorecase") else 0,
-                        negative_pattern=entry.get("negative_pattern"),
-                        multiline=entry.get("multiline", False),
-                        depends_on=entry.get("depends_on"),
-                    )
-                    custom.append(rule)
-                except (KeyError, ValueError):
-                    pass
+            data = json.loads(src.read_text(encoding="utf-8"))
+            entries.extend(data if isinstance(data, list) else data.get("rules", []))
         except (json.JSONDecodeError, OSError):
+            pass
+    for src in yaml_sources:
+        try:
+            entries.extend(_parse_simple_yaml_rules(src.read_text(encoding="utf-8")))
+        except OSError:
+            pass
+
+    custom: List = []
+    for entry in entries:
+        try:
+            custom.append(_rule_from_entry(entry))
+        except (KeyError, ValueError):
             pass
     return custom
 
@@ -367,6 +548,16 @@ class ScanEngine:
                     in_comment=is_comment,
                     function_context=_get_function_context(lines, li),
                 ))
+
+        # ── Passo 3: taint analysis dedicado (com propagação) ─────────────────
+        for tf in _analyze_taint(file_path, lines, language, restricted):
+            if _is_globally_suppressed(tf.rule_id, file_path, self._global_suppress):
+                continue
+            dk = (tf.rule_id, file_path, tf.line_number)
+            if dk in seen:
+                continue
+            seen.add(dk)
+            vulns.append(tf)
 
         return vulns
 

@@ -465,7 +465,10 @@ def main() -> int:
     args_global = args
 
     num_rules = rule_count()
-    print_banner(num_rules)
+    # Em modo LSP o stdout é o canal de protocolo JSON-RPC; em stdin é o pipe
+    # de saída. O banner corromperia ambos, então é suprimido nesses modos.
+    if not args.lsp and not args.stdin:
+        print_banner(num_rules)
 
     # ── Comandos informativos ─────────────────────────────────────────────────
     if args.rules:

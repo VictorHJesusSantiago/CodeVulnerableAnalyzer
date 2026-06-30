@@ -247,13 +247,20 @@ def _check(name: str, version: str, manifest: str, line_no: int) -> List[DepVuln
 
 # ── Parsers de manifesto ──────────────────────────────────────────────────────
 
+# Casa: nome (+ extras opcionais) + operador opcional + versão concreta (limite inferior)
+_REQ_RE = re.compile(
+    r"^([A-Za-z0-9_.\-]+)\s*(?:\[[^\]]*\])?\s*"
+    r"(?:[=<>!~^]=?\s*v?)?\s*([0-9][A-Za-z0-9.\-]*)"
+)
+
+
 def _parse_requirements(content: str, filepath: str) -> List[DepVuln]:
     vulns: List[DepVuln] = []
     for line_no, line in enumerate(content.splitlines(), start=1):
-        line = line.strip()
-        if not line or line.startswith(("#", "-", "git+")):
+        line = line.split("#", 1)[0].split(";", 1)[0].strip()  # remove comentário e marker
+        if not line or line.startswith(("-", "git+")):
             continue
-        m = re.match(r"^([A-Za-z0-9_\-\.]+)\s*==\s*([\d\.]+)", line)
+        m = _REQ_RE.match(line)
         if m:
             vulns.extend(_check(m.group(1).lower(), m.group(2), filepath, line_no))
     return vulns
