@@ -115,7 +115,22 @@ Exemplos:
     p.add_argument("--sbom-format", choices=["cyclonedx", "spdx"], default="cyclonedx",
                    help="Formato do SBOM (padrão: cyclonedx)")
     p.add_argument("--deps", action="store_true",
-                   help="Escanear dependências vulneráveis (CVE)")
+                   help="Escanear dependências vulneráveis (CVE) — requirements.txt, package.json, pom.xml, Cargo.toml, go.mod, .csproj")
+    p.add_argument("--osv", action="store_true",
+                   help="Com --deps: cruzar também com a base online OSV.dev (requer rede)")
+
+    # ── Cofre de segredos (vault) ──────────────────────────────────────────────
+    vg = p.add_argument_group("Cofre de segredos (AES-256)")
+    vg.add_argument("--vault", metavar="ARQUIVO",
+                    help="Caminho do arquivo de cofre (ativa o modo cofre)")
+    vg.add_argument("--vault-init",   action="store_true", help="Criar um novo cofre")
+    vg.add_argument("--vault-set",    metavar="NOME",  help="Armazenar um segredo")
+    vg.add_argument("--vault-value",  metavar="VALOR", help="Valor do segredo (senão lê de stdin/prompt)")
+    vg.add_argument("--vault-get",    metavar="NOME",  help="Recuperar um segredo (valor puro no stdout)")
+    vg.add_argument("--vault-list",   action="store_true", help="Listar nomes de segredos")
+    vg.add_argument("--vault-delete", metavar="NOME",  help="Remover um segredo")
+    vg.add_argument("--vault-passwd", action="store_true", help="Alterar a senha mestre")
+    vg.add_argument("--vault-serve",  metavar="PORTA", type=int, help="Subir a API REST do cofre")
     p.add_argument("--entropy", action="store_true",
                    help="Detectar segredos por entropia de Shannon")
     p.add_argument("--pii", action="store_true",
@@ -466,8 +481,9 @@ def main() -> int:
 
     num_rules = rule_count()
     # Em modo LSP o stdout é o canal de protocolo JSON-RPC; em stdin é o pipe
-    # de saída. O banner corromperia ambos, então é suprimido nesses modos.
-    if not args.lsp and not args.stdin:
+    # de saída; em modo cofre o --vault-get emite o valor puro no stdout. O
+    # banner corromperia esses canais, então é suprimido nesses modos.
+    if not args.lsp and not args.stdin and not args.vault:
         print_banner(num_rules)
 
     # ── Comandos informativos ─────────────────────────────────────────────────
@@ -483,6 +499,11 @@ def main() -> int:
         from analyzer.lsp import run_lsp
         run_lsp()
         return 0
+
+    # ── Modo cofre de segredos ─────────────────────────────────────────────────
+    if args.vault:
+        from analyzer.vault_cli import run_vault_cli
+        return run_vault_cli(args)
 
     if args.install_hook:
         return install_hook()
@@ -532,6 +553,16 @@ def main() -> int:
         from analyzer.deps import scan_manifest_dir
         _SEV_C = {"CRITICAL": "#ff2244", "HIGH": "#ff6600", "MEDIUM": "#ffcc00", "LOW": "#33aaff"}
         vulns = scan_manifest_dir(target)
+        if args.osv:
+            from analyzer.deps import scan_manifest_dir_osv
+            console.print("[dim]Consultando OSV.dev (requer rede)...[/]")
+            osv_vulns = scan_manifest_dir_osv(target)
+            if osv_vulns:
+                # Evita duplicar CVEs já encontrados localmente
+                local_keys = {(v.package, v.cve_id) for v in vulns}
+                vulns.extend(v for v in osv_vulns if (v.package, v.cve_id) not in local_keys)
+            else:
+                console.print("[dim]OSV: nenhuma resposta (offline ou sem achados).[/]")
         if not vulns:
             console.print("[bold bright_green]✅  Nenhuma dependência vulnerável encontrada.[/]")
         else:
