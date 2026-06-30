@@ -363,8 +363,27 @@ class TUIApp:
         t.add_column("Função",  min_width=12,     style="dim", no_wrap=True)
         t.add_column("Nome",    min_width=nome_w, no_wrap=True)
 
-        vis = vulns[self.res_scroll:self.res_scroll + lh]
+        grouped   = _GROUP_MODES[self.group_idx] != "flat"
+        group_cnt = {}
+        if grouped:
+            for v in vulns:
+                k = self._group_key(v)
+                group_cnt[k] = group_cnt.get(k, 0) + 1
+
+        vis       = vulns[self.res_scroll:self.res_scroll + lh]
+        prev_grp  = self._group_key(vulns[self.res_scroll - 1]) if (grouped and self.res_scroll > 0) else None
         for rel, vuln in enumerate(vis, start=self.res_scroll):
+            # Cabeçalho de seção quando o grupo muda
+            if grouped:
+                gk = self._group_key(vuln)
+                if gk != prev_grp:
+                    t.add_row(
+                        "", Text("▸", style="bold bright_yellow"),
+                        Text(gk[:24], style="bold bright_yellow"), "", "",
+                        "", Text(f"({group_cnt.get(gk, 0)} achados)", style="dim"),
+                    )
+                    prev_grp = gk
+
             active = (rel == self.res_cursor)
             sc     = _SC[vuln.severity]
             sv     = Text(f" {vuln.severity.name:8}", style=f"bold {sc}")
@@ -709,7 +728,23 @@ class TUIApp:
         elif sort_mode == "line":
             all_v.sort(key=lambda v: v.line_number)
 
+        # Agrupamento: reordena para manter itens do mesmo grupo contíguos,
+        # preservando a ordenação escolhida como critério secundário.
+        if _GROUP_MODES[self.group_idx] != "flat":
+            all_v.sort(key=lambda v: self._group_key(v).lower())
+
         return all_v
+
+    def _group_key(self, vuln: Vulnerability) -> str:
+        """Chave de agrupamento conforme o modo atual."""
+        mode = _GROUP_MODES[self.group_idx]
+        if mode == "file":
+            return Path(vuln.file_path).name
+        if mode == "category":
+            return vuln.category.value
+        if mode == "language":
+            return vuln.language.value
+        return ""
 
     def _cycle_sev(self) -> None:
         order = [None, Severity.CRITICAL, Severity.HIGH,
@@ -923,8 +958,10 @@ class TUIApp:
             self.res_cursor = 0
             self.res_scroll = 0
         elif k == "g":
-            # Ciclar agrupamento (afeta label apenas; agrupamento real requer lógica adicional)
-            self.group_idx = (self.group_idx + 1) % len(_GROUP_MODES)
+            # Ciclar agrupamento: flat → file → category → language
+            self.group_idx  = (self.group_idx + 1) % len(_GROUP_MODES)
+            self.res_cursor = 0
+            self.res_scroll = 0
         elif k == "f":
             self._cycle_sev()
         elif k == "d":

@@ -24,13 +24,20 @@ def _make_purl(pkg_type: str, name: str, version: str) -> str:
 
 # ── Parsers de manifesto ──────────────────────────────────────────────────────
 
+# Casa: nome (+ extras opcionais [x,y]) + operador opcional (==,>=,~=,^,etc) + versão
+_REQ_RE = re.compile(
+    r"^([A-Za-z0-9_.\-]+)\s*(?:\[[^\]]*\])?\s*"
+    r"(?:[=<>!~^]=?\s*v?)?\s*([0-9][A-Za-z0-9.\-]*)"
+)
+
+
 def _from_requirements(content: str) -> List[Component]:
     components: List[Component] = []
     for line in content.splitlines():
-        line = line.strip()
-        if not line or line.startswith(("#", "-")):
+        line = line.split("#", 1)[0].split(";", 1)[0].strip()  # remove comentário e marker
+        if not line or line.startswith("-"):
             continue
-        m = re.match(r"^([A-Za-z0-9_\-\.]+)\s*==\s*([\d\.][A-Za-z0-9\.\-]*)", line)
+        m = _REQ_RE.match(line)
         if m:
             name, ver = m.group(1), m.group(2)
             components.append(Component(

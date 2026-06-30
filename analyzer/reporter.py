@@ -656,7 +656,7 @@ def export_sarif(report: ScanReport, output_path: str) -> None:
             "results":    results,
             "invocations": [{
                 "executionSuccessful": True,
-                "startTimeUtc": datetime.datetime.utcnow().isoformat() + "Z",
+                "startTimeUtc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
             }],
             "properties": {
                 "target":        report.target,
@@ -706,7 +706,7 @@ def export_junit(report: ScanReport, output_path: str) -> None:
     total     = report.total_vulnerabilities
     failures  = report.critical_count + report.high_count
     errors    = 0
-    timestamp = datetime.datetime.utcnow().isoformat()
+    timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     cases: List[str] = []
     for r in report.results:
