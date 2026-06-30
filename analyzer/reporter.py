@@ -1,5 +1,6 @@
 from __future__ import annotations
 import json
+import re
 import time
 from pathlib import Path
 from typing import Optional, List
@@ -571,6 +572,346 @@ def export_html(report: ScanReport, output_path: str) -> None:
 
     Path(output_path).write_text(html, encoding="utf-8")
     console.print(f"[bold bright_green]✔[/] HTML report saved → [cyan]{output_path}[/cyan]")
+
+
+# ── SARIF 2.1 export ─────────────────────────────────────────────────────────
+
+def export_sarif(report: ScanReport, output_path: str) -> None:
+    """Exporta resultados no formato SARIF 2.1.0 (GitHub Security, SonarQube, VS Code)."""
+    import datetime
+
+    rules_seen: dict[str, dict] = {}
+    results: List[dict] = []
+
+    for r in report.results:
+        for v in r.vulnerabilities:
+            if v.rule_id not in rules_seen:
+                rules_seen[v.rule_id] = {
+                    "id": v.rule_id,
+                    "name": re.sub(r"[^A-Za-z0-9]", "", v.name),
+                    "shortDescription": {"text": v.name},
+                    "fullDescription":  {"text": v.description},
+                    "help": {"text": v.remediation, "markdown": f"**Remediação:** {v.remediation}"},
+                    "properties": {
+                        "tags": [v.category.value],
+                        "precision": "medium",
+                        "problem.severity": v.severity.name.lower(),
+                    },
+                    "defaultConfiguration": {
+                        "level": {
+                            "CRITICAL": "error",
+                            "HIGH":     "error",
+                            "MEDIUM":   "warning",
+                            "LOW":      "note",
+                            "INFO":     "none",
+                        }.get(v.severity.name, "warning")
+                    },
+                }
+                if v.cwe:
+                    rules_seen[v.rule_id]["relationships"] = [
+                        {"target": {"id": v.cwe, "toolComponent": {"name": "CWE"}}}
+                    ]
+
+            level_map = {
+                "CRITICAL": "error", "HIGH": "error",
+                "MEDIUM": "warning", "LOW": "note", "INFO": "none",
+            }
+            results.append({
+                "ruleId": v.rule_id,
+                "level": level_map.get(v.severity.name, "warning"),
+                "message": {"text": v.name},
+                "locations": [{
+                    "physicalLocation": {
+                        "artifactLocation": {"uri": v.file_path.replace("\\", "/"), "uriBaseId": "%SRCROOT%"},
+                        "region": {
+                            "startLine": v.line_number,
+                            "snippet": {"text": v.line_content},
+                        },
+                    },
+                }],
+                "fingerprints": {
+                    "vulnscan/v1": f"{v.rule_id}:{v.file_path}:{v.line_number}",
+                },
+                "properties": {
+                    "confidence": v.confidence.name,
+                    "category":   v.category.value,
+                    "in_comment": v.in_comment,
+                },
+            })
+
+    sarif = {
+        "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+        "version": "2.1.0",
+        "runs": [{
+            "tool": {
+                "driver": {
+                    "name":            "vulnscan",
+                    "version":         "1.0.0",
+                    "informationUri":  "https://github.com/your-org/CodeVulnerableAnalyzer",
+                    "organization":    "CodeVulnerableAnalyzer",
+                    "rules":           list(rules_seen.values()),
+                }
+            },
+            "results":    results,
+            "invocations": [{
+                "executionSuccessful": True,
+                "startTimeUtc": datetime.datetime.utcnow().isoformat() + "Z",
+            }],
+            "properties": {
+                "target":        report.target,
+                "filesScanned":  report.files_scanned,
+                "totalIssues":   report.total_vulnerabilities,
+            },
+        }],
+    }
+
+    Path(output_path).write_text(json.dumps(sarif, indent=2, ensure_ascii=False), encoding="utf-8")
+    console.print(f"[bold bright_green]✔[/] SARIF salvo → [cyan]{output_path}[/cyan]")
+
+
+# ── CSV export ────────────────────────────────────────────────────────────────
+
+def export_csv(report: ScanReport, output_path: str) -> None:
+    """Exporta resultados em CSV (compatível com Excel/Google Sheets)."""
+    import csv, io
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, quoting=csv.QUOTE_ALL)
+    writer.writerow([
+        "severity", "rule_id", "name", "language", "file", "line",
+        "category", "cwe", "owasp", "confidence", "in_comment", "description",
+    ])
+    for r in report.results:
+        for v in r.vulnerabilities:
+            writer.writerow([
+                v.severity.name, v.rule_id, v.name, v.language.value,
+                v.file_path, v.line_number, v.category.value,
+                v.cwe or "", v.owasp or "", v.confidence.name,
+                "yes" if v.in_comment else "no",
+                v.description.replace("\n", " "),
+            ])
+
+    Path(output_path).write_text(buf.getvalue(), encoding="utf-8-sig")
+    console.print(f"[bold bright_green]✔[/] CSV salvo → [cyan]{output_path}[/cyan]")
+
+
+# ── JUnit XML export ──────────────────────────────────────────────────────────
+
+def export_junit(report: ScanReport, output_path: str) -> None:
+    """Exporta resultados em JUnit XML (Jenkins, GitLab CI, Azure DevOps)."""
+    from html import escape
+    import datetime
+
+    total     = report.total_vulnerabilities
+    failures  = report.critical_count + report.high_count
+    errors    = 0
+    timestamp = datetime.datetime.utcnow().isoformat()
+
+    cases: List[str] = []
+    for r in report.results:
+        for v in r.vulnerabilities:
+            cls  = escape(f"vulnscan.{v.language.value}.{v.category.value}".replace(" ", "_"))
+            name = escape(f"{v.rule_id}: {v.name}")
+            body = escape(
+                f"File: {v.file_path}:{v.line_number}\n"
+                f"Severity: {v.severity.name}\n"
+                f"Description: {v.description}\n"
+                f"Remediation: {v.remediation}"
+            )
+            is_fail = v.severity.name in ("CRITICAL", "HIGH")
+            tag     = "failure" if is_fail else "warning"
+            cases.append(
+                f'  <testcase classname="{cls}" name="{name}">\n'
+                f'    <{tag} type="{escape(v.severity.name)}" message="{escape(v.name)}">'
+                f'{body}</{tag}>\n'
+                f'  </testcase>'
+            )
+
+    xml = (
+        f'<?xml version="1.0" encoding="UTF-8"?>\n'
+        f'<testsuite name="vulnscan" tests="{total}" failures="{failures}" '
+        f'errors="{errors}" timestamp="{timestamp}" time="{report.total_time:.3f}">\n'
+        + "\n".join(cases)
+        + "\n</testsuite>\n"
+    )
+
+    Path(output_path).write_text(xml, encoding="utf-8")
+    console.print(f"[bold bright_green]✔[/] JUnit XML salvo → [cyan]{output_path}[/cyan]")
+
+
+# ── Markdown export ───────────────────────────────────────────────────────────
+
+def export_markdown(report: ScanReport, output_path: str) -> None:
+    """Exporta relatório em Markdown (PRs, wikis, GitHub Issues)."""
+    from collections import Counter
+
+    lines: List[str] = [
+        "# Vulnerability Scan Report",
+        "",
+        f"| Métrica | Valor |",
+        f"|---------|-------|",
+        f"| Target | `{report.target}` |",
+        f"| Arquivos escaneados | {report.files_scanned} |",
+        f"| Arquivos com problemas | {report.files_with_issues} |",
+        f"| Total de problemas | {report.total_vulnerabilities} |",
+        f"| Tempo de scan | {report.total_time:.2f}s |",
+        "",
+        "## Distribuição por Severidade",
+        "",
+        "| Severidade | Quantidade |",
+        "|------------|-----------|",
+        f"| 🔴 CRITICAL | {report.critical_count} |",
+        f"| 🟠 HIGH     | {report.high_count} |",
+        f"| 🟡 MEDIUM   | {report.medium_count} |",
+        f"| 🔵 LOW      | {report.low_count} |",
+        f"| ⚪ INFO     | {report.info_count} |",
+        "",
+    ]
+
+    all_vulns = [v for r in report.results for v in r.vulnerabilities]
+    if all_vulns:
+        lines += [
+            "## Achados",
+            "",
+            "| # | Sev | Regra | Arquivo | Linha | Nome |",
+            "|---|-----|-------|---------|-------|------|",
+        ]
+        sev_icons = {"CRITICAL": "🔴", "HIGH": "🟠", "MEDIUM": "🟡", "LOW": "🔵", "INFO": "⚪"}
+        for i, v in enumerate(sorted(all_vulns, key=lambda x: -x.severity.value), 1):
+            icon = sev_icons.get(v.severity.name, "⚪")
+            fname = Path(v.file_path).name
+            lines.append(
+                f"| {i} | {icon} {v.severity.name} | `{v.rule_id}` | "
+                f"`{fname}` | {v.line_number} | {v.name} |"
+            )
+
+        lines += [
+            "",
+            "## Detalhes",
+            "",
+        ]
+        for v in sorted(all_vulns, key=lambda x: -x.severity.value)[:50]:
+            icon = sev_icons.get(v.severity.name, "⚪")
+            lines += [
+                f"### {icon} {v.rule_id} — {v.name}",
+                "",
+                f"- **Arquivo:** `{v.file_path}:{v.line_number}`",
+                f"- **Severidade:** {v.severity.name}",
+                f"- **Categoria:** {v.category.value}",
+            ]
+            if v.cwe:
+                lines.append(f"- **CWE:** {v.cwe}")
+            if v.owasp:
+                lines.append(f"- **OWASP:** {v.owasp}")
+            lines += [
+                "",
+                f"**Descrição:** {v.description}",
+                "",
+                f"**Remediação:** {v.remediation}",
+                "",
+            ]
+            if v.snippet:
+                lines += [
+                    "```",
+                    *v.snippet,
+                    "```",
+                    "",
+                ]
+
+    lines += [
+        "---",
+        "",
+        "*Gerado por [CodeVulnerableAnalyzer](https://github.com/your-org/CodeVulnerableAnalyzer)*",
+    ]
+
+    Path(output_path).write_text("\n".join(lines), encoding="utf-8")
+    console.print(f"[bold bright_green]✔[/] Markdown salvo → [cyan]{output_path}[/cyan]")
+
+
+# ── Diff de baseline ──────────────────────────────────────────────────────────
+
+def print_baseline_diff(diff) -> None:
+    """Imprime comparação com baseline de forma legível."""
+    console.print()
+    console.print(f"[bold bright_white]  📊  Comparação com Baseline  [/]")
+    console.print()
+
+    t = Table(box=box.SIMPLE_HEAVY, show_header=False, padding=(0, 2))
+    t.add_column(style="dim", min_width=20)
+    t.add_column(style="bold white")
+    t.add_row("Novos achados",     f"[bold {'red' if diff.new_count else 'green'}]{diff.new_count}[/]")
+    t.add_row("Resolvidos",        f"[bold bright_green]{diff.resolved_count}[/]")
+    t.add_row("Regressões",        f"[bold {'red' if diff.regression_count else 'green'}]{diff.regression_count}[/]")
+    t.add_row("Sem alteração",     str(diff.unchanged_count))
+    console.print(t)
+
+    if diff.new_findings:
+        console.print(f"\n[bold red] Novos ({diff.new_count}) [/]")
+        for f in diff.new_findings[:10]:
+            console.print(f"  [red]+[/] [{f['severity']}] {f['rule_id']} — {f['file']}:{f['line']}")
+        if diff.new_count > 10:
+            console.print(f"  [dim]... +{diff.new_count - 10} mais[/dim]")
+
+    if diff.resolved_findings:
+        console.print(f"\n[bold bright_green] Resolvidos ({diff.resolved_count}) [/]")
+        for f in diff.resolved_findings[:5]:
+            console.print(f"  [bright_green]-[/] [{f['severity']}] {f['rule_id']} — {f.get('file','')}:{f.get('line','')}")
+
+    if diff.regression_findings:
+        console.print(f"\n[bold yellow] Regressões ({diff.regression_count}) [/]")
+        for f in diff.regression_findings[:5]:
+            console.print(
+                f"  [yellow]↑[/] [{f.get('old_severity','')}→{f['severity']}] "
+                f"{f['rule_id']} — {f['file']}:{f['line']}"
+            )
+    console.print()
+
+
+# ── Badge SVG ─────────────────────────────────────────────────────────────────
+
+def export_badge(report: ScanReport, output_path: str) -> None:
+    """Gera badge SVG estilo shields.io com a contagem de achados."""
+    total = report.total_vulnerabilities
+    if total == 0:
+        color, label = "brightgreen", "0 issues"
+    elif report.critical_count > 0:
+        color, label = "critical", f"{total} issues"
+    elif report.high_count > 0:
+        color, label = "red", f"{total} issues"
+    elif report.medium_count > 0:
+        color, label = "yellow", f"{total} issues"
+    else:
+        color, label = "blue", f"{total} issues"
+
+    colors = {
+        "brightgreen": "#44cc11", "critical": "#e05d44",
+        "red": "#e05d44", "yellow": "#dfb317", "blue": "#4c97ff",
+    }
+    bg = colors.get(color, "#999")
+    left_w, right_w = 88, 68
+    total_w = left_w + right_w
+
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="{total_w}" height="20">
+  <linearGradient id="s" x2="0" y2="100%">
+    <stop offset="0" stop-color="#bbb" stop-opacity=".1"/>
+    <stop offset="1" stop-opacity=".1"/>
+  </linearGradient>
+  <clipPath id="r"><rect width="{total_w}" height="20" rx="3" fill="#fff"/></clipPath>
+  <g clip-path="url(#r)">
+    <rect width="{left_w}" height="20" fill="#555"/>
+    <rect x="{left_w}" width="{right_w}" height="20" fill="{bg}"/>
+    <rect width="{total_w}" height="20" fill="url(#s)"/>
+  </g>
+  <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="110">
+    <text x="{left_w//2 * 10}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="780" lengthAdjust="spacing">vulnscan</text>
+    <text x="{left_w//2 * 10}" y="140" transform="scale(.1)" textLength="780" lengthAdjust="spacing">vulnscan</text>
+    <text x="{(left_w + right_w//2) * 10}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="580" lengthAdjust="spacing">{label}</text>
+    <text x="{(left_w + right_w//2) * 10}" y="140" transform="scale(.1)" textLength="580" lengthAdjust="spacing">{label}</text>
+  </g>
+</svg>"""
+
+    Path(output_path).write_text(svg, encoding="utf-8")
+    console.print(f"[bold bright_green]✔[/] Badge SVG salvo → [cyan]{output_path}[/cyan]")
 
 
 # ── Error helper ──────────────────────────────────────────────────────────────
