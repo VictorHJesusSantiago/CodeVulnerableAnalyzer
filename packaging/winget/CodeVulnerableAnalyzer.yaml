@@ -1,0 +1,14 @@
+PackageIdentifier: VulnScan.CodeVulnerableAnalyzer
+PackageVersion: 2.0.0
+PackageLocale: pt-BR
+Publisher: VulnScan
+PackageName: CodeVulnerableAnalyzer
+License: MIT
+ShortDescription: Analisador estático multi-linguagem
+Installers:
+  - Architecture: x64
+    InstallerType: portable
+    InstallerUrl: https://example.invalid/vulnscan-windows-x64.exe
+    InstallerSha256: SUBSTITUIR_PELO_SHA256_DO_RELEASE
+ManifestType: singleton
+ManifestVersion: 1.6.0
