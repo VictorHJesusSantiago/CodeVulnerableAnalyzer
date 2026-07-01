@@ -1,0 +1,8 @@
+Package: code-vulnerable-analyzer
+Version: 2.0.0
+Section: devel
+Priority: optional
+Architecture: all
+Depends: python3 (>= 3.10), python3-rich
+Maintainer: VulnScan
+Description: Analisador estático multi-linguagem, IaC e segredos
