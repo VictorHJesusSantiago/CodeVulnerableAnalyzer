@@ -101,6 +101,10 @@ class LSPServer:
             self._reply(req_id, {
                 "capabilities": {
                     "textDocumentSync": 1,
+                    "codeActionProvider": {
+                        "codeActionKinds": ["quickfix"],
+                        "resolveProvider": False,
+                    },
                     "diagnosticProvider": {
                         "interFileDependencies": False,
                         "workspaceDiagnostics": False,
@@ -144,6 +148,21 @@ class LSPServer:
             uri = (params.get("textDocument") or {}).get("uri", "")
             self._open_docs.pop(uri, None)
             self._notify("textDocument/publishDiagnostics", {"uri": uri, "diagnostics": []})
+        elif method == "textDocument/codeAction":
+            uri = (params.get("textDocument") or {}).get("uri", "")
+            source = self._open_docs.get(uri, "")
+            findings = []
+            for diagnostic in (params.get("context") or {}).get("diagnostics", []):
+                start = (diagnostic.get("range") or {}).get("start", {})
+                findings.append({
+                    "rule_id": str(diagnostic.get("code", "")),
+                    "line_number": int(start.get("line", 0)) + 1,
+                })
+            try:
+                from analyzer.remediation import lsp_code_actions
+                self._reply(req_id, lsp_code_actions(uri, source, findings))
+            except Exception:
+                self._reply(req_id, [])
         elif req_id is not None:
             self._reply(req_id, None)
 
