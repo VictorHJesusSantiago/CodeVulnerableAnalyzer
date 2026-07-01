@@ -90,6 +90,19 @@ Exemplos:
     p.add_argument("--csv", metavar="FILE", help="Exportar CSV")
     p.add_argument("--junit", metavar="FILE", help="Exportar JUnit XML")
     p.add_argument("--markdown", metavar="FILE", help="Exportar Markdown")
+    p.add_argument("--pdf", metavar="FILE", help="Exportar PDF técnico")
+    p.add_argument("--docx", metavar="FILE", help="Exportar DOCX técnico")
+    p.add_argument("--xlsx", metavar="FILE", help="Exportar XLSX de achados")
+    p.add_argument("--gitlab-sast", metavar="FILE", help="Exportar relatório GitLab SAST JSON")
+    p.add_argument("--interactive-html", metavar="FILE", help="Exportar dashboard HTML interativo")
+    p.add_argument("--education", action="store_true", help="Explicar achados em modo educacional")
+    p.add_argument("--autofix-diff", metavar="FILE", help="Gerar unified diff com codemods determinísticos")
+    p.add_argument("--apply-fixes", action="store_true", help="Aplicar codemods (requer --autofix-diff)")
+    p.add_argument("--profile-json", metavar="FILE", help="Salvar métricas de profiling")
+    p.add_argument("--mobile-archive", action="store_true", help="Inspecionar alvo APK/IPA")
+    p.add_argument("--secret-history", action="store_true", help="Buscar segredos em patch de histórico")
+    p.add_argument("--iac-kind", choices=["vagrant","packer","rego","falco","cloud-init","crossplane","kyverno"],
+                   help="Analisar alvo como formato IaC estendido")
     p.add_argument("--no-snippet", action="store_true", help="Sem snippets de código")
     p.add_argument("--no-comments", action="store_true", help="Ignorar achados em comentários")
     p.add_argument("--flat", action="store_true", help="Lista plana por severidade")
@@ -627,6 +640,29 @@ def main() -> int:
         return 2
 
     # ── SBOM ──────────────────────────────────────────────────────────────────
+    if args.mobile_archive:
+        from analyzer.mobile_archive import scan_mobile_archive
+        import json
+        result = scan_mobile_archive(target_path)
+        console.print_json(json.dumps(result, ensure_ascii=False))
+        return 1 if result["findings"] else 0
+
+    if args.secret_history:
+        from analyzer.secret_history import scan_patch_history
+        import json
+        findings = scan_patch_history(target_path.read_text(encoding="utf-8", errors="replace"))
+        console.print_json(json.dumps({"findings": findings}, ensure_ascii=False))
+        return 1 if findings else 0
+
+    if args.iac_kind:
+        from analyzer.iac_render import scan_extended_iac
+        import json
+        findings = scan_extended_iac(
+            target_path.read_text(encoding="utf-8", errors="replace"), args.iac_kind
+        )
+        console.print_json(json.dumps({"findings": findings}, ensure_ascii=False))
+        return 1 if findings else 0
+
     if args.sbom:
         from analyzer.sbom import collect_components, export_cyclonedx, export_spdx
         components = collect_components(target)
@@ -938,6 +974,17 @@ def main() -> int:
     console.print()
 
     # ── Watch mode ────────────────────────────────────────────────────────────
+    if args.profile_json:
+        import json
+        profile_path = Path(args.profile_json)
+        profile_path.parent.mkdir(parents=True, exist_ok=True)
+        profile_path.write_text(json.dumps({
+            "label": "scan",
+            "wall_seconds": report.total_time,
+            "files_scanned": report.files_scanned,
+            "findings": report.total_vulnerabilities,
+        }, indent=2), encoding="utf-8")
+
     if args.watch:
         from analyzer.engine import watch_mode
         watch_mode(target, {
@@ -966,6 +1013,43 @@ def main() -> int:
         print_report(report, show_snippets=not args.no_snippet, group_by_file=not args.flat)
 
     # ── Exportar relatórios ───────────────────────────────────────────────────
+    if args.education:
+        from analyzer.ai_triage import explain_finding
+        console.print("\n[bold bright_cyan]Modo education[/]")
+        for scan_result in report.results:
+            for vuln in scan_result.vulnerabilities:
+                finding = {
+                    "rule_id": vuln.rule_id, "cwe": vuln.cwe,
+                    "description": vuln.description, "remediation": vuln.remediation,
+                }
+                console.print(f"\n[bold]{vuln.rule_id}[/]: {explain_finding(finding, education=True)}")
+
+    if args.autofix_diff:
+        from analyzer.remediation import default_engine
+        diffs = []
+        fix_engine = default_engine()
+        for scan_result in report.results:
+            source_path = Path(scan_result.file_path)
+            if not source_path.exists():
+                continue
+            source = source_path.read_text(encoding="utf-8", errors="replace")
+            findings = [
+                {"rule_id": v.rule_id, "line_number": v.line_number}
+                for v in scan_result.vulnerabilities
+            ]
+            try:
+                patch = fix_engine.plan(str(source_path), source, findings)
+                if patch.diff:
+                    diffs.append(patch.diff)
+                    if args.apply_fixes:
+                        fix_engine.apply(patch, Path.cwd())
+            except (OSError, ValueError, RuntimeError) as exc:
+                console.print(f"[yellow]Autofix ignorado para {source_path}: {exc}[/]")
+        fix_output = Path(args.autofix_diff)
+        fix_output.parent.mkdir(parents=True, exist_ok=True)
+        fix_output.write_text("\n".join(diffs), encoding="utf-8")
+        console.print(f"[bold bright_green]✔[/] Patch salvo → {args.autofix_diff}")
+
     if args.json:
         export_json(report, args.json)
     if args.html:
@@ -982,6 +1066,28 @@ def main() -> int:
     if args.markdown:
         from analyzer.reporter import export_markdown
         export_markdown(report, args.markdown)
+    if args.pdf:
+        from analyzer.reporting_ext import export_pdf
+        export_pdf(report, args.pdf)
+    if args.docx:
+        from analyzer.reporting_ext import export_docx
+        export_docx(report, args.docx)
+    if args.xlsx:
+        from analyzer.reporting_ext import export_xlsx
+        export_xlsx(report, args.xlsx)
+    if args.gitlab_sast:
+        from analyzer.reporting_ext import gitlab_sast
+        import json
+        gitlab_path = Path(args.gitlab_sast)
+        gitlab_path.parent.mkdir(parents=True, exist_ok=True)
+        gitlab_path.write_text(
+            json.dumps(gitlab_sast(report), indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+    if args.interactive_html:
+        from analyzer.reporting_ext import interactive_html
+        interactive_path = Path(args.interactive_html)
+        interactive_path.parent.mkdir(parents=True, exist_ok=True)
+        interactive_path.write_text(interactive_html(report), encoding="utf-8")
     if args.badge:
         from analyzer.reporter import export_badge
         export_badge(report, args.badge)
