@@ -179,6 +179,30 @@ PROVIDER_SIGNATURES: List[ProviderSignature] = [
     _p("Etherscan", "API Key", r'(?i)etherscan[_-]?api[_-]?key\s*[:=]\s*["\']?[A-Za-z0-9]{34}', "https://etherscan.io/myapikey"),
 ]
 
+# Assinaturas contextuais (confiança média): serviços cujas chaves não possuem
+# prefixo público estável, mas aparecem em atribuições nomeadas.
+_CONTEXTUAL_PROVIDERS = [
+    "Aiven","Akamai","Apollo","ArgoCD","AssemblyAI","Axiom","Backblaze",
+    "Bitly","Brevo","Buildkite","Calendly","Canny","Circle","ClickUp",
+    "CockroachDB","Confluent","ConvertKit","Datadog RUM","Deepgram","Deno Deploy",
+    "DigitalOcean Spaces","Drone CI","Dynatrace","ElevenLabs","Fastly","Fireblocks",
+    "FluxCD","Frame.io","Gandi","Geocodio","GitBook","GoCardless","Harvest",
+    "Hetzner","IBM Cloud","JFrog","Kaggle","Klaviyo","Lokalise","Mapbox",
+    "Mattermost","Mux","Neon","New Relic Insights","Octopus Deploy","OneSignal",
+    "OpenWeather","Oracle Cloud","PagerTree","Perplexity","Pinecone","PostHog",
+    "Pulumi Cloud","Qdrant","Railway","Resend","Scaleway","Semgrep","Snyk",
+    "SonarCloud","Sourcegraph","Tailscale","TeamCity","Together AI","Upstash",
+    "Vultr","Weights & Biases","WorkOS","YouTrack","Zeplin","Zoho","Zulip",
+    "Nhost","Meilisearch","Typesense","Honeycomb","Logtail","Better Stack",
+]
+for _provider in _CONTEXTUAL_PROVIDERS:
+    _slug = re.sub(r"[^a-z0-9]+", r"[_-]?", _provider.lower())
+    PROVIDER_SIGNATURES.append(_p(
+        _provider, "API Key/Token contextual",
+        rf'(?i)\b{_slug}[_-]?(?:api[_-]?)?(?:key|token|secret)\s*[:=]\s*["\'][A-Za-z0-9_./+=-]{{16,}}["\']',
+        "N/A — abra o painel de credenciais do provedor", confidence="MEDIUM",
+    ))
+
 
 def classify_secret(text: str) -> List[Tuple[str, str, str, str]]:
     """Retorna [(provider, secret_type, matched_text, revoke_url), ...] para
