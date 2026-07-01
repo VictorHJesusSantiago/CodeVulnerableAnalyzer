@@ -28,6 +28,7 @@ from analyzer.rules.terraform_rules import TERRAFORM_RULES
 from analyzer.rules.solidity_rules import SOLIDITY_RULES
 from analyzer.rules.html_rules import HTML_RULES
 from analyzer.rules.vb_rules import VB_RULES
+from analyzer.rules.vba_rules import VBA_RULES
 from analyzer.rules.r_rules import R_RULES
 from analyzer.rules.config_rules import CONFIG_RULES
 
@@ -162,7 +163,7 @@ LANGUAGE_RULES: dict[Language, List[Rule]] = {
     Language.CSHARP:       CSHARP_RULES + QUALITY_CSHARP_RULES + _PERF_CSHARP + _CONC_CSHARP,
     Language.FSHARP:       _FS_ONLY,
     Language.OCAML:        _ML_ONLY,
-    Language.VBNET:        VB_RULES,
+    Language.VBNET:        VB_RULES + VBA_RULES,
 
     # ── Web / Backend ─────────────────────────────────────────────────────────
     Language.PHP:          PHP_RULES,
