@@ -255,10 +255,18 @@ def _line_of(fn: FuncNode, lineno: int) -> str:
         return ""
 
 
-def build_call_graph(directory: str) -> CallGraph:
-    """Constrói o call graph para todos os arquivos .py de um diretório."""
+def build_call_graph(target: str) -> CallGraph:
+    """Constrói o call graph a partir de um diretório (todos os .py,
+    recursivamente) ou de um único arquivo .py."""
     cg = CallGraph()
-    for py_file in Path(directory).rglob("*.py"):
+    path = Path(target)
+
+    if path.is_file():
+        py_files = [path] if path.suffix == ".py" else []
+    else:
+        py_files = list(path.rglob("*.py"))
+
+    for py_file in py_files:
         try:
             content = py_file.read_text(encoding="utf-8", errors="replace")
         except (OSError, PermissionError):

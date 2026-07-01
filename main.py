@@ -600,18 +600,40 @@ def main() -> int:
             if report["transitive_callers"]:
                 console.print(f"\n[dim]Cadeia completa de impacto:[/] {', '.join(report['transitive_callers'])}")
 
+        cg_findings = []
         if args.call_graph:
             summary = cg.summary()
             console.print()
             console.print(f"[bold bright_white]Call Graph:[/] {summary['total_functions']} funções "
                           f"({summary['unique_names']} nomes únicos), {summary['total_edges']} arestas de chamada")
-            findings = cg.analyze_taint()
-            if findings:
-                console.print(f"\n[bold red]{len(findings)} achado(s) de taint interprocedural:[/]")
-                for f in findings:
+            cg_findings = cg.analyze_taint()
+            if cg_findings:
+                console.print(f"\n[bold red]{len(cg_findings)} achado(s) de taint interprocedural:[/]")
+                for f in cg_findings:
                     console.print(f"  [red]•[/] {f.file_path}:{f.line_number} — {f.name}")
             else:
                 console.print("\n[bold bright_green]✅ Nenhum taint interprocedural encontrado.[/]")
+
+        # ── Exportação JSON deste modo (não passa pelo pipeline normal de scan) ──
+        if args.json:
+            import json as _json
+            payload = {
+                "mode": "call-graph",
+                "summary": cg.summary() if args.call_graph else None,
+                "impact": cg.impact_report(args.impact) if args.impact else None,
+                "taint_findings": [
+                    {"file": f.file_path, "line": f.line_number, "rule_id": f.rule_id,
+                     "name": f.name, "description": f.description, "severity": f.severity.name}
+                    for f in cg_findings
+                ],
+            }
+            Path(args.json).write_text(_json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+            console.print(f"\n[bold bright_green]✔[/] JSON salvo em [cyan]{args.json}[/cyan]")
+        elif any([args.sarif, args.csv, args.junit, args.markdown]):
+            console.print(
+                "\n[yellow]Aviso:[/] --call-graph/--impact só exportam para --json nesta versão; "
+                "os demais formatos (--sarif/--csv/--junit/--markdown) não se aplicam a este modo."
+            )
         return 0
 
     # ── Modo stdin ────────────────────────────────────────────────────────────
