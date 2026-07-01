@@ -366,6 +366,9 @@ class ScanEngine:
         only_lines:     Optional[Dict[str, Set[int]]]     = None,
         custom_rules:   Optional[List]                    = None,
         global_suppress: Optional[Set[str]]               = None,
+        ast_analysis:   bool                              = False,
+        cpp_macros:     bool                              = False,
+        incremental_cache = None,
     ):
         self.min_severity      = min_severity
         self.languages         = languages
@@ -376,6 +379,9 @@ class ScanEngine:
         self._custom_rules     = custom_rules if custom_rules is not None else _load_custom_rules()
         self._global_suppress  = global_suppress if global_suppress is not None else set()
         self._config           = _load_config()
+        self.ast_analysis      = ast_analysis
+        self.cpp_macros        = cpp_macros
+        self.incremental_cache = incremental_cache
 
     # ── Arquivo único ─────────────────────────────────────────────────────────
 
@@ -411,15 +417,48 @@ class ScanEngine:
                     self.on_file_done(result)
                 return result
 
-            vulnerabilities  = self._scan_content(file_path, content, language)
-            vulnerabilities += analyze_complexity(file_path, content, language)
+            # ── Cache incremental: reaproveita resultado se o conteúdo não mudou ──
+            if self.incremental_cache is not None:
+                cached = self.incremental_cache.get(file_path, content)
+                if cached is not None:
+                    cached_vulns, cached_lines = cached
+                    result = ScanResult(
+                        file_path=file_path, language=language,
+                        vulnerabilities=cached_vulns, lines_scanned=cached_lines,
+                        scan_time=time.perf_counter() - start,
+                    )
+                    if self.on_file_done:
+                        self.on_file_done(result)
+                    return result
+
+            # ── Pré-processamento de macros C/C++ (opt-in) ────────────────────────
+            scan_content = content
+            if self.cpp_macros and language in (Language.C, Language.CPP):
+                from analyzer.cpreprocess import expand_macros
+                scan_content = expand_macros(content)
+
+            vulnerabilities  = self._scan_content(file_path, scan_content, language)
+            vulnerabilities += analyze_complexity(file_path, scan_content, language)
+
+            # ── Análise AST real para Python (opt-in) ─────────────────────────────
+            if self.ast_analysis and language == Language.PYTHON:
+                from analyzer.pyast_engine import analyze_python_ast
+                vulnerabilities += analyze_python_ast(file_path, content)
+
             vulnerabilities  = [v for v in vulnerabilities if v.severity.value >= self.min_severity.value]
+            lines_scanned = len(content.splitlines())
+
+            if self.incremental_cache is not None:
+                self.incremental_cache.put(
+                    file_path, content, vulnerabilities, lines_scanned,
+                    time.perf_counter() - start,
+                )
 
             result = ScanResult(
                 file_path=file_path,
                 language=language,
                 vulnerabilities=sorted(vulnerabilities, key=lambda v: -v.severity.value),
-                lines_scanned=len(content.splitlines()),
+                lines_scanned=lines_scanned,
                 scan_time=time.perf_counter() - start,
             )
         except Exception as e:
