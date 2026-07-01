@@ -119,6 +119,40 @@ Exemplos:
     p.add_argument("--osv", action="store_true",
                    help="Com --deps: cruzar também com a base online OSV.dev (requer rede)")
 
+    # ── Dependências / supply chain — expansões ────────────────────────────────
+    dg = p.add_argument_group("Dependências / Supply Chain (expansões)")
+    dg.add_argument("--deps-ext", action="store_true",
+                     help="Escanear ecossistemas estendidos: Composer, Gemfile, NuGet, pubspec, SwiftPM, CocoaPods, Carthage, Conan, vcpkg, Hex, CPAN, CRAN, Conda, Helm, Dockerfile")
+    dg.add_argument("--dep-tree", action="store_true",
+                     help="Construir e exibir a árvore de dependências transitivas a partir dos lockfiles")
+    dg.add_argument("--vex", metavar="ARQUIVO",
+                     help="Com --deps: suprimir CVEs marcados not_affected/fixed num documento VEX")
+    dg.add_argument("--typosquat-check", action="store_true",
+                     help="Verificar nomes de dependências quanto a typosquatting/dependency confusion")
+    dg.add_argument("--license-check", action="store_true",
+                     help="Verificar dependências quanto a licenças copyleft (GPL/AGPL)")
+    dg.add_argument("--check-abandoned", action="store_true",
+                     help="Verificar (via rede, PyPI/npm) se dependências estão sem manutenção há muito tempo")
+    dg.add_argument("--check-pinning", action="store_true",
+                     help="Verificar integridade de hash/pinning de versões em requirements.txt, package-lock.json, Cargo.lock")
+    dg.add_argument("--sbom-xml", metavar="ARQUIVO",
+                     help="Gerar SBOM em CycloneDX 1.4 XML")
+    dg.add_argument("--sbom-spdx-json", metavar="ARQUIVO",
+                     help="Gerar SBOM em SPDX 2.3 JSON")
+    dg.add_argument("--bump-plan", action="store_true",
+                     help="Com --deps: gerar plano de atualização (diff) para as dependências vulneráveis, sem tocar em git")
+
+    # ── Detecção de segredos — expansões ────────────────────────────────────────
+    sg = p.add_argument_group("Detecção de segredos (expansões)")
+    sg.add_argument("--secrets-scan", action="store_true",
+                     help="Scan completo de segredos: 100+ provedores, chaves privadas (PEM/DER), JWT, binários/EXIF/PDF/.env")
+    sg.add_argument("--validate-secrets", action="store_true",
+                     help="Com --secrets-scan: valida ATIVAMENTE as credenciais encontradas contra a API do provedor (requer rede; use só com autorização)")
+    sg.add_argument("--secrets-baseline", metavar="ARQUIVO",
+                     help="Suprimir segredos já presentes neste arquivo de baseline")
+    sg.add_argument("--save-secrets-baseline", metavar="ARQUIVO",
+                     help="Salvar os segredos encontrados nesta execução como baseline")
+
     # ── Cofre de segredos (vault) ──────────────────────────────────────────────
     vg = p.add_argument_group("Cofre de segredos (AES-256)")
     vg.add_argument("--vault", metavar="ARQUIVO",
@@ -143,6 +177,20 @@ Exemplos:
                    help="Exibir histórico de scans e gráfico de tendência")
     p.add_argument("--lsp", action="store_true",
                    help="Iniciar servidor LSP sobre stdio (para VS Code/Neovim/Emacs)")
+
+    # ── Motor de análise estática avançada (AST/call graph) ────────────────────
+    ag = p.add_argument_group("Motor de análise avançada")
+    ag.add_argument("--ast-analysis", action="store_true",
+                     help="Habilita análise AST real para Python: CFG, dataflow, dead code, complexidade, recursão sem caso-base, TOCTOU, use-after-close, null-deref")
+    ag.add_argument("--cpp-macros", action="store_true",
+                     help="Expande macros #define/#ifdef antes de escanear arquivos C/C++")
+    ag.add_argument("--incremental", action="store_true",
+                     help="Cache incremental: reaproveita resultados de arquivos cujo conteúdo não mudou")
+    ag.add_argument("--call-graph", action="store_true",
+                     help="Constrói o call graph do projeto Python e roda taint interprocedural/cross-file")
+    ag.add_argument("--impact", metavar="FUNC",
+                     help="Impact analysis: lista quem chama (direto/transitivo) a função FUNC")
+
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return p
 
@@ -512,6 +560,47 @@ def main() -> int:
         cmd_trend()
         return 0
 
+    # ── Call graph / Impact analysis / Taint interprocedural ──────────────────
+    if args.call_graph or args.impact:
+        from analyzer.callgraph import build_call_graph
+        target_cg = args.target or "."
+        console.print(f"[dim]Construindo call graph em {target_cg}...[/dim]")
+        cg = build_call_graph(target_cg)
+
+        if args.impact:
+            report = cg.impact_report(args.impact)
+            if not report["defined_in"]:
+                console.print(f"[yellow]Função '{args.impact}' não encontrada.[/]")
+                return 1
+            console.print()
+            t = Table(title=f"[bold bright_white]Impact Analysis — {args.impact}[/]",
+                      box=rbox.SIMPLE_HEAVY, border_style="#444466", padding=(0, 1))
+            t.add_column("Definida em", style="cyan")
+            t.add_column("Chamadores diretos", style="bright_yellow")
+            t.add_column("Impacto transitivo total", justify="right", style="bold white")
+            t.add_row(
+                ", ".join(report["defined_in"]),
+                ", ".join(report["direct_callers"]) or "(nenhum)",
+                str(report["total_impact"]),
+            )
+            console.print(t)
+            if report["transitive_callers"]:
+                console.print(f"\n[dim]Cadeia completa de impacto:[/] {', '.join(report['transitive_callers'])}")
+
+        if args.call_graph:
+            summary = cg.summary()
+            console.print()
+            console.print(f"[bold bright_white]Call Graph:[/] {summary['total_functions']} funções "
+                          f"({summary['unique_names']} nomes únicos), {summary['total_edges']} arestas de chamada")
+            findings = cg.analyze_taint()
+            if findings:
+                console.print(f"\n[bold red]{len(findings)} achado(s) de taint interprocedural:[/]")
+                for f in findings:
+                    console.print(f"  [red]•[/] {f.file_path}:{f.line_number} — {f.name}")
+            else:
+                console.print("\n[bold bright_green]✅ Nenhum taint interprocedural encontrado.[/]")
+        return 0
+
     # ── Modo stdin ────────────────────────────────────────────────────────────
     if args.stdin:
         if not args.lang:
@@ -563,6 +652,14 @@ def main() -> int:
                 vulns.extend(v for v in osv_vulns if (v.package, v.cve_id) not in local_keys)
             else:
                 console.print("[dim]OSV: nenhuma resposta (offline ou sem achados).[/]")
+
+        if args.vex:
+            from analyzer.vex import VexDocument, suppress_by_vex
+            vex_doc = VexDocument.load(args.vex)
+            vulns, suppressed = suppress_by_vex(vulns, vex_doc)
+            if suppressed:
+                console.print(f"[dim]{len(suppressed)} CVE(s) suprimido(s) via VEX (not_affected/fixed).[/]")
+
         if not vulns:
             console.print("[bold bright_green]✅  Nenhuma dependência vulnerável encontrada.[/]")
         else:
@@ -582,7 +679,191 @@ def main() -> int:
                           v.description[:60])
             console.print()
             console.print(t)
+
+            if args.bump_plan:
+                from analyzer.dep_autofix import build_bump_plan
+                by_manifest: dict = {}
+                for v in vulns:
+                    by_manifest.setdefault(v.manifest_file, []).append(v)
+                for manifest_file, mvulns in by_manifest.items():
+                    try:
+                        content = Path(manifest_file).read_text(encoding="utf-8", errors="replace")
+                    except OSError:
+                        continue
+                    plan = build_bump_plan(manifest_file, content, mvulns)
+                    if plan.diff:
+                        console.print(f"\n[bold bright_white]Bump plan para {manifest_file}:[/]")
+                        console.print(plan.diff)
         return 0
+
+    # ── Dependências / supply chain: expansões (deps-ext, dep-tree, saúde) ────
+    if args.deps_ext or args.dep_tree or args.typosquat_check or args.license_check or args.check_abandoned or args.check_pinning or args.sbom_xml or args.sbom_spdx_json:
+        if args.deps_ext:
+            from analyzer.manifests_ext import collect_extended_components
+            comps = collect_extended_components(target)
+            console.print(f"[bold bright_white]Componentes de ecossistemas estendidos: {len(comps)}[/]")
+            for c in comps[:50]:
+                console.print(f"  [cyan]{c.package_type:12}[/] {c.name} @ {c.version}")
+            if len(comps) > 50:
+                console.print(f"  [dim]... +{len(comps)-50} mais[/]")
+
+        if args.dep_tree:
+            from analyzer.lockfiles import build_dependency_tree
+            tree = build_dependency_tree(target)
+            summary = tree.summary()
+            console.print(f"\n[bold bright_white]Árvore de dependências:[/] {summary['total_packages']} pacotes, "
+                          f"{summary['total_edges']} arestas, profundidade máx. {summary['max_depth']}")
+
+        if args.typosquat_check or args.license_check or args.check_abandoned:
+            from analyzer.sbom import collect_components
+            from analyzer.dep_health import check_typosquatting, check_dependency_confusion, check_license, check_abandoned
+            comps = collect_components(target)
+            eco_map = {"pypi": "pypi", "npm": "npm", "cargo": "cargo", "gem": "gem"}
+
+            if args.typosquat_check:
+                console.print("\n[bold bright_white]Verificação de typosquatting/dependency confusion:[/]")
+                found_any = False
+                for c in comps:
+                    eco = eco_map.get(c.package_type)
+                    if eco:
+                        r = check_typosquatting(c.name, eco)
+                        if r:
+                            found_any = True
+                            console.print(f"  [red]⚠[/] '{r.package_name}' parecido com '{r.similar_to}' (distância {r.edit_distance})")
+                    cf = check_dependency_confusion(c.name)
+                    if cf:
+                        found_any = True
+                        console.print(f"  [red]⚠[/] {cf.reason}")
+                if not found_any:
+                    console.print("  [bright_green]✅ Nenhum indício encontrado.[/]")
+
+            if args.license_check:
+                console.print("\n[bold bright_white]Verificação de licenças:[/]")
+                found_any = False
+                for c in comps:
+                    lf = check_license(c.name, c.license_id if c.license_id != "NOASSERTION" else None)
+                    if lf:
+                        found_any = True
+                        console.print(f"  [yellow]⚠[/] {lf.package_name}: {lf.concern}")
+                if not found_any:
+                    console.print("  [bright_green]✅ Nenhuma preocupação de licença encontrada.[/]")
+
+            if args.check_abandoned:
+                console.print("\n[dim]Verificando pacotes abandonados (requer rede)...[/]")
+                found_any = False
+                for c in comps:
+                    eco = eco_map.get(c.package_type)
+                    if eco not in ("pypi", "npm"):
+                        continue
+                    af = check_abandoned(c.name, eco)
+                    if af and af.days_since_release:
+                        found_any = True
+                        console.print(f"  [yellow]⚠[/] {af.package_name}: última publicação há {af.days_since_release} dias")
+                if not found_any:
+                    console.print("  [bright_green]✅ Nenhum pacote abandonado detectado.[/]")
+
+        if args.check_pinning:
+            from analyzer.hash_pinning import scan_pinning
+            findings = scan_pinning(target)
+            console.print(f"\n[bold bright_white]Integridade de pinning ({len(findings)} achado(s)):[/]")
+            for f in findings[:50]:
+                console.print(f"  [yellow]⚠[/] {f.file_path}: {f.package} — {f.issue} ({f.severity})")
+
+        if args.sbom_xml or args.sbom_spdx_json:
+            from analyzer.sbom import collect_components
+            from analyzer.sbom_ext import export_cyclonedx_xml, export_spdx_json
+            comps = collect_components(target)
+            if args.sbom_xml:
+                export_cyclonedx_xml(comps, args.sbom_xml, Path(target).name or "project")
+                console.print(f"[bold bright_green]✔[/] SBOM CycloneDX XML salvo → {args.sbom_xml}")
+            if args.sbom_spdx_json:
+                export_spdx_json(comps, args.sbom_spdx_json, Path(target).name or "project")
+                console.print(f"[bold bright_green]✔[/] SBOM SPDX JSON salvo → {args.sbom_spdx_json}")
+        return 0
+
+    # ── Detecção de segredos: scan completo (provedores/chaves/JWT/binários) ──
+    if args.secrets_scan:
+        from analyzer.secrets_providers import classify_secret
+        from analyzer.key_material import scan_key_material
+        from analyzer.jwt_scan import scan_jwt
+        from analyzer.binary_scan import scan_non_text_file
+        from analyzer.detector import is_scannable, SKIP_DIRS
+
+        all_findings: List[dict] = []
+        files_to_scan: List[Path] = []
+        if target_path.is_dir():
+            for item in target_path.rglob("*"):
+                if item.is_file() and not any(p in SKIP_DIRS for p in item.parts):
+                    files_to_scan.append(item)
+        else:
+            files_to_scan = [target_path]
+
+        for f in files_to_scan:
+            try:
+                content = f.read_text(encoding="utf-8", errors="strict")
+                is_text = True
+            except (UnicodeDecodeError, OSError):
+                is_text = False
+                content = ""
+
+            if is_text:
+                for provider, secret_type, matched, revoke_url in classify_secret(content):
+                    line_no = content[:content.find(matched)].count("\n") + 1 if matched in content else 0
+                    all_findings.append({"file_path": str(f), "line_number": line_no, "provider": provider,
+                                          "secret_type": secret_type, "matched": matched, "revoke_url": revoke_url})
+                for k in scan_key_material(str(f), content):
+                    all_findings.append({"file_path": str(f), "line_number": k.line_number, "provider": "Key Material",
+                                          "secret_type": f"{k.key_type} ({'criptografada' if k.is_encrypted else 'em claro'})",
+                                          "matched": k.header, "revoke_url": "N/A"})
+                for j in scan_jwt(str(f), content):
+                    if j.issues:
+                        all_findings.append({"file_path": str(f), "line_number": j.line_number, "provider": "JWT",
+                                              "secret_type": "; ".join(j.issues), "matched": j.token_preview, "revoke_url": "N/A"})
+            else:
+                for bf in scan_non_text_file(str(f)):
+                    bf.setdefault("line_number", 0)
+                    all_findings.append(bf)
+
+        if args.secrets_baseline:
+            from analyzer.secrets_baseline import filter_new_secrets
+            diff = filter_new_secrets(all_findings, args.secrets_baseline)
+            console.print(f"[dim]{diff.unchanged_count} segredo(s) já no baseline (suprimidos).[/]")
+            all_findings = diff.new_secrets
+
+        if not all_findings:
+            console.print("[bold bright_green]✅  Nenhum segredo encontrado.[/]")
+        else:
+            t = Table(title=f"[bold bright_white]Segredos Encontrados ({len(all_findings)})[/]",
+                      box=rbox.SIMPLE_HEAVY, border_style="#444466",
+                      header_style="bold bright_cyan", padding=(0, 1))
+            t.add_column("Arquivo", min_width=20)
+            t.add_column("Linha", min_width=5, justify="right")
+            t.add_column("Provedor", min_width=14, style="bright_yellow")
+            t.add_column("Tipo", min_width=20)
+            t.add_column("Revogação", style="dim")
+            for f in all_findings[:100]:
+                t.add_row(str(f["file_path"]), str(f.get("line_number", 0)), f["provider"],
+                          f["secret_type"][:50], f["revoke_url"][:40])
+            console.print()
+            console.print(t)
+            if len(all_findings) > 100:
+                console.print(f"[dim]... +{len(all_findings)-100} mais[/]")
+
+            if args.validate_secrets:
+                from analyzer.credential_validators import validate_by_provider
+                console.print("\n[bold yellow]Validando credenciais ativamente (requer rede)...[/]")
+                for f in all_findings:
+                    result = validate_by_provider(f["provider"], f["matched"])
+                    if result:
+                        color = {"VALID": "red", "INVALID": "dim", "UNKNOWN": "yellow"}.get(result.status, "white")
+                        console.print(f"  [{color}]{result.status}[/] — {f['provider']} em {f['file_path']}")
+
+        if args.save_secrets_baseline:
+            from analyzer.secrets_baseline import save_secrets_baseline
+            save_secrets_baseline(args.save_secrets_baseline, all_findings)
+            console.print(f"[bold bright_green]✔[/] Baseline de segredos salvo → {args.save_secrets_baseline}")
+
+        return 1 if all_findings else 0
 
     # ── Entropia ──────────────────────────────────────────────────────────────
     if args.entropy:
@@ -630,12 +911,20 @@ def main() -> int:
         task_id = progress.add_task("Scanning...", total=total_files)
         tracker = ScanTracker(progress, task_id)
 
+        incremental_cache = None
+        if args.incremental:
+            from analyzer.incremental import IncrementalCache
+            incremental_cache = IncrementalCache()
+
         engine = ScanEngine(
             min_severity=min_severity,
             languages=languages,
             include_comments=not args.no_comments,
             on_file_start=tracker.on_file_start,
             on_file_done=tracker.on_file_done,
+            ast_analysis=args.ast_analysis,
+            cpp_macros=args.cpp_macros,
+            incremental_cache=incremental_cache,
         )
 
         if target_path.is_dir():
