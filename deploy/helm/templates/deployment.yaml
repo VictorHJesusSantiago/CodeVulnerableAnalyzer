@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-vulnscan
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {app: vulnscan}
+  template:
+    metadata:
+      labels: {app: vulnscan}
+    spec:
+      containers:
+        - name: vulnscan
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: [".", "--serve", "8765"]
+          ports:
+            - {name: http, containerPort: 8765}
+          securityContext: {{ toYaml .Values.securityContext | nindent 12 }}
+          resources: {{ toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: tmp
+          emptyDir: {}
