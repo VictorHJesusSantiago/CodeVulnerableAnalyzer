@@ -157,7 +157,8 @@ def print_banner(num_rules: int) -> None:
     subtitle.append("  Multi-Language · Static Analysis  ", style="dim white")
     subtitle.append(f"  {num_rules} Regras  ", style="bold cyan")
     subtitle.append("  100+ Linguagens  ", style="bold bright_magenta")
-    subtitle.append("  v1.0.0  ", style="dim white")
+    from analyzer import __version__
+    subtitle.append(f"  v{__version__}  ", style="dim white")
 
     inner = RichTable.grid(padding=(0, 0))
     inner.add_column(justify="center")
