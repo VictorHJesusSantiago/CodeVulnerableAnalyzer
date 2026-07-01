@@ -8,7 +8,7 @@ from analyzer.integrations import MemoryQueue
 
 def test_patch_generation_application_and_race(tmp_path):
     source="value = eval(payload)\nprint(value)\n";path=tmp_path/"a.py";path.write_text(source)
-    patch=default_engine().plan("a.py",source,[{"rule_id":"PY-EVAL","line_number":1}])
+    patch=default_engine().plan("a.py",source,[{"rule_id":"PY-001","line_number":1}])
     assert "ast.literal_eval" in patch.diff
     updated=default_engine().apply(patch,tmp_path)
     assert updated.startswith("value = ast.literal_eval")
@@ -17,7 +17,7 @@ def test_patch_generation_application_and_race(tmp_path):
     else:assert False
 
 def test_lsp_quick_fix_and_llm_provider():
-    actions=lsp_code_actions("file:///a.py","x=eval(v)\n",[{"rule_id":"PY-EVAL","line_number":1}])
+    actions=lsp_code_actions("file:///a.py","x=eval(v)\n",[{"rule_id":"PY-001","line_number":1}])
     assert actions[0]["kind"]=="quickfix"
     class Provider:
         def complete(self,prompt):return json.dumps({"explanation":"risco","replacement":"safe(v)"})

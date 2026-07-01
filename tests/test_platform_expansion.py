@@ -21,9 +21,10 @@ def test_container_scans():
 
 def test_compliance_dsl_evidence_and_score():
     finding={"rule_id":"SQL-1","cwe":"CWE-89"}
-    assert "A03" in map_finding(finding)["OWASP"]
+    assert any(c.startswith("A03") for c in map_finding(finding)["OWASP"])
     report=compliance_report([finding],"PCI-DSS")
-    assert report["score"] < 100 and "6.2.4" in report["gaps"]
+    assert report["score"] < 100
+    assert any(g.startswith("6.2.4") for g in report["gaps"])
     assert len(audit_evidence(report)["sha256"]) == 64
     assert PolicyDSL("deny public == true : recurso público").evaluate({"public":True})
     assert maturity_score({"governance":5})["score"] == 1
