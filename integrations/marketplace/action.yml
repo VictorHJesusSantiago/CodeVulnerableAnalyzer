@@ -1,0 +1,10 @@
+name: CodeVulnerableAnalyzer
+description: Análise SAST, IaC, segredos e compliance
+inputs:
+  path: {description: Caminho a analisar, default: "."}
+  fail-on: {description: Severidade mínima para falhar, default: HIGH}
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: python "$GITHUB_ACTION_PATH/../../main.py" "${{ inputs.path }}" --severity "${{ inputs.fail-on }}" --sarif vulnscan.sarif

@@ -1,0 +1,9 @@
+pre-commit:
+  parallel: true
+  commands:
+    vulnscan:
+      run: python main.py {staged_files} --severity HIGH
+pre-push:
+  commands:
+    vulnscan-full:
+      run: python main.py . --severity HIGH
