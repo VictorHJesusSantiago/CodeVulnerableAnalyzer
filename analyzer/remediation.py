@@ -49,23 +49,91 @@ def apply_edits(source:str,edits:Iterable[TextEdit])->str:
         lines[e.start_line-1:e.end_line]=[e.replacement+newline]
     return "".join(lines)
 
+def _line_edit(source:str,finding:Dict[str,Any],transform:Callable[[str],str])->List[TextEdit]:
+    """Helper comum: aplica `transform` na linha do achado; só gera edit se
+    o resultado realmente mudar algo (mesma filosofia defensiva de antes)."""
+    n=int(finding["line_number"]);lines=source.splitlines()
+    if n<1 or n>len(lines):return []
+    line=lines[n-1];replacement=transform(line)
+    return [TextEdit(n,n,replacement)] if replacement!=line else []
+
 def python_eval_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
-    n=int(finding["line_number"]);line=source.splitlines()[n-1]
-    replacement=re.sub(r"\beval\s*\(", "ast.literal_eval(",line,count=1)
-    return [TextEdit(n,n,replacement)] if replacement!=line else []
+    return _line_edit(source,finding,lambda line:re.sub(r"\beval\s*\(", "ast.literal_eval(",line,count=1))
 def python_yaml_load_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
-    n=int(finding["line_number"]);line=source.splitlines()[n-1]
-    replacement=re.sub(r"\byaml\.load\s*\(([^,\n]+)\)",r"yaml.safe_load(\1)",line)
-    return [TextEdit(n,n,replacement)] if replacement!=line else []
+    return _line_edit(source,finding,lambda line:re.sub(r"\byaml\.load\s*\(([^,\n]+)\)",r"yaml.safe_load(\1)",line))
 def javascript_innerhtml_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
-    n=int(finding["line_number"]);line=source.splitlines()[n-1]
-    replacement=line.replace(".innerHTML =",".textContent =")
-    return [TextEdit(n,n,replacement)] if replacement!=line else []
+    return _line_edit(source,finding,lambda line:line.replace(".innerHTML =",".textContent ="))
+
+def python_weak_hash_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+    """hashlib.md5(...)/hashlib.sha1(...) → hashlib.sha256(...). Troca segura
+    de algoritmo fraco por forte quando usado como hash genérico; se o uso
+    for hashing de senha, ainda assim recomenda-se bcrypt/argon2 no lugar
+    (fora do escopo de uma troca de linha determinística)."""
+    return _line_edit(source,finding,lambda line:re.sub(
+        r"hashlib\.(?:md5|sha1)\s*\(", "hashlib.sha256(",line))
+
+def python_ssl_verify_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+    """requests.get(url, verify=False) → remove o verify=False (volta ao
+    padrão seguro True), preservando os demais argumentos da chamada."""
+    def _fix(line:str)->str:
+        line=re.sub(r",\s*verify\s*=\s*False", "", line)
+        line=re.sub(r"verify\s*=\s*False\s*,\s*", "", line)
+        return re.sub(r"\bverify\s*=\s*False\b", "verify=True", line)
+    return _line_edit(source,finding,_fix)
+
+def flask_debug_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+    """app.run(debug=True) → app.run(debug=False)."""
+    return _line_edit(source,finding,lambda line:re.sub(
+        r"\bdebug\s*=\s*True\b", "debug=False", line))
+
+def python_insecure_random_token_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+    """random.random()/random.randint(...) usados para gerar token/senha →
+    secrets.token_hex(...) — só aplica quando o nome da variável no LHS
+    sugere uso de segurança (token/secret/password/key), evitando trocar
+    usos legítimos de random para fins não-criptográficos (simulação, jogo)."""
+    def _fix(line:str)->str:
+        lhs=line.split("=",1)[0].lower()
+        if not any(k in lhs for k in ("token","secret","password","senha","csrf","sessionid","session_id","apikey","api_key")):
+            return line
+        if re.search(r"random\.random\s*\(\s*\)", line):
+            return re.sub(r"random\.random\s*\(\s*\)", "secrets.token_hex(16)", line)
+        if re.search(r"random\.(?:randint|randrange)\s*\([^)]*\)", line):
+            return re.sub(r"random\.(?:randint|randrange)\s*\([^)]*\)", "secrets.token_hex(16)", line)
+        return line
+    return _line_edit(source,finding,_fix)
+
+def javascript_dangerously_set_innerhtml_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+    """Insere um comentário de alerta acima do dangerouslySetInnerHTML — não
+    há substituição mecânica segura (a correção real exige sanitizar o HTML
+    ou trocar por texto puro, decisão que depende do contexto de uso)."""
+    n=int(finding["line_number"]);lines=source.splitlines()
+    if n<1 or n>len(lines):return []
+    line=lines[n-1]
+    if "vulnscan: revisar XSS" in line:return []
+    indent=re.match(r"^(\s*)", line).group(1)
+    warning=f"{indent}{{/* vulnscan: revisar XSS — sanitize o HTML antes de usar dangerouslySetInnerHTML */}}"
+    return [TextEdit(n,n,warning+"\n"+line)]
 
 def default_engine()->RemediationEngine:
     e=RemediationEngine()
-    for rid in ("PY-001","PY-EVAL","TAINT-001"):e.register(rid,python_eval_codemod)
-    e.register("PY-YAML-001",python_yaml_load_codemod);e.register("WEB-DOMXSS-001",javascript_innerhtml_codemod)
+    # eval() dinâmico
+    for rid in ("PY-001","TAINT-001"):e.register(rid,python_eval_codemod)
+    # yaml.load inseguro (PY-012 é o ID real da regra)
+    e.register("PY-012",python_yaml_load_codemod)
+    # DOM XSS via innerHTML (JS-003 é o ID real; WEB-DOMXSS-001 é a
+    # variante multi-linguagem cadastrada em domain_security.py)
+    e.register("JS-003",javascript_innerhtml_codemod)
+    e.register("WEB-DOMXSS-001",javascript_innerhtml_codemod)
+    # Hash fraco (MD5/SHA1)
+    e.register("PY-009",python_weak_hash_codemod)
+    # Verificação SSL/TLS desabilitada
+    e.register("PY-016",python_ssl_verify_codemod)
+    # Flask debug mode em produção
+    e.register("PY-021",flask_debug_codemod)
+    # Randomness insegura para tokens/segredos
+    e.register("PY-011",python_insecure_random_token_codemod)
+    # React dangerouslySetInnerHTML (aviso, não substituição mecânica)
+    e.register("JS-006",javascript_dangerously_set_innerhtml_codemod)
     return e
 
 class LLMProvider(Protocol):

@@ -605,4 +605,36 @@ def analyze_python_ast(file_path: str, content: str) -> List[Vulnerability]:
                         cwe="CWE-563", confidence=Confidence.MEDIUM,
                     ))
 
+            # ── SSA real (dominadores + φ-nodes) → definite assignment ───────
+            from analyzer.ssa import definite_assignment
+            params = {a.arg for a in node.args.args}
+            all_local_defs = {v for n in cfg.nodes.values() for v in n.defs}
+            certain = definite_assignment(cfg, params=params)
+
+            reported_vars: set = set()
+            for nid, cfgnode in cfg.nodes.items():
+                # Só considera nomes que são de fato variáveis locais desta
+                # função (definidas em algum ponto dela) — evita falso
+                # positivo em builtins/globais/imports usados sem serem
+                # atribuídos localmente.
+                candidates = (cfgnode.uses & all_local_defs) - certain.get(nid, set()) - params
+                for varname in candidates:
+                    if varname in reported_vars:
+                        continue
+                    reported_vars.add(varname)
+                    results.append(Vulnerability(
+                        rule_id="AST-SSA-001", name="Variável Possivelmente Não Inicializada (via SSA)",
+                        description=f"Variável '{varname}' é usada na linha {cfgnode.stmt.lineno} mas "
+                                    f"a análise de atribuição definitiva (definite assignment, via "
+                                    f"dominadores + φ-nodes reais sobre o CFG) mostra que nem todo "
+                                    f"caminho de execução até este ponto passa por uma atribuição a "
+                                    f"'{varname}' — risco real de UnboundLocalError em runtime.",
+                        severity=Severity.HIGH, category=VulnCategory.ERROR_HANDLING, language=Language.PYTHON,
+                        file_path=file_path, line_number=cfgnode.stmt.lineno,
+                        line_content=_line(cfgnode.stmt.lineno),
+                        remediation=f"Garanta que '{varname}' seja atribuída em todos os ramos (ex.: "
+                                    f"adicione um 'else' ou um valor default antes do bloco condicional).",
+                        cwe="CWE-457", confidence=Confidence.MEDIUM,
+                    ))
+
     return results
