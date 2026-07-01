@@ -107,6 +107,112 @@ def validate_anthropic_key(api_key: str) -> ValidationResult:
     return r
 
 
+def validate_gitlab_token(token: str) -> ValidationResult:
+    r = _get("https://gitlab.com/api/v4/user", {"PRIVATE-TOKEN": token})
+    r.provider = "GitLab"
+    return r
+
+
+def validate_mailgun_key(api_key: str) -> ValidationResult:
+    import base64
+    auth = base64.b64encode(f"api:{api_key}".encode()).decode()
+    r = _get("https://api.mailgun.net/v3/domains", {"Authorization": f"Basic {auth}"})
+    r.provider = "Mailgun"
+    return r
+
+
+def validate_discord_bot_token(token: str) -> ValidationResult:
+    r = _get("https://discord.com/api/v10/users/@me", {"Authorization": f"Bot {token}"})
+    r.provider = "Discord"
+    return r
+
+
+def validate_telegram_bot_token(token: str) -> ValidationResult:
+    r = _get(f"https://api.telegram.org/bot{token}/getMe", {})
+    r.provider = "Telegram"
+    return r
+
+
+def validate_digitalocean_token(token: str) -> ValidationResult:
+    r = _get("https://api.digitalocean.com/v2/account", {"Authorization": f"Bearer {token}"})
+    r.provider = "DigitalOcean"
+    return r
+
+
+def validate_cloudflare_token(token: str) -> ValidationResult:
+    r = _get("https://api.cloudflare.com/client/v4/user/tokens/verify", {"Authorization": f"Bearer {token}"})
+    r.provider = "Cloudflare"
+    return r
+
+
+def validate_huggingface_token(token: str) -> ValidationResult:
+    r = _get("https://huggingface.co/api/whoami-v2", {"Authorization": f"Bearer {token}"})
+    r.provider = "HuggingFace"
+    return r
+
+
+def validate_notion_token(token: str) -> ValidationResult:
+    r = _get("https://api.notion.com/v1/users/me", {
+        "Authorization": f"Bearer {token}", "Notion-Version": "2022-06-28",
+    })
+    r.provider = "Notion"
+    return r
+
+
+def validate_vercel_token(token: str) -> ValidationResult:
+    r = _get("https://api.vercel.com/v2/user", {"Authorization": f"Bearer {token}"})
+    r.provider = "Vercel"
+    return r
+
+
+def validate_netlify_token(token: str) -> ValidationResult:
+    r = _get("https://api.netlify.com/api/v1/user", {"Authorization": f"Bearer {token}"})
+    r.provider = "Netlify"
+    return r
+
+
+def validate_pagerduty_token(token: str) -> ValidationResult:
+    r = _get("https://api.pagerduty.com/users", {"Authorization": f"Token token={token}"})
+    r.provider = "PagerDuty"
+    return r
+
+
+def validate_datadog_key(api_key: str) -> ValidationResult:
+    r = _get("https://api.datadoghq.com/api/v1/validate", {"DD-API-KEY": api_key})
+    r.provider = "Datadog"
+    return r
+
+
+def validate_airtable_token(token: str) -> ValidationResult:
+    r = _get("https://api.airtable.com/v0/meta/whoami", {"Authorization": f"Bearer {token}"})
+    r.provider = "Airtable"
+    return r
+
+
+def validate_groq_key(api_key: str) -> ValidationResult:
+    r = _get("https://api.groq.com/openai/v1/models", {"Authorization": f"Bearer {api_key}"})
+    r.provider = "Groq"
+    return r
+
+
+def validate_mistral_key(api_key: str) -> ValidationResult:
+    r = _get("https://api.mistral.ai/v1/models", {"Authorization": f"Bearer {api_key}"})
+    r.provider = "Mistral"
+    return r
+
+
+def validate_figma_token(token: str) -> ValidationResult:
+    r = _get("https://api.figma.com/v1/me", {"X-Figma-Token": token})
+    r.provider = "Figma"
+    return r
+
+
+def validate_linode_token(token: str) -> ValidationResult:
+    r = _get("https://api.linode.com/v4/profile", {"Authorization": f"Bearer {token}"})
+    r.provider = "Linode"
+    return r
+
+
 # ════════════════════════════════════════════════════════════════════════════
 #  AWS Signature Version 4 (implementação real via hmac/hashlib, sem boto3)
 #  Usada para chamar sts:GetCallerIdentity — a forma padrão e não-destrutiva
@@ -218,6 +324,24 @@ _VALIDATORS = {
     "npm": lambda v: validate_npm_token(v),
     "OpenAI": lambda v: validate_openai_key(v),
     "Anthropic": lambda v: validate_anthropic_key(v),
+    "GitLab": lambda v: validate_gitlab_token(v),
+    "Mailgun": lambda v: validate_mailgun_key(v),
+    "Discord": lambda v: validate_discord_bot_token(v),
+    "Telegram": lambda v: validate_telegram_bot_token(v),
+    "DigitalOcean": lambda v: validate_digitalocean_token(v),
+    "Cloudflare": lambda v: validate_cloudflare_token(v),
+    "HuggingFace": lambda v: validate_huggingface_token(v),
+    "Notion": lambda v: validate_notion_token(v),
+    "Vercel": lambda v: validate_vercel_token(v),
+    "Netlify": lambda v: validate_netlify_token(v),
+    "PagerDuty": lambda v: validate_pagerduty_token(v),
+    "Datadog": lambda v: validate_datadog_key(v),
+    "Airtable": lambda v: validate_airtable_token(v),
+    "Groq": lambda v: validate_groq_key(v),
+    "Mistral": lambda v: validate_mistral_key(v),
+    "Figma": lambda v: validate_figma_token(v),
+    "Linode": lambda v: validate_linode_token(v),
+    "AWS": lambda v: None,  # AWS exige access_key+secret_key (2 campos); use validate_aws_credentials diretamente
 }
 
 

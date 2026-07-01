@@ -100,7 +100,12 @@ Exemplos:
     p.add_argument("--apply-fixes", action="store_true", help="Aplicar codemods (requer --autofix-diff)")
     p.add_argument("--profile-json", metavar="FILE", help="Salvar métricas de profiling")
     p.add_argument("--mobile-archive", action="store_true", help="Inspecionar alvo APK/IPA")
-    p.add_argument("--secret-history", action="store_true", help="Buscar segredos em patch de histórico")
+    p.add_argument("--secret-history", action="store_true",
+                    help="Buscar segredos no histórico git (se target for repo) ou num arquivo de patch (se for arquivo)")
+    p.add_argument("--history-max-commits", type=int, default=None,
+                    help="Limita quantos commits mais recentes variar com --secret-history")
+    p.add_argument("--history-since", metavar="DATA",
+                    help="Só considera commits a partir desta data (ex.: '30 days ago', '2024-01-01') com --secret-history")
     p.add_argument("--iac-kind", choices=["vagrant","packer","rego","falco","cloud-init","crossplane","kyverno"],
                    help="Analisar alvo como formato IaC estendido")
     p.add_argument("--no-snippet", action="store_true", help="Sem snippets de código")
@@ -670,11 +675,22 @@ def main() -> int:
         return 1 if result["findings"] else 0
 
     if args.secret_history:
-        from analyzer.secret_history import scan_patch_history
         import json
-        findings = scan_patch_history(target_path.read_text(encoding="utf-8", errors="replace"))
-        console.print_json(json.dumps({"findings": findings}, ensure_ascii=False))
-        return 1 if findings else 0
+        if target_path.is_dir():
+            from analyzer.secret_history import scan_git_history
+            result = scan_git_history(target, max_commits=args.history_max_commits, since=args.history_since)
+            if not result["ok"]:
+                print_error(f"Não foi possível varrer histórico git: {result['error']}")
+                return 2
+            findings = [f.__dict__ for f in result["findings"]]
+            console.print(f"[dim]{result['commits_scanned']} commit(s) varrido(s).[/dim]")
+            console.print_json(json.dumps({"findings": findings}, ensure_ascii=False))
+            return 1 if findings else 0
+        else:
+            from analyzer.secret_history import scan_patch_history
+            findings = scan_patch_history(target_path.read_text(encoding="utf-8", errors="replace"))
+            console.print_json(json.dumps({"findings": findings}, ensure_ascii=False))
+            return 1 if findings else 0
 
     if args.iac_kind:
         from analyzer.iac_render import scan_extended_iac
