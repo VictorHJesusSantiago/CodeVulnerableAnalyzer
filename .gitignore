@@ -12,3 +12,12 @@ venv/
 *.json
 *.html
 !tests/
+
+# Saídas de smoke-test / builds de distribuição (reprodutíveis, não são fonte)
+.cli-smoke/
+.dist-test/
+.dist-final/
+
+# Artefatos de build .NET (analyzer/identity_dotnet)
+**/bin/
+**/obj/
