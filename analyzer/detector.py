@@ -1,6 +1,8 @@
 from __future__ import annotations
+
 import re
 from pathlib import Path
+
 from analyzer.models import Language
 
 EXTENSION_MAP: dict[str, Language] = {
@@ -36,10 +38,10 @@ EXTENSION_MAP: dict[str, Language] = {
     ".tsql": Language.TSQL,
     # ── COBOL ─────────────────────────────────────────────────────────────────
     ".cbl": Language.COBOL, ".cob": Language.COBOL, ".cpy": Language.COBOL,
-    ".cobol": Language.COBOL, ".cbl": Language.COBOL,
+    ".cobol": Language.COBOL,
     # ── Shell ─────────────────────────────────────────────────────────────────
-    ".sh": Language.SHELL, ".bash": Language.BASH, ".zsh": Language.SHELL,
-    ".ksh": Language.SHELL, ".fish": Language.SHELL, ".bashrc": Language.BASH,
+    ".sh": Language.SHELL, ".bash": Language.BASH,
+    ".ksh": Language.SHELL, ".bashrc": Language.BASH,
     ".profile": Language.BASH, ".bash_profile": Language.BASH,
     # ── PowerShell ────────────────────────────────────────────────────────────
     ".ps1": Language.POWERSHELL, ".psm1": Language.POWERSHELL,
@@ -142,11 +144,11 @@ EXTENSION_MAP: dict[str, Language] = {
     # ── OCaml ─────────────────────────────────────────────────────────────────
     ".ml": Language.OCAML, ".mli": Language.OCAML, ".mll": Language.OCAML, ".mly": Language.OCAML,
     # ── Scheme ────────────────────────────────────────────────────────────────
-    ".scm": Language.SCHEME, ".ss": Language.SCHEME, ".sls": Language.SCHEME, ".sld": Language.SCHEME,
+    ".scm": Language.SCHEME, ".ss": Language.SCHEME, ".sld": Language.SCHEME,
     # ── Lisp ──────────────────────────────────────────────────────────────────
-    ".lisp": Language.LISP, ".lsp": Language.LISP, ".cl": Language.LISP, ".asd": Language.LISP,
+    ".lisp": Language.LISP, ".lsp": Language.LISP, ".asd": Language.LISP,
     # ── Prolog ────────────────────────────────────────────────────────────────
-    ".pro": Language.PROLOG, ".prolog": Language.PROLOG, ".pl": Language.PERL,  # .pl → Perl (more common)
+    ".pro": Language.PROLOG, ".prolog": Language.PROLOG,  # .pl → Perl (mapeado na seção Perl acima; mais comum que Prolog)
     # ── Julia ─────────────────────────────────────────────────────────────────
     ".jl": Language.JULIA,
     # ── Elm ───────────────────────────────────────────────────────────────────
@@ -161,7 +163,7 @@ EXTENSION_MAP: dict[str, Language] = {
     # ── ColdFusion ────────────────────────────────────────────────────────────
     ".cfm": Language.COLDFUSION, ".cfc": Language.COLDFUSION, ".cfml": Language.COLDFUSION,
     # ── Pascal / Delphi ───────────────────────────────────────────────────────
-    ".pas": Language.PASCAL, ".pp": Language.PASCAL, ".dpr": Language.PASCAL,
+    ".pas": Language.PASCAL, ".dpr": Language.PASCAL,
     ".dfm": Language.PASCAL, ".dpk": Language.PASCAL, ".lpr": Language.PASCAL,
     # ── PL/I ──────────────────────────────────────────────────────────────────
     ".pli": Language.PLI, ".pl1": Language.PLI,
@@ -187,6 +189,8 @@ EXTENSION_MAP: dict[str, Language] = {
     ".mat": Language.MATLAB, ".mlx": Language.MATLAB, ".mlapp": Language.MATLAB,
     # ── R ─────────────────────────────────────────────────────────────────────
     ".r": Language.R, ".R": Language.R, ".rmd": Language.R, ".Rmd": Language.R,
+    # ── SAS ───────────────────────────────────────────────────────────────────
+    ".sas": Language.SAS,
 
     # ══════════════════════════════════════════════════════════════════════════
     #  EXPANSÃO — novas linguagens (chaves duplicadas sobrescrevem as anteriores)
@@ -385,6 +389,7 @@ def get_comment_prefix(language: Language) -> tuple[str, str, str]:
         Language.BASH:        hash_style,
         Language.PERL:        hash_style,
         Language.R:           hash_style,
+        Language.SAS:         ("", "/*", "*/"),
         Language.COFFEESCRIPT: hash_style,
         Language.POWERSHELL:  ("#", "<#", "#>"),
         Language.JAVASCRIPT:  c_style,
