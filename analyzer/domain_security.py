@@ -1,12 +1,14 @@
 """Analisadores semânticos de Mobile, Web, API, Banco, Blockchain e AI/ML."""
 from __future__ import annotations
-import json, re
-from typing import Any, Dict, List
 
-def _hit(rule: str, severity: str, message: str, **context: Any) -> Dict[str, Any]:
+import re
+from typing import Any
+
+
+def _hit(rule: str, severity: str, message: str, **context: Any) -> dict[str, Any]:
     return {"rule_id": rule, "severity": severity, "message": message, **context}
 
-def scan_android_manifest(xml: str) -> List[Dict[str, Any]]:
+def scan_android_manifest(xml: str) -> list[dict[str, Any]]:
     out = []
     checks = [
       ("MOBILE-ANDROID-001", r'android:debuggable\s*=\s*"true"', "critical", "Aplicativo depurável em produção"),
@@ -19,7 +21,7 @@ def scan_android_manifest(xml: str) -> List[Dict[str, Any]]:
         if re.search(pattern, xml, re.I | re.S): out.append(_hit(rid, sev, msg))
     return out
 
-def scan_mobile_code(text: str) -> List[Dict[str, Any]]:
+def scan_mobile_code(text: str) -> list[dict[str, Any]]:
     out=[]
     for rid, pattern, sev, msg in [
       ("MOBILE-PIN-001", r'(?:TrustAll|allowInvalidCertificates|proceed\(\)|HostnameVerifier\s*\{[^}]*true)', "critical", "Certificate pinning/validação TLS desabilitada"),
@@ -30,7 +32,7 @@ def scan_mobile_code(text: str) -> List[Dict[str, Any]]:
         if re.search(pattern,text,re.I|re.S): out.append(_hit(rid,sev,msg))
     return out
 
-def analyze_http_security(headers: Dict[str, str], status: int = 200) -> List[Dict[str, Any]]:
+def analyze_http_security(headers: dict[str, str], status: int = 200) -> list[dict[str, Any]]:
     h={k.lower():v for k,v in headers.items()}; out=[]
     required={"content-security-policy":"WEB-CSP-001","x-content-type-options":"WEB-HEADER-001",
               "strict-transport-security":"WEB-HEADER-002","referrer-policy":"WEB-HEADER-003"}
@@ -46,7 +48,7 @@ def analyze_http_security(headers: Dict[str, str], status: int = 200) -> List[Di
         out.append(_hit("WEB-COOKIE-001","high","Cookie sem Secure, HttpOnly ou SameSite"))
     return out
 
-def scan_web_code(text: str) -> List[Dict[str, Any]]:
+def scan_web_code(text: str) -> list[dict[str, Any]]:
     patterns=[
       ("WEB-SSRF-001",r'(?:requests\.get|fetch|axios\.get)\s*\(\s*(?:req|request|url|input)',"high","URL controlada alcança cliente HTTP"),
       ("WEB-SSTI-001",r'(?:render_template_string|Template)\s*\(\s*(?:req|request|input)',"critical","Template compilado a partir de entrada"),
@@ -56,7 +58,7 @@ def scan_web_code(text: str) -> List[Dict[str, Any]]:
     ]
     return [_hit(r,s,m) for r,p,s,m in patterns if re.search(p,text,re.I)]
 
-def analyze_api_contract(spec: Dict[str, Any]) -> List[Dict[str, Any]]:
+def analyze_api_contract(spec: dict[str, Any]) -> list[dict[str, Any]]:
     out=[]; paths=spec.get("paths",{})
     if not spec.get("openapi") and not spec.get("asyncapi"): out.append(_hit("API-SPEC-001","low","Versão do contrato ausente"))
     for path,item in paths.items():
@@ -69,7 +71,7 @@ def analyze_api_contract(spec: Dict[str, Any]) -> List[Dict[str, Any]]:
             if not op.get("responses"): out.append(_hit("API-CONTRACT-001","medium","Operação sem respostas",path=path,method=method))
     return out
 
-def generate_contract_cases(spec: Dict[str, Any]) -> List[Dict[str, Any]]:
+def generate_contract_cases(spec: dict[str, Any]) -> list[dict[str, Any]]:
     cases=[]
     for path,item in spec.get("paths",{}).items():
       for method,op in item.items():
@@ -77,7 +79,7 @@ def generate_contract_cases(spec: Dict[str, Any]) -> List[Dict[str, Any]]:
         cases.extend({"path":path,"method":method.upper(),"mutation":m} for m in ("missing-required","wrong-type","boundary","unexpected-field"))
     return cases
 
-def scan_database(text: str) -> List[Dict[str, Any]]:
+def scan_database(text: str) -> list[dict[str, Any]]:
     rules=[
       ("DB-INJECTION-001",r'(?:execute|raw|query)\s*\([^)]*(?:\+|f["\']|\$\{)',"critical","SQL construído por concatenação"),
       ("DB-NPLUS1-001",r'for\s+.+:\s*[\s\S]{0,160}(?:\.query|\.find|SELECT)',"medium","Consulta dentro de loop sugere N+1"),
@@ -87,7 +89,7 @@ def scan_database(text: str) -> List[Dict[str, Any]]:
     ]
     return [_hit(r,s,m) for r,p,s,m in rules if re.search(p,text,re.I)]
 
-def scan_blockchain(text: str) -> List[Dict[str, Any]]:
+def scan_blockchain(text: str) -> list[dict[str, Any]]:
     rules=[
       ("CHAIN-REENTRANCY-001",r'\.call\{value:[^}]+\}\([^)]*\)[\s\S]{0,240}(?:balances|balanceOf)\s*\[.*\]\s*[-=]',"critical","Estado atualizado após chamada externa"),
       ("CHAIN-ORACLE-001",r'(?:latestAnswer|latestRoundData)\s*\([^)]*\)(?![\s\S]{0,180}(?:updatedAt|stale))',"high","Oracle sem validação de freshness"),
@@ -97,7 +99,7 @@ def scan_blockchain(text: str) -> List[Dict[str, Any]]:
     ]
     return [_hit(r,s,m) for r,p,s,m in rules if re.search(p,text,re.I)]
 
-def scan_ml(text: str) -> List[Dict[str, Any]]:
+def scan_ml(text: str) -> list[dict[str, Any]]:
     rules=[
       ("ML-DESERIALIZE-001",r'(?:pickle\.load|torch\.load|joblib\.load)\s*\(',"critical","Modelo/objeto desserializado com formato executável"),
       ("ML-PROMPT-001",r'(?:system_prompt|messages)\s*(?:\+|\.append)\s*\(?\s*(?:user|request|input)',"high","Entrada incorporada ao prompt privilegiado"),
@@ -107,7 +109,7 @@ def scan_ml(text: str) -> List[Dict[str, Any]]:
     ]
     return [_hit(r,s,m) for r,p,s,m in rules if re.search(p,text,re.I)]
 
-def generate_mlbom(models: List[Dict[str, Any]], datasets: List[Dict[str, Any]]) -> Dict[str, Any]:
+def generate_mlbom(models: list[dict[str, Any]], datasets: list[dict[str, Any]]) -> dict[str, Any]:
     return {"bomFormat":"CycloneDX","specVersion":"1.6","type":"ML-BOM",
             "models":[{"name":m["name"],"version":m.get("version","unknown"),"hashes":m.get("hashes",[]),
                        "modelCard":m.get("modelCard")} for m in models],
