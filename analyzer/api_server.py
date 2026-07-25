@@ -1,12 +1,16 @@
 """API REST + GraphQL leve e daemon de jobs usando apenas stdlib."""
 from __future__ import annotations
-import json,threading,uuid
-from http.server import BaseHTTPRequestHandler,ThreadingHTTPServer
-from pathlib import Path
-from typing import Any,Callable,Dict
+
+import json
+import threading
+import uuid
+from collections.abc import Callable
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from typing import Any
+
 
 class ScanService:
-    def __init__(self,scanner:Callable[[str],Any]):self.scanner=scanner;self.jobs:Dict[str,Dict[str,Any]]={}
+    def __init__(self,scanner:Callable[[str],Any]):self.scanner=scanner;self.jobs:dict[str,dict[str,Any]]={}
     def submit(self,path:str)->str:
         job=str(uuid.uuid4());self.jobs[job]={"id":job,"status":"queued","path":path}
         threading.Thread(target=self._run,args=(job,),daemon=True).start();return job

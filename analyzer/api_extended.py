@@ -1,9 +1,12 @@
 """Análise de AsyncAPI, SOAP/WSDL, GraphQL e autorização BOLA/BFLA."""
 from __future__ import annotations
-import re,xml.etree.ElementTree as ET
-from typing import Any,Dict,List
 
-def scan_asyncapi(spec:Dict[str,Any])->List[Dict[str,Any]]:
+import re
+import xml.etree.ElementTree as ET
+from typing import Any
+
+
+def scan_asyncapi(spec:dict[str,Any])->list[dict[str,Any]]:
     out=[]
     if not spec.get("asyncapi"):out.append({"rule_id":"ASYNCAPI-001","severity":"low","message":"Versão AsyncAPI ausente"})
     servers=spec.get("servers",{})
@@ -15,7 +18,7 @@ def scan_asyncapi(spec:Dict[str,Any])->List[Dict[str,Any]]:
             if op in item and not item[op].get("security") and not servers:out.append({"rule_id":"ASYNCAPI-004","severity":"medium","channel":channel,"message":"Operação sem segurança"})
     return out
 
-def scan_wsdl(xml:str)->List[Dict[str,Any]]:
+def scan_wsdl(xml:str)->list[dict[str,Any]]:
     out=[]
     try:root=ET.fromstring(xml)
     except ET.ParseError:return [{"rule_id":"SOAP-001","severity":"medium","message":"WSDL/XML inválido"}]
@@ -25,7 +28,7 @@ def scan_wsdl(xml:str)->List[Dict[str,Any]]:
     if re.search(r'<!DOCTYPE|<!ENTITY',xml,re.I):out.append({"rule_id":"SOAP-XXE-001","severity":"critical","message":"DTD/entidade externa no WSDL"})
     return out
 
-def scan_graphql_schema(schema:str)->List[Dict[str,Any]]:
+def scan_graphql_schema(schema:str)->list[dict[str,Any]]:
     out=[]
     if re.search(r'\btype\s+Query\s*\{[\s\S]*?(?:users|accounts|orders)\s*(?:\([^)]*\))?\s*:',schema,re.I) and not re.search(r'@(?:auth|requires|authenticated)',schema,re.I):
         out.append({"rule_id":"GRAPHQL-BFLA-001","severity":"high","message":"Query sensível sem diretiva de autorização"})
@@ -34,7 +37,7 @@ def scan_graphql_schema(schema:str)->List[Dict[str,Any]]:
     if "__schema" in schema or "__type" in schema:out.append({"rule_id":"GRAPHQL-INTROSPECTION-001","severity":"low","message":"Referência explícita a introspecção"})
     return out
 
-def bfla_matrix(spec:Dict[str,Any],roles:Dict[str,List[str]])->List[Dict[str,Any]]:
+def bfla_matrix(spec:dict[str,Any],roles:dict[str,list[str]])->list[dict[str,Any]]:
     gaps=[]
     for path,item in spec.get("paths",{}).items():
         for method,op in item.items():
