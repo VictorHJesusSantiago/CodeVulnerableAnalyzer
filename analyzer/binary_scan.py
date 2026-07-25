@@ -12,15 +12,14 @@ inflate completo, fora do escopo aqui (mas o zlib da stdlib é usado quando
 um stream FlateDecode é encontrado, então há suporte parcial real).
 """
 from __future__ import annotations
+
 import re
 import struct
 import zlib
 from pathlib import Path
-from typing import List, Optional, Tuple
 
-from analyzer.secrets_providers import classify_secret
 from analyzer.entropy import scan_entropy
-
+from analyzer.secrets_providers import classify_secret
 
 # ════════════════════════════════════════════════════════════════════════════
 #  Extração de strings de binários (equivalente a `strings`)
@@ -30,7 +29,7 @@ _MIN_STRING_LEN = 6
 _ASCII_RUN_RE = re.compile(rb'[\x20-\x7e]{%d,}' % _MIN_STRING_LEN)
 
 
-def extract_strings(data: bytes, min_len: int = _MIN_STRING_LEN) -> List[str]:
+def extract_strings(data: bytes, min_len: int = _MIN_STRING_LEN) -> list[str]:
     """Extrai sequências de bytes ASCII imprimíveis (>= min_len), similar ao
     comando `strings`. Também tenta UTF-16LE (comum em binários Windows)."""
     results = []
@@ -52,7 +51,7 @@ def extract_strings(data: bytes, min_len: int = _MIN_STRING_LEN) -> List[str]:
     return results
 
 
-def scan_binary_for_secrets(file_path: str, data: bytes) -> List[dict]:
+def scan_binary_for_secrets(file_path: str, data: bytes) -> list[dict]:
     """Extrai strings do binário e roda a classificação de provedores +
     entropia sobre cada string encontrada."""
     findings = []
@@ -86,7 +85,7 @@ _EXIF_TAG_NAMES = {
 }
 
 
-def _read_ifd(data: bytes, ifd_offset: int, endian: str) -> List[Tuple[int, int, int, bytes]]:
+def _read_ifd(data: bytes, ifd_offset: int, endian: str) -> list[tuple[int, int, int, bytes]]:
     """Lê um IFD (Image File Directory) TIFF e retorna [(tag, type, count, raw_value), ...]."""
     fmt = "<H" if endian == "<" else ">H"
     if ifd_offset + 2 > len(data):
@@ -103,15 +102,15 @@ def _read_ifd(data: bytes, ifd_offset: int, endian: str) -> List[Tuple[int, int,
     return entries
 
 
-def extract_exif_strings(jpeg_data: bytes) -> List[str]:
+def extract_exif_strings(jpeg_data: bytes) -> list[str]:
     """Extrai valores de string de tags EXIF de um JPEG (parser TIFF/IFD real,
     via struct — sem dependência de Pillow/exifread)."""
-    results: List[str] = []
+    results: list[str] = []
     if not jpeg_data.startswith(b"\xff\xd8"):
         return results
 
     offset = 2
-    app1_data: Optional[bytes] = None
+    app1_data: bytes | None = None
     while offset < len(jpeg_data) - 4:
         marker = jpeg_data[offset:offset + 2]
         if marker[0:1] != b"\xff":
@@ -154,7 +153,7 @@ def extract_exif_strings(jpeg_data: bytes) -> List[str]:
     return results
 
 
-def scan_image_exif_for_secrets(file_path: str, data: bytes) -> List[dict]:
+def scan_image_exif_for_secrets(file_path: str, data: bytes) -> list[dict]:
     strings = extract_exif_strings(data)
     joined = "\n".join(strings)
     findings = []
@@ -178,7 +177,7 @@ _PDF_TEXT_LITERAL_RE = re.compile(rb'\((?:[^()\\]|\\.)*\)')
 def extract_pdf_text(data: bytes) -> str:
     """Extrai texto de um PDF: literais de texto em claro '(...)' fora de
     streams, e o conteúdo de streams FlateDecode (descomprimidos via zlib)."""
-    texts: List[str] = []
+    texts: list[str] = []
 
     for lit in _PDF_TEXT_LITERAL_RE.finditer(data):
         raw = lit.group(0)[1:-1]
@@ -202,7 +201,7 @@ def extract_pdf_text(data: bytes) -> str:
     return "\n".join(texts)
 
 
-def scan_pdf_for_secrets(file_path: str, data: bytes) -> List[dict]:
+def scan_pdf_for_secrets(file_path: str, data: bytes) -> list[dict]:
     text = extract_pdf_text(data)
     findings = []
     for provider, secret_type, matched, revoke_url in classify_secret(text):
@@ -221,7 +220,7 @@ def scan_pdf_for_secrets(file_path: str, data: bytes) -> List[dict]:
 _ENV_LINE_RE = re.compile(r'^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$')
 
 
-def parse_env_file(content: str) -> List[Tuple[int, str, str]]:
+def parse_env_file(content: str) -> list[tuple[int, str, str]]:
     """Retorna [(line_number, key, value), ...] de um arquivo .env."""
     results = []
     for i, line in enumerate(content.splitlines(), start=1):
@@ -236,7 +235,7 @@ def parse_env_file(content: str) -> List[Tuple[int, str, str]]:
     return results
 
 
-def scan_env_for_secrets(file_path: str, content: str) -> List[dict]:
+def scan_env_for_secrets(file_path: str, content: str) -> list[dict]:
     findings = []
     for line_number, key, value in parse_env_file(content):
         if not value:
@@ -262,7 +261,7 @@ def scan_env_for_secrets(file_path: str, content: str) -> List[dict]:
 #  Orquestração
 # ════════════════════════════════════════════════════════════════════════════
 
-def scan_non_text_file(file_path: str) -> List[dict]:
+def scan_non_text_file(file_path: str) -> list[dict]:
     """Detecta o tipo do arquivo pelos magic bytes/extensão e roda o scanner
     apropriado. Retorna lista de achados em formato dict uniforme."""
     path = Path(file_path)

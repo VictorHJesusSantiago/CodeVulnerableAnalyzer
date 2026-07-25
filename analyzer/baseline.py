@@ -1,18 +1,18 @@
 """Comparação com baseline — reporta apenas novos achados em relação a scan anterior."""
 from __future__ import annotations
+
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Dict, Set
 
 from analyzer.models import ScanReport
 
 
 @dataclass
 class BaselineDiff:
-    new_findings:        List[Dict] = field(default_factory=list)
-    resolved_findings:   List[Dict] = field(default_factory=list)
-    regression_findings: List[Dict] = field(default_factory=list)
+    new_findings:        list[dict] = field(default_factory=list)
+    resolved_findings:   list[dict] = field(default_factory=list)
+    regression_findings: list[dict] = field(default_factory=list)
     unchanged_count:     int = 0
 
     @property
@@ -38,7 +38,7 @@ def _key(f: dict) -> tuple:
     return (f.get("rule_id", ""), f.get("file", ""), f.get("line", 0))
 
 
-def load_baseline(path: str) -> List[Dict]:
+def load_baseline(path: str) -> list[dict]:
     p = Path(path)
     if not p.exists():
         return []
@@ -52,10 +52,10 @@ def load_baseline(path: str) -> List[Dict]:
 def compare_with_baseline(report: ScanReport, baseline_path: str) -> BaselineDiff:
     """Compara o scan atual com o baseline JSON e retorna as diferenças."""
     baseline = load_baseline(baseline_path)
-    base_keys: Set[tuple] = {_key(f) for f in baseline}
-    base_sev:  Dict[tuple, str] = {_key(f): f.get("severity", "") for f in baseline}
+    base_keys: set[tuple] = {_key(f) for f in baseline}
+    base_sev:  dict[tuple, str] = {_key(f): f.get("severity", "") for f in baseline}
 
-    current: List[Dict] = []
+    current: list[dict] = []
     for result in report.results:
         for v in result.vulnerabilities:
             current.append({
@@ -67,13 +67,13 @@ def compare_with_baseline(report: ScanReport, baseline_path: str) -> BaselineDif
                 "category": v.category.value,
             })
 
-    current_keys: Set[tuple] = {_key(f) for f in current}
+    current_keys: set[tuple] = {_key(f) for f in current}
 
     new_findings      = [f for f in current  if _key(f) not in base_keys]
     resolved_findings = [f for f in baseline if _key(f) not in current_keys]
     unchanged_count   = len([f for f in current if _key(f) in base_keys])
 
-    regression_findings: List[Dict] = []
+    regression_findings: list[dict] = []
     for f in current:
         k = _key(f)
         if k in base_sev:
