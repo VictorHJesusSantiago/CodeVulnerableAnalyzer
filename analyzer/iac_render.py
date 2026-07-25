@@ -1,12 +1,18 @@
 """Renderizadores e scanners estruturais para Helm, Kustomize e IaC estendido."""
 from __future__ import annotations
-import copy,json,re,subprocess,tempfile
+
+import copy
+import json
+import re
+import subprocess
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any,Dict,Iterable,List,Optional
+from typing import Any
+
 
 class RenderError(ValueError):pass
 
-def _lookup(values:Dict[str,Any],path:str)->Any:
+def _lookup(values:dict[str,Any],path:str)->Any:
     current:Any=values
     for part in path.strip(".").split("."):
         if not part:continue
@@ -14,7 +20,7 @@ def _lookup(values:Dict[str,Any],path:str)->Any:
         current=current[part]
     return current
 
-def render_helm(template:str,values:Dict[str,Any],release_name:str="release",namespace:str="default")->str:
+def render_helm(template:str,values:dict[str,Any],release_name:str="release",namespace:str="default")->str:
     """Render seguro do subconjunto determinístico mais comum de templates Helm."""
     context={"Values":values,"Release":{"Name":release_name,"Namespace":namespace}}
     def replace(match:re.Match)->str:
@@ -35,7 +41,7 @@ def render_helm(template:str,values:Dict[str,Any],release_name:str="release",nam
         return str(value)
     return re.sub(r"\{\{\s*(.*?)\s*\}\}",replace,template)
 
-def render_helm_chart(chart:str|Path,values_file:Optional[str|Path]=None,release_name:str="vulnscan",
+def render_helm_chart(chart:str|Path,values_file:str | Path | None=None,release_name:str="vulnscan",
                       namespace:str="default",helm_binary:str="helm",timeout:int=30)->str:
     """Render completo delegando ao Helm oficial, sem shell interpolation."""
     command=[helm_binary,"template",release_name,str(chart),"--namespace",namespace]
@@ -71,7 +77,7 @@ def strategic_merge(base:Any,patch:Any)->Any:
         return out
     return copy.deepcopy(patch)
 
-def kustomize(resources:Iterable[Dict[str,Any]],patches:Iterable[Dict[str,Any]]=(),name_prefix:str="",namespace:str="")->List[Dict[str,Any]]:
+def kustomize(resources:Iterable[dict[str,Any]],patches:Iterable[dict[str,Any]]=(),name_prefix:str="",namespace:str="")->list[dict[str,Any]]:
     docs=[copy.deepcopy(x) for x in resources]
     for patch in patches:
         meta=patch.get("metadata",{})
@@ -83,7 +89,7 @@ def kustomize(resources:Iterable[Dict[str,Any]],patches:Iterable[Dict[str,Any]]=
         if namespace and doc.get("kind") not in {"Namespace","ClusterRole","ClusterRoleBinding"}:meta["namespace"]=namespace
     return docs
 
-def scan_extended_iac(text:str,kind:str)->List[Dict[str,Any]]:
+def scan_extended_iac(text:str,kind:str)->list[dict[str,Any]]:
     kind=kind.lower();out=[]
     rules={
       "vagrant":[("VAGRANT-001",r'config\.ssh\.password\s*=',"high","Senha SSH configurada"),("VAGRANT-002",r'synced_folder.*mount_options.*(?:777|dmode=777)',"high","Diretório compartilhado world-writable")],
