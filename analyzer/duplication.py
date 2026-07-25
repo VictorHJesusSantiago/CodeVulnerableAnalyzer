@@ -1,9 +1,9 @@
 """Detecção de código duplicado (copy-paste) — regras DUP-001..005."""
 from __future__ import annotations
-import re
+
 import hashlib
+import re
 from dataclasses import dataclass
-from typing import List, Dict, Tuple
 
 BLOCK_MIN_LINES  = 5
 LINE_MIN_TOKENS  = 3
@@ -43,18 +43,18 @@ def _meaningful(line: str) -> bool:
     return len(re.split(r"\s+", stripped)) >= LINE_MIN_TOKENS
 
 
-def scan_duplication(file_path: str, content: str) -> List[DuplicationFinding]:
+def scan_duplication(file_path: str, content: str) -> list[DuplicationFinding]:
     """Detecta blocos de código duplicados dentro de um único arquivo."""
     lines = content.splitlines()
     if len(lines) > MAX_SCAN_LINES:
         lines = lines[:MAX_SCAN_LINES]
 
-    norms  = [_normalize(l) for l in lines]
+    norms  = [_normalize(ln) for ln in lines]
     hashes = [_hash8(n) for n in norms]
-    valid  = [_meaningful(l) for l in lines]
+    valid  = [_meaningful(ln) for ln in lines]
 
-    findings: List[DuplicationFinding] = []
-    seen_pairs: set[Tuple[int, int]] = set()
+    findings: list[DuplicationFinding] = []
+    seen_pairs: set[tuple[int, int]] = set()
     n = len(lines)
 
     for i in range(n - BLOCK_MIN_LINES):
