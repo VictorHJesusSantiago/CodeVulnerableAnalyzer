@@ -27,6 +27,63 @@ py-modules = ["main"]
 [tool.setuptools.packages.find]
 include = ["analyzer*"]
 
+[project.optional-dependencies]
+# Ferramentas de qualidade — instale com: pip install -e ".[dev]"
+dev = [
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "pytest>=8",
+  "pytest-cov>=5",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"
+
+# ── Lint (ruff) ───────────────────────────────────────────────────────────────
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+# Gate ENFORÇADO (bloqueante no CI). O codebase passa 100% neste conjunto:
+#   F  (pyflakes)  — bugs reais: nomes indefinidos, imports não usados,
+#                    chaves de dict duplicadas, f-strings vazias, redefinições
+#   I  (isort)     — ordenação de imports
+#   UP (pyupgrade) — sintaxe moderna (list/dict, X | None, etc.)
+#   E/W            — estilo pycodestyle
+select = ["F", "I", "UP", "E", "W"]
+# Estilos compactos deliberados deste codebase (guard clauses `if x: continue`,
+# múltiplas atribuições por linha em tabelas, alinhamento de colunas em regras).
+# Um `ruff format` dedicado pode revê-los no futuro; não são bugs.
+ignore = ["E501", "E701", "E702"]
+
+# B (bugbear) fica fora do gate por ora: 18 achados a triar num PR próprio.
+
+[tool.ruff.lint.per-file-ignores]
+# Tabelas de regras alinham colunas propositalmente (linhas longas).
+"analyzer/rules/*.py" = ["E501"]
+"tests/*.py" = ["E501"]
+
+# ── Tipagem (mypy — gradual) ──────────────────────────────────────────────────
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+# Gradual: começa permissivo num codebase grande e amplamente não-tipado;
+# aperte estes flags (check_untyped_defs, disallow_untyped_defs) com o tempo.
+check_untyped_defs = false
+exclude = "(^build/|^tests/)"
+
+# ── Cobertura ─────────────────────────────────────────────────────────────────
+[tool.coverage.run]
+source = ["analyzer"]
+omit = ["*/tests/*", "*/build/*"]
+
+[tool.coverage.report]
+show_missing = true
+# Piso de cobertura (ratchet): fixado logo abaixo da cobertura atual (~70%)
+# para impedir REGRESSÃO. Suba este número conforme a cobertura cresce —
+# nunca o abaixe.
+fail_under = 70
