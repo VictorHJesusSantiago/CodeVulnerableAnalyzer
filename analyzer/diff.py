@@ -1,23 +1,23 @@
 """Parser de git diff — escaneia apenas linhas modificadas."""
 from __future__ import annotations
+
 import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, Set, List, Optional
 
 
 @dataclass
 class DiffChunk:
     file_path: str
-    added_lines: Set[int] = field(default_factory=set)
-    removed_lines: Set[int] = field(default_factory=set)
+    added_lines: set[int] = field(default_factory=set)
+    removed_lines: set[int] = field(default_factory=set)
 
 
-def parse_unified_diff(diff_text: str) -> Dict[str, DiffChunk]:
+def parse_unified_diff(diff_text: str) -> dict[str, DiffChunk]:
     """Parse saída de unified diff e retorna {file_path: DiffChunk}."""
-    chunks: Dict[str, DiffChunk] = {}
-    current_file: Optional[str] = None
+    chunks: dict[str, DiffChunk] = {}
+    current_file: str | None = None
     current_line: int = 0
 
     for line in diff_text.splitlines():
@@ -49,7 +49,7 @@ def parse_unified_diff(diff_text: str) -> Dict[str, DiffChunk]:
     return chunks
 
 
-def get_git_diff(base_ref: str = "HEAD", cwd: Optional[str] = None) -> str:
+def get_git_diff(base_ref: str = "HEAD", cwd: str | None = None) -> str:
     """Executa git diff e retorna o output unified diff."""
     try:
         result = subprocess.run(
@@ -62,7 +62,7 @@ def get_git_diff(base_ref: str = "HEAD", cwd: Optional[str] = None) -> str:
         return ""
 
 
-def get_staged_diff(cwd: Optional[str] = None) -> str:
+def get_staged_diff(cwd: str | None = None) -> str:
     """Executa git diff --staged e retorna o output unified diff."""
     try:
         result = subprocess.run(
@@ -75,7 +75,7 @@ def get_staged_diff(cwd: Optional[str] = None) -> str:
         return ""
 
 
-def diff_only_lines(file_path: str, diff_chunks: Dict[str, DiffChunk]) -> Optional[Set[int]]:
+def diff_only_lines(file_path: str, diff_chunks: dict[str, DiffChunk]) -> set[int] | None:
     """Retorna o conjunto de linhas adicionadas para um arquivo, ou None se não está no diff."""
     vpath = Path(file_path)
     for chunk_path, chunk in diff_chunks.items():
@@ -84,7 +84,7 @@ def diff_only_lines(file_path: str, diff_chunks: Dict[str, DiffChunk]) -> Option
     return None
 
 
-def filter_vulns_to_diff(vulns: list, diff_chunks: Dict[str, DiffChunk]) -> list:
+def filter_vulns_to_diff(vulns: list, diff_chunks: dict[str, DiffChunk]) -> list:
     """Filtra vulnerabilidades para incluir apenas achados em linhas adicionadas no diff."""
     filtered = []
     for v in vulns:
