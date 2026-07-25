@@ -9,10 +9,10 @@ Isso permite ao usuário revisar e aplicar manualmente (ou integrar num fluxo
 de PR próprio) sem que esta ferramenta jamais toque no repositório git.
 """
 from __future__ import annotations
+
 import difflib
 import re
 from dataclasses import dataclass
-from typing import Dict, List
 
 from analyzer.deps import DepVuln
 
@@ -22,22 +22,22 @@ class BumpPlanEntry:
     package: str
     from_version: str
     to_version: str
-    cve_ids: List[str]
+    cve_ids: list[str]
 
 
 @dataclass
 class BumpPlan:
-    entries: List[BumpPlanEntry]
+    entries: list[BumpPlanEntry]
     updated_content: str
     diff: str
 
 
-def _plan_from_vulns(vulns: List[DepVuln]) -> Dict[str, BumpPlanEntry]:
+def _plan_from_vulns(vulns: list[DepVuln]) -> dict[str, BumpPlanEntry]:
     """Para cada pacote, escolhe a MAIOR fixed_version entre todos os CVEs
     reportados (corrige todos de uma vez)."""
     from analyzer.deps import _ver_lt
 
-    plan: Dict[str, BumpPlanEntry] = {}
+    plan: dict[str, BumpPlanEntry] = {}
     for v in vulns:
         if v.package not in plan:
             plan[v.package] = BumpPlanEntry(v.package, v.installed_version, v.fixed_version, [v.cve_id])
@@ -49,7 +49,7 @@ def _plan_from_vulns(vulns: List[DepVuln]) -> Dict[str, BumpPlanEntry]:
     return plan
 
 
-def _bump_requirements_txt(content: str, plan: Dict[str, BumpPlanEntry]) -> str:
+def _bump_requirements_txt(content: str, plan: dict[str, BumpPlanEntry]) -> str:
     lines = content.splitlines(keepends=True)
     out = []
     for line in lines:
@@ -67,7 +67,7 @@ def _bump_requirements_txt(content: str, plan: Dict[str, BumpPlanEntry]) -> str:
     return "".join(out)
 
 
-def _bump_package_json(content: str, plan: Dict[str, BumpPlanEntry]) -> str:
+def _bump_package_json(content: str, plan: dict[str, BumpPlanEntry]) -> str:
     import json
     try:
         data = json.loads(content)
@@ -85,7 +85,7 @@ def _bump_package_json(content: str, plan: Dict[str, BumpPlanEntry]) -> str:
     return json.dumps(data, indent=2) + "\n"
 
 
-def build_bump_plan(manifest_path: str, manifest_content: str, vulns: List[DepVuln]) -> BumpPlan:
+def build_bump_plan(manifest_path: str, manifest_content: str, vulns: list[DepVuln]) -> BumpPlan:
     plan_dict = _plan_from_vulns(vulns)
     if not plan_dict:
         return BumpPlan(entries=[], updated_content=manifest_content, diff="")

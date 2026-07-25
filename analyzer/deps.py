@@ -1,10 +1,10 @@
 """Scanner de dependências vulneráveis com base CVE local embutida (zero rede)."""
 from __future__ import annotations
-import re
+
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Dict, Tuple, Optional
 
 # ── Modelo ────────────────────────────────────────────────────────────────────
 
@@ -23,7 +23,7 @@ class DepVuln:
 # ── Base CVE local embutida ───────────────────────────────────────────────────
 # Formato: { nome_pacote: [(cve_id, severity, fixed_version, description), ...] }
 
-LOCAL_CVE_DB: Dict[str, List[Tuple[str, str, str, str]]] = {
+LOCAL_CVE_DB: dict[str, list[tuple[str, str, str, str]]] = {
     # ── Python ────────────────────────────────────────────────────────────────
     "pillow": [
         ("CVE-2024-28219", "HIGH",     "10.3.0", "Buffer overflow in _imagingcms"),
@@ -244,8 +244,8 @@ def _normalize(name: str) -> str:
     return name.lower().replace("-", "_").replace(".", "_")
 
 
-def _check(name: str, version: str, manifest: str, line_no: int) -> List[DepVuln]:
-    vulns: List[DepVuln] = []
+def _check(name: str, version: str, manifest: str, line_no: int) -> list[DepVuln]:
+    vulns: list[DepVuln] = []
     entries = LOCAL_CVE_DB.get(name) or LOCAL_CVE_DB.get(_normalize(name))
     if not entries:
         return vulns
@@ -273,8 +273,8 @@ _REQ_RE = re.compile(
 )
 
 
-def _parse_requirements(content: str, filepath: str) -> List[DepVuln]:
-    vulns: List[DepVuln] = []
+def _parse_requirements(content: str, filepath: str) -> list[DepVuln]:
+    vulns: list[DepVuln] = []
     for line_no, line in enumerate(content.splitlines(), start=1):
         line = line.split("#", 1)[0].split(";", 1)[0].strip()  # remove comentário e marker
         if not line or line.startswith(("-", "git+")):
@@ -285,8 +285,8 @@ def _parse_requirements(content: str, filepath: str) -> List[DepVuln]:
     return vulns
 
 
-def _parse_package_json(content: str, filepath: str) -> List[DepVuln]:
-    vulns: List[DepVuln] = []
+def _parse_package_json(content: str, filepath: str) -> list[DepVuln]:
+    vulns: list[DepVuln] = []
     try:
         data = json.loads(content)
     except Exception:
@@ -299,8 +299,8 @@ def _parse_package_json(content: str, filepath: str) -> List[DepVuln]:
     return vulns
 
 
-def _parse_pom_xml(content: str, filepath: str) -> List[DepVuln]:
-    vulns: List[DepVuln] = []
+def _parse_pom_xml(content: str, filepath: str) -> list[DepVuln]:
+    vulns: list[DepVuln] = []
     dep_re = re.compile(
         r"<dependency>.*?<artifactId>(.*?)</artifactId>.*?<version>([\d\.]+[A-Za-z0-9\-\.]*)</version>",
         re.DOTALL,
@@ -312,8 +312,8 @@ def _parse_pom_xml(content: str, filepath: str) -> List[DepVuln]:
     return vulns
 
 
-def _parse_cargo_toml(content: str, filepath: str) -> List[DepVuln]:
-    vulns: List[DepVuln] = []
+def _parse_cargo_toml(content: str, filepath: str) -> list[DepVuln]:
+    vulns: list[DepVuln] = []
     in_deps = False
     for line_no, line in enumerate(content.splitlines(), start=1):
         stripped = line.strip()
@@ -331,8 +331,8 @@ def _parse_cargo_toml(content: str, filepath: str) -> List[DepVuln]:
     return vulns
 
 
-def _parse_go_mod(content: str, filepath: str) -> List[DepVuln]:
-    vulns: List[DepVuln] = []
+def _parse_go_mod(content: str, filepath: str) -> list[DepVuln]:
+    vulns: list[DepVuln] = []
     for line_no, line in enumerate(content.splitlines(), start=1):
         m = re.match(r"\s*(?:require\s+)?\S+/(\S+)\s+v([\d\.]+)", line)
         if m:
@@ -341,9 +341,9 @@ def _parse_go_mod(content: str, filepath: str) -> List[DepVuln]:
     return vulns
 
 
-def _parse_csproj(content: str, filepath: str) -> List[DepVuln]:
+def _parse_csproj(content: str, filepath: str) -> list[DepVuln]:
     """Projetos .NET: <PackageReference Include="X" Version="Y" />."""
-    vulns: List[DepVuln] = []
+    vulns: list[DepVuln] = []
     # Atributos podem vir em qualquer ordem; também suporta <Version> como elemento filho.
     for m in re.finditer(
         r'<PackageReference\b[^>]*?\bInclude\s*=\s*"([^"]+)"[^>]*?'
@@ -370,7 +370,7 @@ _PARSERS: dict[str, object] = {
 }
 
 
-def scan_dependencies(file_path: str, content: str) -> List[DepVuln]:
+def scan_dependencies(file_path: str, content: str) -> list[DepVuln]:
     """Escaneia um arquivo de manifesto e retorna vulnerabilidades conhecidas."""
     fname = Path(file_path).name
     parser = _PARSERS.get(fname)
@@ -381,9 +381,9 @@ def scan_dependencies(file_path: str, content: str) -> List[DepVuln]:
     return parser(content, file_path)  # type: ignore[call-arg]
 
 
-def scan_manifest_dir(directory: str) -> List[DepVuln]:
+def scan_manifest_dir(directory: str) -> list[DepVuln]:
     """Escaneia todos os manifestos em um diretório recursivamente."""
-    all_vulns: List[DepVuln] = []
+    all_vulns: list[DepVuln] = []
     for fname in _PARSERS:
         for mpath in Path(directory).rglob(fname):
             try:
@@ -412,7 +412,7 @@ _OSV_ECOSYSTEM = {
 }
 
 
-def _cvss_v3_base(vector: str) -> Optional[float]:
+def _cvss_v3_base(vector: str) -> float | None:
     """Calcula o CVSS v3.x base score a partir de um vetor (FIRST.org spec)."""
     import math
     m = dict(p.split(":", 1) for p in vector.split("/") if ":" in p)
@@ -481,7 +481,7 @@ def _osv_fixed_version(vuln: dict) -> str:
     return "—"
 
 
-def query_osv(name: str, version: str, ecosystem: str, timeout: float = 8.0) -> List[DepVuln]:
+def query_osv(name: str, version: str, ecosystem: str, timeout: float = 8.0) -> list[DepVuln]:
     """
     Consulta a API pública OSV.dev para um pacote/versão. Usa apenas urllib
     (stdlib). Em caso de erro de rede, retorna lista vazia (degradação graciosa).
@@ -504,7 +504,7 @@ def query_osv(name: str, version: str, ecosystem: str, timeout: float = 8.0) -> 
     except Exception:
         return []
 
-    results: List[DepVuln] = []
+    results: list[DepVuln] = []
     for v in data.get("vulns", []) or []:
         aliases = v.get("aliases") or []
         cve_id  = next((a for a in aliases if a.startswith("CVE-")), v.get("id", ""))
@@ -522,7 +522,7 @@ def query_osv(name: str, version: str, ecosystem: str, timeout: float = 8.0) -> 
     return results
 
 
-def scan_manifest_dir_osv(directory: str, timeout: float = 8.0) -> List[DepVuln]:
+def scan_manifest_dir_osv(directory: str, timeout: float = 8.0) -> list[DepVuln]:
     """
     Cruza todas as dependências do diretório com a base online OSV.dev.
     Reutiliza o coletor de componentes do SBOM (que conhece o ecossistema).
@@ -530,7 +530,7 @@ def scan_manifest_dir_osv(directory: str, timeout: float = 8.0) -> List[DepVuln]
     """
     from analyzer.sbom import collect_components
 
-    out: List[DepVuln] = []
+    out: list[DepVuln] = []
     seen: set = set()
     for c in collect_components(directory):
         eco = _OSV_ECOSYSTEM.get(c.package_type)

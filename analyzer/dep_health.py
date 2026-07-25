@@ -18,18 +18,18 @@ pacotes abandonados/pouco mantidos.
     PyPI/npm para data do último release.
 """
 from __future__ import annotations
+
 import json
 import re
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Dict, List, Optional, Tuple
 
 # ── Top pacotes populares por ecossistema (para comparação de typosquatting) ──
 # Lista curada dos pacotes mais baixados/conhecidos — não é exaustiva, mas
 # cobre os alvos mais comuns de ataques de typosquatting documentados.
-POPULAR_PACKAGES: Dict[str, List[str]] = {
+POPULAR_PACKAGES: dict[str, list[str]] = {
     "pypi": [
         "requests", "numpy", "pandas", "flask", "django", "urllib3", "boto3",
         "pytest", "setuptools", "pyyaml", "click", "jinja2", "cryptography",
@@ -84,8 +84,8 @@ class LicenseFinding:
 class AbandonedFinding:
     package_name: str
     ecosystem: str
-    last_release: Optional[str]
-    days_since_release: Optional[int]
+    last_release: str | None
+    days_since_release: int | None
 
 
 # ── Levenshtein (stdlib puro) ──────────────────────────────────────────────────
@@ -107,7 +107,7 @@ def levenshtein(a: str, b: str) -> int:
     return prev[-1]
 
 
-def check_typosquatting(package_name: str, ecosystem: str, max_distance: int = 2) -> Optional[TyposquatFinding]:
+def check_typosquatting(package_name: str, ecosystem: str, max_distance: int = 2) -> TyposquatFinding | None:
     popular = POPULAR_PACKAGES.get(ecosystem, [])
     name_lower = package_name.lower()
     if name_lower in popular:
@@ -125,7 +125,7 @@ def check_typosquatting(package_name: str, ecosystem: str, max_distance: int = 2
 _INTERNAL_NAME_MARKERS = ("internal-", "corp-", "private-", "-internal", "-private")
 
 
-def check_dependency_confusion(package_name: str) -> Optional[ConfusionFinding]:
+def check_dependency_confusion(package_name: str) -> ConfusionFinding | None:
     lower = package_name.lower()
     if lower.startswith("@") and "/" not in lower:
         return None
@@ -139,7 +139,7 @@ def check_dependency_confusion(package_name: str) -> Optional[ConfusionFinding]:
     return None
 
 
-def check_license(package_name: str, declared_license: Optional[str] = None) -> Optional[LicenseFinding]:
+def check_license(package_name: str, declared_license: str | None = None) -> LicenseFinding | None:
     lower = package_name.lower()
     if lower in _GPL_LICENSED_PACKAGES:
         lic = _GPL_LICENSED_PACKAGES[lower]
@@ -154,7 +154,7 @@ def check_license(package_name: str, declared_license: Optional[str] = None) -> 
 
 # ── Pacotes abandonados (rede, opt-in) ────────────────────────────────────────
 
-def query_pypi_last_release(package_name: str, timeout: float = 8.0) -> Optional[str]:
+def query_pypi_last_release(package_name: str, timeout: float = 8.0) -> str | None:
     url = f"https://pypi.org/pypi/{package_name}/json"
     try:
         with urllib.request.urlopen(url, timeout=timeout) as resp:
@@ -170,7 +170,7 @@ def query_pypi_last_release(package_name: str, timeout: float = 8.0) -> Optional
         return None
 
 
-def query_npm_last_release(package_name: str, timeout: float = 8.0) -> Optional[str]:
+def query_npm_last_release(package_name: str, timeout: float = 8.0) -> str | None:
     url = f"https://registry.npmjs.org/{package_name}"
     try:
         with urllib.request.urlopen(url, timeout=timeout) as resp:
@@ -180,7 +180,7 @@ def query_npm_last_release(package_name: str, timeout: float = 8.0) -> Optional[
         return None
 
 
-def check_abandoned(package_name: str, ecosystem: str, max_age_days: int = 730) -> Optional[AbandonedFinding]:
+def check_abandoned(package_name: str, ecosystem: str, max_age_days: int = 730) -> AbandonedFinding | None:
     """Consulta REDE (opt-in) para verificar a última publicação do pacote."""
     last_release = None
     if ecosystem == "pypi":
