@@ -1,24 +1,26 @@
 """Grafo IAM/AD/Azure AD multi-provedor, escalonamento e least privilege."""
 from __future__ import annotations
-from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
+
+from dataclasses import asdict, dataclass, field
+from typing import Any
+
 
 @dataclass
 class Principal:
-    id:str; kind:str; provider:str; attributes:Dict[str,Any]=field(default_factory=dict)
+    id:str; kind:str; provider:str; attributes:dict[str,Any]=field(default_factory=dict)
 @dataclass
 class PrivilegeEdge:
-    source:str; target:str; relation:str; permissions:Set[str]=field(default_factory=set); metadata:Dict[str,Any]=field(default_factory=dict)
+    source:str; target:str; relation:str; permissions:set[str]=field(default_factory=set); metadata:dict[str,Any]=field(default_factory=dict)
 
 class IdentityGraph:
     HIGH_RISK={"dcsync","genericall","writeowner","writedacl","addmember","assumerole","impersonate","owner"}
     def __init__(self):
-        self.principals:Dict[str,Principal]={};self.edges:List[PrivilegeEdge]=[]
+        self.principals:dict[str,Principal]={};self.edges:list[PrivilegeEdge]=[]
     def add_principal(self,p:Principal)->None:self.principals[p.id]=p
     def add_edge(self,e:PrivilegeEdge)->None:
         if e.source not in self.principals or e.target not in self.principals: raise KeyError("Aresta referencia principal desconhecido")
         self.edges.append(e)
-    def paths(self,start:str,goal:str,max_depth:int=8)->List[List[PrivilegeEdge]]:
+    def paths(self,start:str,goal:str,max_depth:int=8)->list[list[PrivilegeEdge]]:
         result=[]; queue=[(start,[],{start})]
         while queue:
             node,path,seen=queue.pop(0)
@@ -29,7 +31,7 @@ class IdentityGraph:
                 if e.target==goal:result.append(next_path)
                 else:queue.append((e.target,next_path,seen|{e.target}))
         return result
-    def escalation_paths(self,targets:Optional[Set[str]]=None)->List[Dict[str,Any]]:
+    def escalation_paths(self,targets:set[str] | None=None)->list[dict[str,Any]]:
         targets=targets or {p.id for p in self.principals.values() if p.attributes.get("tier0") or p.kind in {"domain","account-root"}}
         out=[]
         for source in self.principals:
@@ -39,21 +41,21 @@ class IdentityGraph:
                     score=sum(20 if e.relation.lower() in self.HIGH_RISK else 5 for e in path)
                     out.append({"source":source,"target":target,"score":min(100,score),"path":[asdict(e) for e in path]})
         return sorted(out,key=lambda x:x["score"],reverse=True)
-    def simulate_removal(self,source:str,target:str,relation:str)->Dict[str,Any]:
+    def simulate_removal(self,source:str,target:str,relation:str)->dict[str,Any]:
         before=len(self.escalation_paths()); kept=[e for e in self.edges if not(e.source==source and e.target==target and e.relation==relation)]
         old=self.edges;self.edges=kept;after=len(self.escalation_paths());self.edges=old
         return {"before":before,"after":after,"paths_removed":before-after,"safe":after<=before}
-    def least_privilege(self,usage:Dict[str,Set[str]])->List[Dict[str,Any]]:
+    def least_privilege(self,usage:dict[str,set[str]])->list[dict[str,Any]]:
         out=[]
         for edge in self.edges:
             unused=edge.permissions-usage.get(edge.source,set())
             if unused:out.append({"principal":edge.source,"target":edge.target,"remove":sorted(unused),"relation":edge.relation})
         return out
-    def to_bloodhound(self)->Dict[str,Any]:
+    def to_bloodhound(self)->dict[str,Any]:
         return {"nodes":[{"id":p.id,"type":p.kind,"provider":p.provider,**p.attributes} for p in self.principals.values()],
                 "edges":[{"source":e.source,"target":e.target,"label":e.relation,"permissions":sorted(e.permissions)} for e in self.edges]}
 
-def detect_identity_risks(snapshot:Dict[str,Any])->List[Dict[str,Any]]:
+def detect_identity_risks(snapshot:dict[str,Any])->list[dict[str,Any]]:
     out=[]
     def hit(rule,severity,principal,message):out.append({"rule_id":rule,"severity":severity,"principal":principal,"message":message})
     for user in snapshot.get("users",[]):
@@ -74,7 +76,7 @@ def detect_identity_risks(snapshot:Dict[str,Any])->List[Dict[str,Any]]:
             hit("AD-DCSYNC-001","critical",grant.get("principal","unknown"),"Direitos DCSync concedidos")
     return out
 
-def import_aws_iam(doc:Dict[str,Any])->IdentityGraph:
+def import_aws_iam(doc:dict[str,Any])->IdentityGraph:
     g=IdentityGraph()
     for p in doc.get("principals",[]):g.add_principal(Principal(p["arn"],p.get("type","principal"),"aws",p))
     for r in doc.get("roles",[]):
@@ -84,7 +86,7 @@ def import_aws_iam(doc:Dict[str,Any])->IdentityGraph:
             g.add_edge(PrivilegeEdge(src,r["arn"],"AssumeRole",set(r.get("actions",[]))))
     return g
 
-def import_directory(doc:Dict[str,Any],provider:str)->IdentityGraph:
+def import_directory(doc:dict[str,Any],provider:str)->IdentityGraph:
     """Normalizador para AD, Azure AD, Okta, Google Workspace e GCP IAM."""
     g=IdentityGraph()
     for item in doc.get("principals",[]):g.add_principal(Principal(item["id"],item.get("kind","user"),provider,item.get("attributes",{})))
