@@ -4,11 +4,11 @@ Code Vulnerability Analyzer — Multi-language static analysis tool.
 Usage: python main.py [target] [options]
 """
 from __future__ import annotations
-import sys
-import os
+
 import argparse
+import os
+import sys
 from pathlib import Path
-from typing import List, Optional
 
 # Force UTF-8 output on Windows
 if sys.platform == "win32":
@@ -26,20 +26,23 @@ if sys.platform == "win32":
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from rich.console import Console
-from rich.progress import Progress
-from rich.text import Text
-from rich.table import Table
-from rich.panel import Panel
-from rich.align import Align
 from rich import box as rbox
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import Progress
+from rich.table import Table
+from rich.text import Text
 
 from analyzer import __version__
-from analyzer.models import Severity, Language, ScanResult
 from analyzer.engine import ScanEngine
+from analyzer.models import Language, ScanResult, Severity
 from analyzer.reporter import (
-    console as _reporter_console, print_banner, make_progress, print_report,
-    export_json, export_html, print_error,
+    export_html,
+    export_json,
+    make_progress,
+    print_banner,
+    print_error,
+    print_report,
 )
 from analyzer.rules import rule_count
 
@@ -114,6 +117,17 @@ Exemplos:
     p.add_argument("--quiet", "-q", action="store_true", help="Apenas resumo")
     p.add_argument("--summary-only", action="store_true", help="Apenas métricas (sem detalhes)")
     p.add_argument("--rules", action="store_true", help="Listar todas as regras")
+    p.add_argument("--rules-dir", action="append", metavar="DIR",
+                    help="Diretório extra com regras customizadas (.json/.yaml/.yml). Repetível. "
+                         f"Também pode ser definido via variável de ambiente VULNSCAN_RULES_DIR (separado por {os.pathsep}).")
+    p.add_argument("--allow-py-plugins", action="store_true",
+                    help="Permite carregar regras de módulos .py (variável RULES) nos diretórios de --rules-dir. "
+                         "ATENÇÃO: executa código Python arbitrário — só use com diretórios de confiança.")
+    p.add_argument("--theme", choices=["dark", "light", "high-contrast"],
+                    help="Tema de cores do terminal (padrão: dark, ou VULNSCAN_THEME)")
+    p.add_argument("--locale", choices=["pt", "en"],
+                    help="Idioma dos rótulos fixos da UI (padrão: pt, ou VULNSCAN_LOCALE). "
+                         "Descrições de regras permanecem em inglês.")
     p.add_argument("--list-langs", "--langs", action="store_true", dest="list_langs",
                    help="Listar linguagens suportadas")
     p.add_argument("--interactive", "-i", action="store_true", dest="interactive",
@@ -244,8 +258,8 @@ def cmd_list_langs() -> None:
 # ── List rules ────────────────────────────────────────────────────────────────
 
 def cmd_list_rules() -> None:
-    from analyzer.rules import get_all_rules
     from analyzer.reporter import SEVERITY_COLORS
+    from analyzer.rules import get_all_rules
 
     rules = get_all_rules()
     table = Table(
@@ -294,8 +308,8 @@ _LANG_MAP: dict[str, Language] = {
 }
 
 
-def parse_languages(names: List[str]) -> List[Language]:
-    result: List[Language] = []
+def parse_languages(names: list[str]) -> list[Language]:
+    result: list[Language] = []
     for name in names:
         lang = _LANG_MAP.get(name.lower())
         if lang:
@@ -545,6 +559,13 @@ def main() -> int:
     args   = parser.parse_args()
     args_global = args
 
+    if args.theme:
+        from analyzer.theme import set_theme
+        set_theme(args.theme)
+    if args.locale:
+        from analyzer.i18n import set_locale
+        set_locale(args.locale)
+
     num_rules = rule_count()
     # Em modo LSP o stdout é o canal de protocolo JSON-RPC; em stdin é o pipe
     # de saída; em modo cofre o --vault-get emite o valor puro no stdout. O
@@ -668,8 +689,9 @@ def main() -> int:
 
     # ── SBOM ──────────────────────────────────────────────────────────────────
     if args.mobile_archive:
-        from analyzer.mobile_archive import scan_mobile_archive
         import json
+
+        from analyzer.mobile_archive import scan_mobile_archive
         result = scan_mobile_archive(target_path)
         console.print_json(json.dumps(result, ensure_ascii=False))
         return 1 if result["findings"] else 0
@@ -693,8 +715,9 @@ def main() -> int:
             return 1 if findings else 0
 
     if args.iac_kind:
-        from analyzer.iac_render import scan_extended_iac
         import json
+
+        from analyzer.iac_render import scan_extended_iac
         findings = scan_extended_iac(
             target_path.read_text(encoding="utf-8", errors="replace"), args.iac_kind
         )
@@ -789,8 +812,13 @@ def main() -> int:
                           f"{summary['total_edges']} arestas, profundidade máx. {summary['max_depth']}")
 
         if args.typosquat_check or args.license_check or args.check_abandoned:
+            from analyzer.dep_health import (
+                check_abandoned,
+                check_dependency_confusion,
+                check_license,
+                check_typosquatting,
+            )
             from analyzer.sbom import collect_components
-            from analyzer.dep_health import check_typosquatting, check_dependency_confusion, check_license, check_abandoned
             comps = collect_components(target)
             eco_map = {"pypi": "pypi", "npm": "npm", "cargo": "cargo", "gem": "gem"}
 
@@ -857,14 +885,14 @@ def main() -> int:
 
     # ── Detecção de segredos: scan completo (provedores/chaves/JWT/binários) ──
     if args.secrets_scan:
-        from analyzer.secrets_providers import classify_secret
-        from analyzer.key_material import scan_key_material
-        from analyzer.jwt_scan import scan_jwt
         from analyzer.binary_scan import scan_non_text_file
-        from analyzer.detector import is_scannable, SKIP_DIRS
+        from analyzer.detector import SKIP_DIRS, is_scannable
+        from analyzer.jwt_scan import scan_jwt
+        from analyzer.key_material import scan_key_material
+        from analyzer.secrets_providers import classify_secret
 
-        all_findings: List[dict] = []
-        files_to_scan: List[Path] = []
+        all_findings: list[dict] = []
+        files_to_scan: list[Path] = []
         if target_path.is_dir():
             for item in target_path.rglob("*"):
                 if item.is_file() and not any(p in SKIP_DIRS for p in item.parts):
@@ -941,13 +969,11 @@ def main() -> int:
 
     # ── Entropia ──────────────────────────────────────────────────────────────
     if args.entropy:
-        from analyzer.entropy import scan_entropy
         _collect_and_scan_entropy(target, target_path)
         return 0
 
     # ── PII ───────────────────────────────────────────────────────────────────
     if args.pii:
-        from analyzer.pii import scan_pii
         _collect_and_scan_pii(target, target_path)
         return 0
 
@@ -957,8 +983,8 @@ def main() -> int:
 
     # Coletar arquivos para barra de progresso
     if target_path.is_dir():
-        from analyzer.detector import is_scannable, SKIP_DIRS
-        files: List[Path] = []
+        from analyzer.detector import SKIP_DIRS, is_scannable
+        files: list[Path] = []
         for item in target_path.rglob("*"):
             if item.is_file() and is_scannable(str(item)):
                 skip = False
@@ -999,6 +1025,8 @@ def main() -> int:
             ast_analysis=args.ast_analysis,
             cpp_macros=args.cpp_macros,
             incremental_cache=incremental_cache,
+            rules_dirs=args.rules_dir,
+            allow_py_plugins=args.allow_py_plugins,
         )
 
         if target_path.is_dir():
@@ -1114,8 +1142,9 @@ def main() -> int:
         from analyzer.reporting_ext import export_xlsx
         export_xlsx(report, args.xlsx)
     if args.gitlab_sast:
-        from analyzer.reporting_ext import gitlab_sast
         import json
+
+        from analyzer.reporting_ext import gitlab_sast
         gitlab_path = Path(args.gitlab_sast)
         gitlab_path.parent.mkdir(parents=True, exist_ok=True)
         gitlab_path.write_text(
@@ -1146,8 +1175,8 @@ def main() -> int:
 # ── Helpers extras ────────────────────────────────────────────────────────────
 
 def _collect_and_scan_entropy(target: str, target_path: Path) -> None:
-    from analyzer.entropy import scan_entropy
     from analyzer.detector import is_scannable
+    from analyzer.entropy import scan_entropy
 
     _SEV_C = {"hex": "#33aaff", "base64": "#ffcc00", "alnum": "#ff6600"}
     all_findings = []
@@ -1189,8 +1218,8 @@ def _collect_and_scan_entropy(target: str, target_path: Path) -> None:
 
 
 def _collect_and_scan_pii(target: str, target_path: Path) -> None:
-    from analyzer.pii import scan_pii
     from analyzer.detector import is_scannable
+    from analyzer.pii import scan_pii
 
     _PII_C = {"CPF": "bright_cyan", "CNPJ": "bright_blue", "CartaoCredito": "bright_red",
               "Email": "yellow", "TelefoneBR": "green"}
