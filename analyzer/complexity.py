@@ -4,12 +4,11 @@ Detecta: funções longas, complexidade ciclomática alta, aninhamento profundo,
 muitos parâmetros, arquivos muito grandes, ausência de docstring (Python).
 """
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
-from analyzer.models import (
-    Language, Severity, Vulnerability, VulnCategory, Confidence
-)
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory, Vulnerability
 
 # ── Thresholds configuráveis ───────────────────────────────────────────────
 MAX_FUNCTION_LINES     = 50    # Linhas de código por função
@@ -84,7 +83,7 @@ class FunctionInfo:
         return len(params)
 
     def line_count(self) -> int:
-        return len([l for l in self.lines if l.strip()])
+        return len([ln for ln in self.lines if ln.strip()])
 
     def cyclomatic_complexity(self) -> int:
         lang_patterns = DECISION_PATTERNS.get(self.language, DECISION_PATTERNS.get(Language.PYTHON, []))
@@ -127,20 +126,68 @@ class ComplexityAnalyzer:
         self.language = language
         self.lines = content.splitlines()
 
-    def analyze(self) -> List[Vulnerability]:
-        results: List[Vulnerability] = []
+    def analyze(self) -> list[Vulnerability]:
+        results: list[Vulnerability] = []
         results.extend(self._check_file_length())
         functions = self._extract_functions()
         for func in functions:
             results.extend(self._check_function(func))
         results.extend(self._check_nesting_per_line())
+        results.extend(self._check_god_classes())
+        return results
+
+    # ── God Class (excesso de métodos por classe) ─────────────────────────────
+    def _check_god_classes(self) -> list[Vulnerability]:
+        class_pattern = CLASS_START.get(self.language)
+        func_pattern = FUNCTION_START.get(self.language)
+        if not class_pattern or not func_pattern:
+            return []
+
+        class_starts: list[tuple[int, int, str]] = []  # (line, indent, name)
+        for i, line in enumerate(self.lines):
+            m = class_pattern.match(line)
+            if m:
+                indent = len(line) - len(line.lstrip())
+                class_starts.append((i, indent, m.group(1)))
+
+        if not class_starts:
+            return []
+
+        results: list[Vulnerability] = []
+        for idx, (start, indent, name) in enumerate(class_starts):
+            if self.language in (Language.PYTHON, Language.RUBY):
+                end = self._find_end_python(start, indent)
+            else:
+                end = self._find_end_brace(start)
+
+            method_count = 0
+            for line in self.lines[start + 1:end]:
+                if func_pattern.match(line):
+                    method_count += 1
+
+            if method_count > MAX_CLASS_METHODS:
+                results.append(Vulnerability(
+                    rule_id="CMPLX-006",
+                    name="Classe Excessivamente Grande (God Class)",
+                    description=f"Classe '{name}' tem {method_count} métodos (threshold: {MAX_CLASS_METHODS}). Classes com muitos métodos tendem a acumular múltiplas responsabilidades (violação do SRP), tornando-se difíceis de entender, testar e reutilizar.",
+                    severity=Severity.MEDIUM,
+                    category=VulnCategory.SOLID_SRP,
+                    language=self.language,
+                    file_path=self.file_path,
+                    line_number=start + 1,
+                    line_content=self.lines[start].rstrip(),
+                    remediation="Aplique 'Extract Class' do catálogo de Fowler: separe grupos de métodos/atributos coesos em novas classes colaboradoras. Considere Composição no lugar de uma classe monolítica.",
+                    cwe="CWE-1093",
+                    confidence=Confidence.MEDIUM,
+                ))
+
         return results
 
     # ── Comprimento do arquivo ─────────────────────────────────────────────────
-    def _check_file_length(self) -> List[Vulnerability]:
+    def _check_file_length(self) -> list[Vulnerability]:
         if self.language == Language.UNKNOWN:
             return []
-        non_empty = sum(1 for l in self.lines if l.strip())
+        non_empty = sum(1 for ln in self.lines if ln.strip())
         if non_empty <= MAX_FILE_LINES:
             return []
         return [Vulnerability(
@@ -159,13 +206,13 @@ class ComplexityAnalyzer:
         )]
 
     # ── Extração de funções ────────────────────────────────────────────────────
-    def _extract_functions(self) -> List[FunctionInfo]:
+    def _extract_functions(self) -> list[FunctionInfo]:
         pattern = FUNCTION_START.get(self.language)
         if not pattern:
             return []
 
-        functions: List[FunctionInfo] = []
-        starts: List[Tuple[int, re.Match]] = []
+        functions: list[FunctionInfo] = []
+        starts: list[tuple[int, re.Match]] = []
 
         for i, line in enumerate(self.lines):
             m = pattern.match(line)
@@ -221,8 +268,8 @@ class ComplexityAnalyzer:
         return len(self.lines)
 
     # ── Verificações por função ───────────────────────────────────────────────
-    def _check_function(self, func: FunctionInfo) -> List[Vulnerability]:
-        results: List[Vulnerability] = []
+    def _check_function(self, func: FunctionInfo) -> list[Vulnerability]:
+        results: list[Vulnerability] = []
         line_count = func.line_count()
         cyclo = func.cyclomatic_complexity()
         params = func.param_count()
@@ -279,8 +326,8 @@ class ComplexityAnalyzer:
         return results
 
     # ── Aninhamento por linha ─────────────────────────────────────────────────
-    def _check_nesting_per_line(self) -> List[Vulnerability]:
-        results: List[Vulnerability] = []
+    def _check_nesting_per_line(self) -> list[Vulnerability]:
+        results: list[Vulnerability] = []
         reported: set[int] = set()
 
         if self.language in (Language.PYTHON, Language.RUBY):
@@ -320,7 +367,7 @@ class ComplexityAnalyzer:
         )
 
 
-def analyze_complexity(file_path: str, content: str, language: Language) -> List[Vulnerability]:
+def analyze_complexity(file_path: str, content: str, language: Language) -> list[Vulnerability]:
     if language in (Language.UNKNOWN, Language.GENERIC):
         return []
     analyzer = ComplexityAnalyzer(file_path, content, language)

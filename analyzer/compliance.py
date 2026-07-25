@@ -1,9 +1,11 @@
 """Catálogo, mapeamento, gap analysis, evidências e score de maturidade."""
 from __future__ import annotations
-import hashlib, json
-from dataclasses import dataclass, asdict
+
+import hashlib
+import json
+from collections.abc import Iterable
 from datetime import datetime, timezone
-from typing import Any, Dict, Iterable, List
+from typing import Any
 
 # Mapeamentos baseados nas publicações oficiais de cada framework (OWASP Top
 # 10 2021, ASVS v4.0, PCI-DSS v4.0, NIST SP 800-53 Rev.5, ISO/IEC 27001:2022
@@ -128,12 +130,12 @@ FRAMEWORKS = {
  },
 }
 
-def map_finding(finding: Dict[str, Any]) -> Dict[str, List[str]]:
+def map_finding(finding: dict[str, Any]) -> dict[str, list[str]]:
     cwe = finding.get("cwe", "")
     return {fw: [control for control, cwes in controls.items() if cwe in cwes]
             for fw, controls in FRAMEWORKS.items() if any(cwe in c for c in controls.values())}
 
-def compliance_report(findings: Iterable[Dict[str, Any]], framework: str) -> Dict[str, Any]:
+def compliance_report(findings: Iterable[dict[str, Any]], framework: str) -> dict[str, Any]:
     controls = FRAMEWORKS[framework]
     rows = []
     findings = list(findings)
@@ -145,12 +147,12 @@ def compliance_report(findings: Iterable[Dict[str, Any]], framework: str) -> Dic
     return {"framework": framework, "score": round(100 * passed / max(1, len(rows)), 1),
             "controls": rows, "gaps": [r["control"] for r in rows if r["status"] == "fail"]}
 
-def audit_evidence(payload: Dict[str, Any], actor: str = "vulnscan") -> Dict[str, Any]:
+def audit_evidence(payload: dict[str, Any], actor: str = "vulnscan") -> dict[str, Any]:
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return {"timestamp": datetime.now(timezone.utc).isoformat(), "actor": actor,
             "sha256": hashlib.sha256(canonical.encode()).hexdigest(), "payload": payload}
 
-def maturity_score(metrics: Dict[str, float]) -> Dict[str, Any]:
+def maturity_score(metrics: dict[str, float]) -> dict[str, Any]:
     dimensions = ("governance", "design", "implementation", "verification", "operations")
     values = {d: max(0, min(5, float(metrics.get(d, 0)))) for d in dimensions}
     score = round(sum(values.values()) / len(values), 2)
@@ -171,7 +173,7 @@ class PolicyDSL:
             if len(parts) < 3 or parts[0] not in ("deny","warn") or parts[2] not in self.OPS:
                 raise ValueError(f"Política inválida na linha {n}")
             self.rules.append((parts[0], parts[1], parts[2], parts[3] if len(parts)>3 else "", message.strip()))
-    def evaluate(self, document: Dict[str, Any]) -> List[Dict[str, str]]:
+    def evaluate(self, document: dict[str, Any]) -> list[dict[str, str]]:
         out = []
         for effect, field, op, expected, message in self.rules:
             value: Any = document

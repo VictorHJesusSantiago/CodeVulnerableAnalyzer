@@ -1,12 +1,17 @@
 """Scanners sem dependências para Dockerfile, Compose e camadas OCI."""
 from __future__ import annotations
-import json, re, tarfile
-from pathlib import Path
-from typing import Any, Dict, List
 
-def scan_dockerfile(text: str) -> List[Dict[str, Any]]:
+import json
+import re
+import tarfile
+from pathlib import Path
+from typing import Any
+
+
+def scan_dockerfile(text: str) -> list[dict[str, Any]]:
     findings, user_seen = [], False
-    add = lambda rid, sev, line, msg: findings.append({"rule_id": rid, "severity": sev, "line": line, "message": msg})
+    def add(rid, sev, line, msg):
+        findings.append({"rule_id": rid, "severity": sev, "line": line, "message": msg})
     for n, raw in enumerate(text.splitlines(), 1):
         line = raw.strip()
         if re.match(r"USER\s+\S+", line, re.I): user_seen = not bool(re.match(r"USER\s+(?:0|root)\b", line, re.I))
@@ -18,7 +23,7 @@ def scan_dockerfile(text: str) -> List[Dict[str, Any]]:
     if not user_seen: add("DOCKER-BP-005", "high", len(text.splitlines()) or 1, "Imagem termina executando como root")
     return findings
 
-def scan_compose(doc: str | Dict[str, Any]) -> List[Dict[str, Any]]:
+def scan_compose(doc: str | dict[str, Any]) -> list[dict[str, Any]]:
     if isinstance(doc, str):
         try: data = json.loads(doc)
         except json.JSONDecodeError:
@@ -34,7 +39,7 @@ def scan_compose(doc: str | Dict[str, Any]) -> List[Dict[str, Any]]:
             if condition: out.append({"rule_id": rule, "service": name, "severity": "high", "message": message})
     return out
 
-def scan_oci_archive(path: str | Path) -> List[Dict[str, Any]]:
+def scan_oci_archive(path: str | Path) -> list[dict[str, Any]]:
     """Inspeciona cada layer de um ``docker save`` e atribui o achado à camada."""
     out = []
     with tarfile.open(path) as outer:
@@ -47,7 +52,7 @@ def scan_oci_archive(path: str | Path) -> List[Dict[str, Any]]:
                         out.append({"rule_id": "OCI-LAYER-SECRET", "severity": "critical", "layer": index, "path": item.name})
     return out
 
-def _simple_yaml(text: str) -> Dict[str, Any]:
+def _simple_yaml(text: str) -> dict[str, Any]:
     result, current = {"services": {}}, None
     for raw in text.splitlines():
         s = raw.strip()
