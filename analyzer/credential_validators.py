@@ -12,6 +12,7 @@ Aviso ético: só use isto em credenciais que você tem autorização para testa
 validação é, por definição, uma tentativa de autenticação real no provedor.
 """
 from __future__ import annotations
+
 import datetime
 import hashlib
 import hmac
@@ -19,7 +20,6 @@ import json
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from typing import Optional
 
 _TIMEOUT = 8.0
 
@@ -233,7 +233,7 @@ def _sigv4_signing_key(secret_key: str, date_stamp: str, region: str, service: s
 
 def build_sigv4_headers(
     access_key: str, secret_key: str, region: str = "us-east-1",
-    service: str = "sts", session_token: Optional[str] = None,
+    service: str = "sts", session_token: str | None = None,
 ) -> dict:
     """Constrói os headers assinados (Signature V4) para uma requisição
     GET https://sts.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15
@@ -294,7 +294,7 @@ def build_sigv4_headers(
 
 def validate_aws_credentials(
     access_key: str, secret_key: str, region: str = "us-east-1",
-    session_token: Optional[str] = None,
+    session_token: str | None = None,
 ) -> ValidationResult:
     """Valida credenciais AWS via sts:GetCallerIdentity (não-destrutivo,
     não requer permissões IAM além do princípio básico de autenticação)."""
@@ -345,7 +345,7 @@ _VALIDATORS = {
 }
 
 
-def validate_by_provider(provider: str, matched_value: str) -> Optional[ValidationResult]:
+def validate_by_provider(provider: str, matched_value: str) -> ValidationResult | None:
     """Roteia para o validador apropriado, se existir suporte para o provedor."""
     fn = _VALIDATORS.get(provider)
     if fn is None:

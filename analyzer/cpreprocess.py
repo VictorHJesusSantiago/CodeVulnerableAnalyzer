@@ -16,8 +16,8 @@ macros recursivas, nem expansão de macro função que se espalha por várias
 linhas — essas ficam sem expansão (documentado, não fingido).
 """
 from __future__ import annotations
+
 import re
-from typing import Dict, List, Optional, Tuple
 
 _DEFINE_OBJ_RE  = re.compile(r'^\s*#\s*define\s+(\w+)\s+(.+?)\s*$')
 _DEFINE_FUNC_RE = re.compile(r'^\s*#\s*define\s+(\w+)\s*\(([^)]*)\)\s+(.+?)\s*$')
@@ -35,15 +35,15 @@ _MAX_EXPAND_DEPTH = 5
 class Macro:
     __slots__ = ("name", "params", "body")
 
-    def __init__(self, name: str, params: Optional[List[str]], body: str):
+    def __init__(self, name: str, params: list[str] | None, body: str):
         self.name = name
         self.params = params  # None = macro objeto; [] ou [p1,...] = macro função
         self.body = body
 
 
-def _split_args(s: str) -> List[str]:
+def _split_args(s: str) -> list[str]:
     """Divide argumentos de uma chamada de macro respeitando parênteses aninhados."""
-    args: List[str] = []
+    args: list[str] = []
     depth = 0
     current = ""
     for ch in s:
@@ -63,7 +63,7 @@ def _split_args(s: str) -> List[str]:
     return args
 
 
-def _expand_line(line: str, macros: Dict[str, Macro], depth: int = 0) -> str:
+def _expand_line(line: str, macros: dict[str, Macro], depth: int = 0) -> str:
     if depth >= _MAX_EXPAND_DEPTH:
         return line
 
@@ -108,11 +108,11 @@ def expand_macros(content: str) -> str:
     a contagem de linhas (linhas de diretiva e blocos não incluídos viram
     linhas em branco)."""
     lines = content.splitlines()
-    macros: Dict[str, Macro] = {}
-    out: List[str] = []
+    macros: dict[str, Macro] = {}
+    out: list[str] = []
 
     # Pilha de condicionais: cada item é (currently_active, branch_taken_before)
-    cond_stack: List[Tuple[bool, bool]] = []
+    cond_stack: list[tuple[bool, bool]] = []
 
     def _active() -> bool:
         return all(c[0] for c in cond_stack)
