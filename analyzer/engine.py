@@ -1,113 +1,64 @@
 from __future__ import annotations
+
+import json
 import os
 import re
 import time
-import json
+from collections.abc import Callable
 from pathlib import Path
-from typing import List, Optional, Callable, Set, Dict
 
-from analyzer.models import (
-    Language, Severity, Vulnerability, ScanResult, ScanReport, Confidence, VulnCategory
-)
-from analyzer.detector import detect_language, is_scannable, get_comment_prefix, SKIP_DIRS
-from analyzer.rules import get_rules
 from analyzer.complexity import analyze_complexity
+from analyzer.detector import SKIP_DIRS, detect_language, get_comment_prefix, is_scannable
+from analyzer.models import Confidence, Language, ScanReport, ScanResult, Severity, VulnCategory, Vulnerability
+from analyzer.rules import get_rules
+
+# Taint: primitivas compartilhadas (SSOT — ver analyzer.taint)
+from analyzer.taint import TAINT_SINK_RE, TAINT_SINKS, TaintTracker
 
 CONTEXT_LINES    = 3
 MAX_FILE_SIZE_MB = 5
 MAX_LINE_LENGTH  = 2000
 
-# ── Taint: fontes e sinks ─────────────────────────────────────────────────────
+def _localize_rule(rule_id: str, name: str, description: str, remediation: str) -> tuple:
+    """Aplica overrides de i18n de conteúdo de regra (ver analyzer.i18n), se houver."""
+    try:
+        from analyzer.i18n import translate_rule_fields
+        return translate_rule_fields(rule_id, name, description, remediation)
+    except Exception:
+        return name, description, remediation
 
-_TAINT_SOURCE_RE = re.compile(
-    r'\b(\w+)\s*=\s*(?:'
-    r'request\.(?:args|form|json|data|values|get|params|cookies|headers)\b|'
-    r'sys\.argv\[|'
-    r'input\s*\(|'
-    r'os\.environ\b|'
-    r'os\.getenv\s*\(|'
-    r'urllib\.parse\.parse_qs\s*\(|'
-    r'flask\.request\b|'
-    r'fastapi\.Request\b'
-    r')'
-)
-_TAINT_SINK_RE = re.compile(
-    r'(?:eval|exec|os\.system|subprocess\.(?:run|call|Popen)|'
-    r'cursor\.execute|engine\.execute|render_template_string|'
-    r'__import__)\s*\([^)]*\b(\w+)\b'
-)
 
-# Atribuição genérica: captura LHS e RHS para propagação de taint
-_ASSIGN_RE = re.compile(r'^\s*(\w+)\s*(?:=|\+=)\s*(.+)$')
-
-# Sinks perigosos para o analisador de taint dedicado:
-#   (regex do sink, categoria, severidade, rótulo)
-_TAINT_SINKS = [
-    (re.compile(r'\beval\s*\('),                                   VulnCategory.CODE_INJECTION,    Severity.CRITICAL, "eval()"),
-    (re.compile(r'\bexec\s*\('),                                   VulnCategory.CODE_INJECTION,    Severity.CRITICAL, "exec()"),
-    (re.compile(r'\bos\.system\s*\('),                             VulnCategory.COMMAND_INJECTION, Severity.CRITICAL, "os.system()"),
-    (re.compile(r'\bsubprocess\.(?:run|call|Popen|check_output)\s*\('), VulnCategory.COMMAND_INJECTION, Severity.HIGH, "subprocess"),
-    (re.compile(r'\brender_template_string\s*\('),                 VulnCategory.CODE_INJECTION,    Severity.HIGH,     "render_template_string()"),
-    (re.compile(r'\.execute\s*\('),                                VulnCategory.SQL_INJECTION,     Severity.HIGH,     "cursor.execute()"),
-    (re.compile(r'\bchild_process\.exec\s*\('),                    VulnCategory.COMMAND_INJECTION, Severity.HIGH,     "child_process.exec()"),
-    (re.compile(r'\b(?:shell_exec|passthru|popen|system)\s*\('),   VulnCategory.COMMAND_INJECTION, Severity.HIGH,     "shell exec (PHP)"),
-]
-
-# Fontes adicionais por linguagem (PHP/JS) além do _TAINT_SOURCE_RE (Python)
-_TAINT_SOURCE_EXTRA_RE = re.compile(
-    r'\b(\w+)\s*=\s*(?:'
-    r'\$_(?:GET|POST|REQUEST|COOKIE|SERVER)\b|'           # PHP
-    r'req\.(?:body|query|params|cookies|headers)\b|'      # Express/Node
-    r'process\.argv\b'
-    r')'
-)
-
+# ── Taint analysis ────────────────────────────────────────────────────────────
 
 def _analyze_taint(
     file_path: str,
-    lines: List[str],
+    lines: list[str],
     language: Language,
-    restricted: Optional[Set[int]],
-) -> List[Vulnerability]:
+    restricted: set[int] | None,
+) -> list[Vulnerability]:
     """
     Taint analysis intra-arquivo: rastreia variáveis derivadas de entrada do
     usuário (com propagação por atribuição) e emite um achado quando uma
     variável contaminada alcança um sink perigoso.
     """
-    tainted: Set[str] = set()
-    findings: List[Vulnerability] = []
+    tracker = TaintTracker()
+    findings: list[Vulnerability] = []
     total = len(lines)
-
-    def _refs_tainted(expr: str) -> bool:
-        return any(re.search(r'\b' + re.escape(t) + r'\b', expr) for t in tainted)
 
     for li, line in enumerate(lines):
         if len(line) > MAX_LINE_LENGTH:
             continue
 
-        # ── Fontes diretas ────────────────────────────────────────────────
-        src = _TAINT_SOURCE_RE.search(line) or _TAINT_SOURCE_EXTRA_RE.search(line)
-        is_source = bool(src)
-        if src:
-            tainted.add(src.group(1))
-
-        # ── Propagação por atribuição: lhs = <expr com var contaminada> ───
-        ma = _ASSIGN_RE.match(line)
-        if ma and not is_source:
-            lhs, rhs = ma.group(1), ma.group(2)
-            if _refs_tainted(rhs):
-                tainted.add(lhs)
-            elif lhs in tainted:
-                # Reatribuído a partir de algo não-contaminado → sanitizado
-                tainted.discard(lhs)
+        # ── Fontes + propagação por atribuição (estado compartilhado) ──────
+        tracker.observe(line)
 
         # ── Sinks ─────────────────────────────────────────────────────────
-        for sink_re, category, severity, label in _TAINT_SINKS:
+        for sink_re, category, severity, label in TAINT_SINKS:
             sm = sink_re.search(line)
             if not sm:
                 continue
             args = line[sm.end() - 1:]  # do '(' em diante
-            used = next((t for t in tainted
+            used = next((t for t in tracker.tainted
                          if re.search(r'\b' + re.escape(t) + r'\b', args)), None)
             if not used:
                 continue
@@ -154,7 +105,7 @@ _FUNC_DEF_RE  = re.compile(
 _CLASS_DEF_RE = re.compile(r'^\s*(?:class|struct|interface|impl|trait)\s+(\w+)')
 
 
-def _get_function_context(lines: List[str], line_idx: int) -> Optional[str]:
+def _get_function_context(lines: list[str], line_idx: int) -> str | None:
     for i in range(line_idx, max(-1, line_idx - 60), -1):
         m = _FUNC_DEF_RE.match(lines[i])
         if m:
@@ -170,10 +121,10 @@ def _get_function_context(lines: List[str], line_idx: int) -> Optional[str]:
 _SUPPRESS_INLINE_RE = re.compile(r'#\s*vulnscan:\s*ignore\s+(\S+)', re.IGNORECASE)
 
 
-def _load_ignore_file(directory: str) -> Set[str]:
+def _load_ignore_file(directory: str) -> set[str]:
     """Carrega entradas do .vulnscan-ignore (RULE_ID ou ARQUIVO:RULE_ID por linha)."""
     path = Path(directory) / ".vulnscan-ignore"
-    suppressed: Set[str] = set()
+    suppressed: set[str] = set()
     if not path.exists():
         return suppressed
     try:
@@ -194,7 +145,7 @@ def _is_inline_suppressed(line: str, rule_id: str) -> bool:
     return False
 
 
-def _is_globally_suppressed(rule_id: str, file_path: str, suppressed: Set[str]) -> bool:
+def _is_globally_suppressed(rule_id: str, file_path: str, suppressed: set[str]) -> bool:
     return (rule_id in suppressed
             or f"{Path(file_path).name}:{rule_id}" in suppressed)
 
@@ -218,7 +169,7 @@ def _coerce_scalar(raw: str):
     return s
 
 
-def _parse_simple_yaml_rules(text: str) -> List[dict]:
+def _parse_simple_yaml_rules(text: str) -> list[dict]:
     """
     Parser YAML mínimo para arquivos de regras (sem dependências externas).
     Suporta lista de mapeamentos no formato:
@@ -227,8 +178,8 @@ def _parse_simple_yaml_rules(text: str) -> List[dict]:
           pattern: "..."
     ou sob a chave de topo `rules:`. Valores são escalares de uma linha.
     """
-    items: List[dict] = []
-    current: Optional[dict] = None
+    items: list[dict] = []
+    current: dict | None = None
     for raw_line in text.splitlines():
         line = raw_line.split(" #", 1)[0].rstrip() if " #" in raw_line else raw_line.rstrip()
         if not line.strip() or line.strip().startswith("#"):
@@ -253,12 +204,11 @@ def _parse_simple_yaml_rules(text: str) -> List[dict]:
 def _rule_from_entry(entry: dict):
     """Constrói um objeto Rule a partir de um dict (JSON ou YAML)."""
     from analyzer.rules.base import Rule
-    from analyzer.models import Severity, Confidence, Language, VulnCategory
 
     _sev_map  = {s.name: s   for s in Severity}
     _conf_map = {c.name: c   for c in Confidence}
     _cat_map  = {c.value: c  for c in VulnCategory}
-    _lang_map = {l.value: l  for l in Language}
+    _lang_map = {lang.value: lang for lang in Language}
 
     lang_val = str(entry.get("language", "generic")).title()
     return Rule(
@@ -280,13 +230,55 @@ def _rule_from_entry(entry: dict):
     )
 
 
-def _load_custom_rules() -> List:
+def _load_py_plugin_rules(plugin_dirs: list[Path]) -> list:
     """
-    Carrega regras de ./vulnscan-rules.{json,yaml,yml} e
-    ~/.vulnscan/rules/*.{json,yaml,yml}. JSON e YAML são suportados.
+    Carrega regras de módulos Python (*.py) nos diretórios de plugin.
+    Cada módulo deve expor uma variável de nível de módulo `RULES: list[Rule]`.
+
+    SÓ é chamada quando o usuário passa explicitamente --allow-py-plugins,
+    pois isso executa código Python arbitrário de terceiros — uma decisão
+    de segurança deliberada que exige opt-in explícito (diferente do
+    carregamento de JSON/YAML, que é passivo e seguro por padrão).
     """
-    json_sources: List[Path] = []
-    yaml_sources: List[Path] = []
+    import importlib.util
+    import uuid
+
+    from analyzer.rules.base import Rule
+
+    custom: list = []
+    for d in plugin_dirs:
+        if not d.is_dir():
+            continue
+        for py_file in sorted(d.glob("*.py")):
+            try:
+                mod_name = f"vulnscan_plugin_{uuid.uuid4().hex}"
+                spec = importlib.util.spec_from_file_location(mod_name, py_file)
+                if spec is None or spec.loader is None:
+                    continue
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                rules = getattr(module, "RULES", None)
+                if isinstance(rules, list):
+                    custom.extend(r for r in rules if isinstance(r, Rule))
+            except Exception:
+                # Um plugin quebrado não pode derrubar o scan inteiro.
+                pass
+    return custom
+
+
+def _load_custom_rules(extra_dirs: list[str] | None = None, allow_py_plugins: bool = False) -> list:
+    """
+    Carrega regras de ./vulnscan-rules.{json,yaml,yml},
+    ~/.vulnscan/rules/*.{json,yaml,yml}, do diretório apontado pela
+    variável de ambiente VULNSCAN_RULES_DIR e de quaisquer diretórios
+    passados em `extra_dirs` (equivalente a --rules-dir na CLI).
+    JSON e YAML são suportados — permite plugar regras próprias sem
+    tocar no código-fonte do analisador. Com `allow_py_plugins=True`
+    (--allow-py-plugins na CLI), também carrega módulos .py que expõem
+    `RULES: list[Rule]` — opt-in explícito por rodar código arbitrário.
+    """
+    json_sources: list[Path] = []
+    yaml_sources: list[Path] = []
 
     for stem in ("vulnscan-rules.json",):
         p = Path(stem)
@@ -303,7 +295,20 @@ def _load_custom_rules() -> List:
         yaml_sources.extend(sorted(home_dir.glob("*.yaml")))
         yaml_sources.extend(sorted(home_dir.glob("*.yml")))
 
-    entries: List[dict] = []
+    plugin_dirs: list[Path] = []
+    env_dir = os.environ.get("VULNSCAN_RULES_DIR")
+    if env_dir:
+        plugin_dirs.extend(Path(p) for p in env_dir.split(os.pathsep) if p)
+    if extra_dirs:
+        plugin_dirs.extend(Path(p) for p in extra_dirs if p)
+
+    for d in plugin_dirs:
+        if d.is_dir():
+            json_sources.extend(sorted(d.glob("*.json")))
+            yaml_sources.extend(sorted(d.glob("*.yaml")))
+            yaml_sources.extend(sorted(d.glob("*.yml")))
+
+    entries: list[dict] = []
     for src in json_sources:
         try:
             data = json.loads(src.read_text(encoding="utf-8"))
@@ -316,12 +321,16 @@ def _load_custom_rules() -> List:
         except OSError:
             pass
 
-    custom: List = []
+    custom: list = []
     for entry in entries:
         try:
             custom.append(_rule_from_entry(entry))
         except (KeyError, ValueError):
             pass
+
+    if allow_py_plugins:
+        custom.extend(_load_py_plugin_rules(plugin_dirs))
+
     return custom
 
 
@@ -353,22 +362,57 @@ def _load_config() -> dict:
     return {}
 
 
+_SEV_NAME_MAP = {s.name: s for s in Severity}
+
+
+def _severity_overrides_from_config(config: dict) -> dict[str, Severity]:
+    """
+    Lê `severity_overrides` de vulnscan.toml/json:
+
+        [severity_overrides]
+        PY-EVAL-001 = "LOW"
+    ou
+        {"severity_overrides": {"PY-EVAL-001": "LOW"}}
+
+    Chaves desconhecidas ou valores inválidos são ignorados silenciosamente.
+    """
+    raw = config.get("severity_overrides", {})
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, Severity] = {}
+    for rule_id, sev_name in raw.items():
+        sev = _SEV_NAME_MAP.get(str(sev_name).upper())
+        if sev is not None:
+            out[str(rule_id)] = sev
+    return out
+
+
+def _config_suppressed_ids(config: dict) -> set[str]:
+    """Lê `suppress` (lista de rule_id) de vulnscan.toml/json."""
+    raw = config.get("suppress", [])
+    if not isinstance(raw, list):
+        return set()
+    return {str(x) for x in raw}
+
+
 # ── Engine principal ──────────────────────────────────────────────────────────
 
 class ScanEngine:
     def __init__(
         self,
         min_severity:   Severity                          = Severity.INFO,
-        languages:      Optional[List[Language]]          = None,
+        languages:      list[Language] | None          = None,
         include_comments: bool                            = True,
-        on_file_start:  Optional[Callable[[str], None]]   = None,
-        on_file_done:   Optional[Callable[[ScanResult], None]] = None,
-        only_lines:     Optional[Dict[str, Set[int]]]     = None,
-        custom_rules:   Optional[List]                    = None,
-        global_suppress: Optional[Set[str]]               = None,
+        on_file_start:  Callable[[str], None] | None   = None,
+        on_file_done:   Callable[[ScanResult], None] | None = None,
+        only_lines:     dict[str, set[int]] | None     = None,
+        custom_rules:   list | None                    = None,
+        global_suppress: set[str] | None               = None,
         ast_analysis:   bool                              = False,
         cpp_macros:     bool                              = False,
         incremental_cache = None,
+        rules_dirs:     list[str] | None                = None,
+        allow_py_plugins: bool                             = False,
     ):
         self.min_severity      = min_severity
         self.languages         = languages
@@ -376,9 +420,11 @@ class ScanEngine:
         self.on_file_start     = on_file_start
         self.on_file_done      = on_file_done
         self.only_lines        = only_lines or {}
-        self._custom_rules     = custom_rules if custom_rules is not None else _load_custom_rules()
+        self._custom_rules     = custom_rules if custom_rules is not None else _load_custom_rules(rules_dirs, allow_py_plugins)
         self._global_suppress  = global_suppress if global_suppress is not None else set()
         self._config           = _load_config()
+        self._severity_overrides = _severity_overrides_from_config(self._config)
+        self._global_suppress |= _config_suppressed_ids(self._config)
         self.ast_analysis      = ast_analysis
         self.cpp_macros        = cpp_macros
         self.incremental_cache = incremental_cache
@@ -475,14 +521,14 @@ class ScanEngine:
 
     def _scan_content(
         self, file_path: str, content: str, language: Language
-    ) -> List[Vulnerability]:
+    ) -> list[Vulnerability]:
         all_rules      = get_rules(language) + self._custom_rules
         lines          = content.splitlines()
         total          = len(lines)
-        vulns:   List[Vulnerability] = []
+        vulns:   list[Vulnerability] = []
         seen:    set[tuple]          = set()
-        fired:   Set[str]            = set()
-        tainted: Set[str]            = set()
+        fired:   set[str]            = set()
+        tracker: TaintTracker        = TaintTracker()
 
         single_pfx, blk_start, blk_end = get_comment_prefix(language)
         in_block = False
@@ -510,12 +556,13 @@ class ScanEngine:
                 fired.add(rule.id)
                 sc = max(0, li - CONTEXT_LINES)
                 ec = min(total, li + CONTEXT_LINES + 1)
+                r_name, r_desc, r_rem = _localize_rule(rule.id, rule.name, rule.description, rule.remediation)
                 vulns.append(Vulnerability(
-                    rule_id=rule.id, name=rule.name, description=rule.description,
-                    severity=rule.severity, category=rule.category, language=language,
+                    rule_id=rule.id, name=r_name, description=r_desc,
+                    severity=self._severity_overrides.get(rule.id, rule.severity), category=rule.category, language=language,
                     file_path=file_path, line_number=li + 1,
                     line_content=lines[li].rstrip() if li < total else "",
-                    remediation=rule.remediation, cwe=rule.cwe, owasp=rule.owasp,
+                    remediation=r_rem, cwe=rule.cwe, owasp=rule.owasp,
                     confidence=rule.confidence,
                     snippet=lines[sc:ec], snippet_start_line=sc + 1,
                     in_comment=False,
@@ -540,10 +587,9 @@ class ScanEngine:
 
             is_comment = in_block or bool(single_pfx and stripped.startswith(single_pfx))
 
-            # Taint: detectar variáveis contaminadas
-            src = _TAINT_SOURCE_RE.search(line)
-            if src:
-                tainted.add(src.group(1))
+            # Taint: rastreia fontes + propagação (Python + PHP/JS) via o mesmo
+            # TaintTracker do analisador dedicado — SSOT, nunca mais diverge.
+            tracker.observe(line)
 
             for rule in all_rules:
                 if rule.multiline:
@@ -570,18 +616,19 @@ class ScanEngine:
                     conf = Confidence.MEDIUM if conf == Confidence.HIGH else Confidence.LOW
 
                 # Taint: elevar confiança se var tainted num sink
-                snk = _TAINT_SINK_RE.search(line)
-                if snk and snk.group(1) in tainted:
+                snk = TAINT_SINK_RE.search(line)
+                if snk and snk.group(1) in tracker.tainted:
                     conf = Confidence.HIGH
 
                 sc = max(0, li - CONTEXT_LINES)
                 ec = min(total, li + CONTEXT_LINES + 1)
+                r_name, r_desc, r_rem = _localize_rule(rule.id, rule.name, rule.description, rule.remediation)
                 vulns.append(Vulnerability(
-                    rule_id=rule.id, name=rule.name, description=rule.description,
-                    severity=rule.severity, category=rule.category, language=language,
+                    rule_id=rule.id, name=r_name, description=r_desc,
+                    severity=self._severity_overrides.get(rule.id, rule.severity), category=rule.category, language=language,
                     file_path=file_path, line_number=li + 1,
                     line_content=line.rstrip(),
-                    remediation=rule.remediation, cwe=rule.cwe, owasp=rule.owasp,
+                    remediation=r_rem, cwe=rule.cwe, owasp=rule.owasp,
                     confidence=conf,
                     snippet=lines[sc:ec], snippet_start_line=sc + 1,
                     in_comment=is_comment,
@@ -596,6 +643,8 @@ class ScanEngine:
             if dk in seen:
                 continue
             seen.add(dk)
+            if tf.rule_id in self._severity_overrides:
+                tf.severity = self._severity_overrides[tf.rule_id]
             vulns.append(tf)
 
         return vulns
@@ -610,19 +659,19 @@ class ScanEngine:
         self._global_suppress.update(dir_suppress)
 
         files = self._collect_files(dir_path)
-        results: List[ScanResult] = []
+        results: list[ScanResult] = []
         for fp in files:
             results.append(self.scan_file(str(fp)))
 
         return self._build_report(results, directory, time.perf_counter() - start)
 
-    def scan_files(self, files: List[str]) -> ScanReport:
+    def scan_files(self, files: list[str]) -> ScanReport:
         start = time.perf_counter()
         results = [self.scan_file(fp) for fp in files]
         return self._build_report(results, f"{len(files)} files", time.perf_counter() - start)
 
-    def _collect_files(self, directory: Path) -> List[Path]:
-        collected: List[Path] = []
+    def _collect_files(self, directory: Path) -> list[Path]:
+        collected: list[Path] = []
         try:
             for item in directory.rglob("*"):
                 if not item.is_file() or not is_scannable(str(item)):
@@ -643,7 +692,7 @@ class ScanEngine:
 
     @staticmethod
     def _build_report(
-        results: List[ScanResult], target: str, total_time: float
+        results: list[ScanResult], target: str, total_time: float
     ) -> ScanReport:
         all_vulns = [v for r in results for v in r.vulnerabilities]
         counts    = {s: 0 for s in Severity}
@@ -670,13 +719,13 @@ class ScanEngine:
 
 def watch_mode(target: str, engine_kwargs: dict, interval: float = 2.0) -> None:
     """Monitora alterações em arquivos e re-escaneia automaticamente."""
-    from analyzer.reporter import print_report, console
+    from analyzer.reporter import console, print_report
 
     target_path = Path(target)
-    mtimes: Dict[str, float] = {}
+    mtimes: dict[str, float] = {}
 
-    def _snap() -> Dict[str, float]:
-        r: Dict[str, float] = {}
+    def _snap() -> dict[str, float]:
+        r: dict[str, float] = {}
         if target_path.is_file():
             try:
                 r[str(target_path)] = os.stat(target_path).st_mtime

@@ -1,9 +1,9 @@
 """Shannon entropy detector — encontra API keys, tokens e hashes em código-fonte."""
 from __future__ import annotations
-import re
+
 import math
+import re
 from dataclasses import dataclass
-from typing import List
 
 
 @dataclass
@@ -55,9 +55,9 @@ def _classify(value: str) -> tuple[str, float]:
     return "alnum", 4.0
 
 
-def scan_entropy(file_path: str, content: str, threshold: float = 4.0) -> List[EntropyFinding]:
+def scan_entropy(file_path: str, content: str, threshold: float = 4.0) -> list[EntropyFinding]:
     """Scan a file for high-entropy string assignments (possíveis segredos)."""
-    findings: List[EntropyFinding] = []
+    findings: list[EntropyFinding] = []
     seen: set[tuple] = set()
     lines = content.splitlines()
 
