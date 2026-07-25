@@ -13,15 +13,13 @@ dynamic dispatch complexo ou funções de mesmo nome em classes diferentes
 como entidades distintas (elas são tratadas como o mesmo nó do grafo).
 """
 from __future__ import annotations
+
 import ast
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
 
-from analyzer.models import (
-    Language, Severity, Vulnerability, VulnCategory, Confidence
-)
+from analyzer.models import Confidence, Language, Severity, VulnCategory, Vulnerability
 
 # Reaproveita os padrões de taint já usados no engine principal
 _TAINT_SOURCE_RE = re.compile(
@@ -41,19 +39,19 @@ class FuncNode:
     file_path: str
     lineno: int
     node: ast.AST
-    params: List[str]
-    calls: List[Tuple[str, ast.Call]] = field(default_factory=list)   # (callee_name, call_node)
-    tainted_params: Set[str] = field(default_factory=set)
+    params: list[str]
+    calls: list[tuple[str, ast.Call]] = field(default_factory=list)   # (callee_name, call_node)
+    tainted_params: set[str] = field(default_factory=set)
     returns_tainted: bool = False
 
 
 class CallGraph:
     def __init__(self):
         # nome -> lista de FuncNode (pode haver múltiplas defs com mesmo nome)
-        self.functions: Dict[str, List[FuncNode]] = {}
+        self.functions: dict[str, list[FuncNode]] = {}
         # edges: nome_chamador -> set(nome_chamado)
-        self.edges: Dict[str, Set[str]] = {}
-        self.reverse_edges: Dict[str, Set[str]] = {}
+        self.edges: dict[str, set[str]] = {}
+        self.reverse_edges: dict[str, set[str]] = {}
 
     # ── Construção ──────────────────────────────────────────────────────────
     def add_file(self, file_path: str, content: str) -> None:
@@ -84,7 +82,7 @@ class CallGraph:
                     self.reverse_edges.setdefault(callee, set()).add(fname)
 
     @staticmethod
-    def _callee_name(call: ast.Call) -> Optional[str]:
+    def _callee_name(call: ast.Call) -> str | None:
         f = call.func
         if isinstance(f, ast.Name):
             return f.id
@@ -93,15 +91,15 @@ class CallGraph:
         return None
 
     # ── Impact analysis ─────────────────────────────────────────────────────
-    def callers(self, func_name: str) -> Set[str]:
+    def callers(self, func_name: str) -> set[str]:
         return set(self.reverse_edges.get(func_name, set()))
 
-    def callers_transitive(self, func_name: str, max_depth: int = 10) -> Set[str]:
-        seen: Set[str] = set()
+    def callers_transitive(self, func_name: str, max_depth: int = 10) -> set[str]:
+        seen: set[str] = set()
         frontier = {func_name}
         depth = 0
         while frontier and depth < max_depth:
-            next_frontier: Set[str] = set()
+            next_frontier: set[str] = set()
             for f in frontier:
                 for caller in self.reverse_edges.get(f, set()):
                     if caller not in seen:
@@ -111,12 +109,12 @@ class CallGraph:
             depth += 1
         return seen
 
-    def callees_transitive(self, func_name: str, max_depth: int = 10) -> Set[str]:
-        seen: Set[str] = set()
+    def callees_transitive(self, func_name: str, max_depth: int = 10) -> set[str]:
+        seen: set[str] = set()
         frontier = {func_name}
         depth = 0
         while frontier and depth < max_depth:
-            next_frontier: Set[str] = set()
+            next_frontier: set[str] = set()
             for f in frontier:
                 for callee in self.edges.get(f, set()):
                     if callee not in seen:
@@ -145,13 +143,12 @@ class CallGraph:
         }
 
     # ── Taint interprocedural (ponto fixo sobre o grafo) ────────────────────
-    def _intraproc_tainted_vars(self, fn: FuncNode) -> Set[str]:
+    def _intraproc_tainted_vars(self, fn: FuncNode) -> set[str]:
         """Variáveis contaminadas dentro do corpo de fn, considerando também
         os parâmetros já marcados como tainted (por chamadas anteriores)."""
-        tainted: Set[str] = set(fn.tainted_params)
+        tainted: set[str] = set(fn.tainted_params)
         for node in ast.walk(fn.node):
             if isinstance(node, ast.Assign):
-                src = ast.unparse(node.value) if hasattr(ast, "unparse") else ""
                 rhs_names = {n.id for n in ast.walk(node.value) if isinstance(n, ast.Name)}
                 if rhs_names & tainted or _TAINT_SOURCE_RE.search(_line_of(fn, node.lineno)):
                     for t in node.targets:
@@ -159,11 +156,11 @@ class CallGraph:
                             tainted.add(t.id)
         return tainted
 
-    def analyze_taint(self, max_iterations: int = 5) -> List[Vulnerability]:
+    def analyze_taint(self, max_iterations: int = 5) -> list[Vulnerability]:
         """Fixed-point: propaga taint de argumentos->parâmetros e de
         retorno->call-site, então reporta quando um parâmetro tainted
         alcança um sink dentro do calee."""
-        findings: List[Vulnerability] = []
+        findings: list[Vulnerability] = []
 
         for _ in range(max_iterations):
             changed = False
@@ -201,7 +198,7 @@ class CallGraph:
                 break
 
         # ── Geração dos achados: parâmetro tainted alcançando sink no calee ──
-        seen_keys: Set[tuple] = set()
+        seen_keys: set[tuple] = set()
         for fname, defs in self.functions.items():
             for fn in defs:
                 if not fn.tainted_params:
