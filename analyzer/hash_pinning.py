@@ -8,11 +8,11 @@ Checagem de integridade de hash / pinning de dependências:
     comprometida) seja instalada silenciosamente.
 """
 from __future__ import annotations
+
 import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
 
 
 @dataclass
@@ -29,7 +29,7 @@ _REQ_HASH_RE = re.compile(r'--hash=sha256:[a-f0-9]{64}')
 _REQ_RANGE_RE = re.compile(r'^([A-Za-z0-9_.\-]+)\s*(?:>=|<=|~=|\^|>|<|!=)')
 
 
-def check_requirements_pinning(content: str) -> List[PinningFinding]:
+def check_requirements_pinning(content: str) -> list[PinningFinding]:
     findings = []
     for i, line in enumerate(content.splitlines(), start=1):
         stripped = line.split("#", 1)[0].strip()
@@ -51,7 +51,7 @@ def check_requirements_pinning(content: str) -> List[PinningFinding]:
     return findings
 
 
-def check_package_lock_integrity(content: str) -> List[PinningFinding]:
+def check_package_lock_integrity(content: str) -> list[PinningFinding]:
     findings = []
     try:
         data = json.loads(content)
@@ -72,7 +72,7 @@ _CARGO_ENTRY_RE = re.compile(r'name\s*=\s*"([^"]+)"')
 _CARGO_CHECKSUM_RE = re.compile(r'checksum\s*=\s*"[a-f0-9]{64}"')
 
 
-def check_cargo_lock_checksums(content: str) -> List[PinningFinding]:
+def check_cargo_lock_checksums(content: str) -> list[PinningFinding]:
     findings = []
     blocks = content.split("[[package]]")
     for block in blocks[1:]:
@@ -84,8 +84,8 @@ def check_cargo_lock_checksums(content: str) -> List[PinningFinding]:
     return findings
 
 
-def scan_pinning(directory: str) -> List[PinningFinding]:
-    all_findings: List[PinningFinding] = []
+def scan_pinning(directory: str) -> list[PinningFinding]:
+    all_findings: list[PinningFinding] = []
     for req_file in Path(directory).rglob("requirements*.txt"):
         try:
             content = req_file.read_text(encoding="utf-8", errors="replace")
