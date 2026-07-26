@@ -1,24 +1,30 @@
 """Remediação segura: codemods, patches aplicáveis, quick fixes e provedores de PR/LLM."""
 from __future__ import annotations
-import ast, difflib, hashlib, json, re
-from dataclasses import dataclass, asdict
+
+import difflib
+import hashlib
+import json
+import re
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, Iterable, List, Optional, Protocol, Tuple
+from typing import Any, Protocol
+
 
 @dataclass
 class TextEdit:
     start_line:int;end_line:int;replacement:str
 @dataclass
 class Patch:
-    file_path:str;before_sha256:str;edits:List[TextEdit];diff:str="";description:str=""
+    file_path:str;before_sha256:str;edits:list[TextEdit];diff:str="";description:str=""
 
 class Codemod(Protocol):
-    def __call__(self,source:str,finding:Dict[str,Any])->List[TextEdit]:...
+    def __call__(self,source:str,finding:dict[str,Any])->list[TextEdit]:...
 
 class RemediationEngine:
-    def __init__(self):self.codemods:Dict[str,Codemod]={}
+    def __init__(self):self.codemods:dict[str,Codemod]={}
     def register(self,rule_id:str,codemod:Codemod)->None:self.codemods[rule_id]=codemod
-    def plan(self,file_path:str,source:str,findings:Iterable[Dict[str,Any]])->Patch:
+    def plan(self,file_path:str,source:str,findings:Iterable[dict[str,Any]])->Patch:
         edits=[]
         for f in findings:
             transform=self.codemods.get(f.get("rule_id",""))
@@ -36,7 +42,7 @@ class RemediationEngine:
         if not dry_run:path.write_text(updated,encoding="utf-8")
         return updated
     @staticmethod
-    def _validate_edits(edits:List[TextEdit],lines:int)->None:
+    def _validate_edits(edits:list[TextEdit],lines:int)->None:
         ordered=sorted(edits,key=lambda e:(e.start_line,e.end_line))
         for i,e in enumerate(ordered):
             if e.start_line<1 or e.end_line<e.start_line or e.end_line>max(1,lines):raise ValueError("Intervalo de edição inválido")
@@ -49,7 +55,7 @@ def apply_edits(source:str,edits:Iterable[TextEdit])->str:
         lines[e.start_line-1:e.end_line]=[e.replacement+newline]
     return "".join(lines)
 
-def _line_edit(source:str,finding:Dict[str,Any],transform:Callable[[str],str])->List[TextEdit]:
+def _line_edit(source:str,finding:dict[str,Any],transform:Callable[[str],str])->list[TextEdit]:
     """Helper comum: aplica `transform` na linha do achado; só gera edit se
     o resultado realmente mudar algo (mesma filosofia defensiva de antes)."""
     n=int(finding["line_number"]);lines=source.splitlines()
@@ -57,14 +63,14 @@ def _line_edit(source:str,finding:Dict[str,Any],transform:Callable[[str],str])->
     line=lines[n-1];replacement=transform(line)
     return [TextEdit(n,n,replacement)] if replacement!=line else []
 
-def python_eval_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+def python_eval_codemod(source:str,finding:dict[str,Any])->list[TextEdit]:
     return _line_edit(source,finding,lambda line:re.sub(r"\beval\s*\(", "ast.literal_eval(",line,count=1))
-def python_yaml_load_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+def python_yaml_load_codemod(source:str,finding:dict[str,Any])->list[TextEdit]:
     return _line_edit(source,finding,lambda line:re.sub(r"\byaml\.load\s*\(([^,\n]+)\)",r"yaml.safe_load(\1)",line))
-def javascript_innerhtml_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+def javascript_innerhtml_codemod(source:str,finding:dict[str,Any])->list[TextEdit]:
     return _line_edit(source,finding,lambda line:line.replace(".innerHTML =",".textContent ="))
 
-def python_weak_hash_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+def python_weak_hash_codemod(source:str,finding:dict[str,Any])->list[TextEdit]:
     """hashlib.md5(...)/hashlib.sha1(...) → hashlib.sha256(...). Troca segura
     de algoritmo fraco por forte quando usado como hash genérico; se o uso
     for hashing de senha, ainda assim recomenda-se bcrypt/argon2 no lugar
@@ -72,7 +78,7 @@ def python_weak_hash_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
     return _line_edit(source,finding,lambda line:re.sub(
         r"hashlib\.(?:md5|sha1)\s*\(", "hashlib.sha256(",line))
 
-def python_ssl_verify_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+def python_ssl_verify_codemod(source:str,finding:dict[str,Any])->list[TextEdit]:
     """requests.get(url, verify=False) → remove o verify=False (volta ao
     padrão seguro True), preservando os demais argumentos da chamada."""
     def _fix(line:str)->str:
@@ -81,12 +87,12 @@ def python_ssl_verify_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
         return re.sub(r"\bverify\s*=\s*False\b", "verify=True", line)
     return _line_edit(source,finding,_fix)
 
-def flask_debug_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+def flask_debug_codemod(source:str,finding:dict[str,Any])->list[TextEdit]:
     """app.run(debug=True) → app.run(debug=False)."""
     return _line_edit(source,finding,lambda line:re.sub(
         r"\bdebug\s*=\s*True\b", "debug=False", line))
 
-def python_insecure_random_token_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+def python_insecure_random_token_codemod(source:str,finding:dict[str,Any])->list[TextEdit]:
     """random.random()/random.randint(...) usados para gerar token/senha →
     secrets.token_hex(...) — só aplica quando o nome da variável no LHS
     sugere uso de segurança (token/secret/password/key), evitando trocar
@@ -102,7 +108,7 @@ def python_insecure_random_token_codemod(source:str,finding:Dict[str,Any])->List
         return line
     return _line_edit(source,finding,_fix)
 
-def javascript_dangerously_set_innerhtml_codemod(source:str,finding:Dict[str,Any])->List[TextEdit]:
+def javascript_dangerously_set_innerhtml_codemod(source:str,finding:dict[str,Any])->list[TextEdit]:
     """Insere um comentário de alerta acima do dangerouslySetInnerHTML — não
     há substituição mecânica segura (a correção real exige sanitizar o HTML
     ou trocar por texto puro, decisão que depende do contexto de uso)."""
@@ -140,7 +146,7 @@ class LLMProvider(Protocol):
     def complete(self,prompt:str)->str:...
 class AssistedRemediator:
     def __init__(self,provider:LLMProvider):self.provider=provider
-    def suggest(self,finding:Dict[str,Any],code:str)->Dict[str,str]:
+    def suggest(self,finding:dict[str,Any],code:str)->dict[str,str]:
         prompt=("Você é um remediador de segurança. Não altere comportamento além do necessário. "
                 "Retorne JSON com explanation e replacement.\nACHADO="+json.dumps(finding,ensure_ascii=False)+"\nCÓDIGO:\n"+code)
         raw=self.provider.complete(prompt)
@@ -148,7 +154,7 @@ class AssistedRemediator:
         except json.JSONDecodeError:return {"explanation":raw,"replacement":""}
         return {"explanation":str(data.get("explanation","")),"replacement":str(data.get("replacement",""))}
 
-def lsp_code_actions(uri:str,source:str,findings:Iterable[Dict[str,Any]],engine:Optional[RemediationEngine]=None)->List[Dict[str,Any]]:
+def lsp_code_actions(uri:str,source:str,findings:Iterable[dict[str,Any]],engine:RemediationEngine | None=None)->list[dict[str,Any]]:
     engine=engine or default_engine();actions=[]
     for f in findings:
         mod=engine.codemods.get(f.get("rule_id",""))
@@ -159,8 +165,8 @@ def lsp_code_actions(uri:str,source:str,findings:Iterable[Dict[str,Any]],engine:
     return actions
 
 class PullRequestProvider(Protocol):
-    def create(self,title:str,body:str,changes:Dict[str,str])->Dict[str,Any]:...
-def create_remediation_pr(provider:PullRequestProvider,patches:Iterable[Patch],contents:Dict[str,str])->Dict[str,Any]:
+    def create(self,title:str,body:str,changes:dict[str,str])->dict[str,Any]:...
+def create_remediation_pr(provider:PullRequestProvider,patches:Iterable[Patch],contents:dict[str,str])->dict[str,Any]:
     patches=list(patches);changes={p.file_path:apply_edits(contents[p.file_path],p.edits) for p in patches}
     body="Correções automáticas revisáveis:\n\n"+"\n".join(f"- {p.file_path}: {p.description}" for p in patches)
     return provider.create("fix(security): remediações automáticas",body,changes)

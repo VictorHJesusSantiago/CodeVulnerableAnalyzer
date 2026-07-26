@@ -1,34 +1,39 @@
 from __future__ import annotations
+
 import json
 import re
-import time
-from pathlib import Path
-from typing import Optional, List
+import sys as _sys
 from collections import defaultdict
+from pathlib import Path
 
+from rich import box
+from rich.align import Align
 from rich.console import Console
+from rich.padding import Padding
 from rich.panel import Panel
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
+from rich.rule import Rule as RichRule
+from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
-from rich.columns import Columns
-from rich.rule import Rule as RichRule
-from rich.padding import Padding
-from rich.align import Align
-from rich.progress import (
-    Progress, SpinnerColumn, BarColumn, TextColumn,
-    TimeElapsedColumn, MofNCompleteColumn,
-)
-from rich.syntax import Syntax
-from rich.style import Style
-from rich import box
 
+# Palette dinâmica por tema ativo (ver analyzer.theme)
+from analyzer import theme as _theme_mod
 from analyzer.models import (
-    Severity, Language, VulnCategory,
-    Vulnerability, ScanResult, ScanReport,
+    Language,
+    ScanReport,
+    ScanResult,
+    Severity,
+    Vulnerability,
 )
-from analyzer.rules import rule_count
 
-import sys as _sys
 if _sys.platform == "win32":
     try:
         _sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
@@ -36,22 +41,25 @@ if _sys.platform == "win32":
         pass
 console = Console(highlight=False)
 
-# ── Palette ──────────────────────────────────────────────────────────────────
-SEVERITY_COLORS = {
-    Severity.CRITICAL: "#ff2244",
-    Severity.HIGH:     "#ff6600",
-    Severity.MEDIUM:   "#ffcc00",
-    Severity.LOW:      "#33aaff",
-    Severity.INFO:     "#888888",
-}
 
-SEVERITY_BG = {
-    Severity.CRITICAL: "on #7a0010",
-    Severity.HIGH:     "on #7a2e00",
-    Severity.MEDIUM:   "on #5a4a00",
-    Severity.LOW:      "on #003366",
-    Severity.INFO:     "on #2a2a2a",
-}
+class _ThemeDict:
+    """Dict-like que resolve cores no tema ativo a cada acesso (permite trocar
+    tema em runtime via --theme sem precisar recriar constantes)."""
+    def __init__(self, resolver):
+        self._resolver = resolver
+
+    def __getitem__(self, key):
+        return self._resolver()[key]
+
+    def values(self):
+        return self._resolver().values()
+
+    def items(self):
+        return self._resolver().items()
+
+
+SEVERITY_COLORS = _ThemeDict(_theme_mod.severity_colors)
+SEVERITY_BG = _ThemeDict(_theme_mod.severity_backgrounds)
 
 LANG_SYNTAX_MAP: dict[Language, str] = {
     Language.PYTHON:      "python",
@@ -207,7 +215,7 @@ def _sev_dot(sev: Severity) -> Text:
 
 # ── Finding panel ─────────────────────────────────────────────────────────────
 
-def _format_snippet(vuln: Vulnerability) -> Optional[Syntax]:
+def _format_snippet(vuln: Vulnerability) -> Syntax | None:
     if not vuln.snippet:
         return None
     syntax_lang = LANG_SYNTAX_MAP.get(vuln.language, "text")
@@ -251,7 +259,7 @@ def print_finding(vuln: Vulnerability, show_snippet: bool = True) -> None:
     meta.add_row("File",     f"[bold white]{rel_path}[/bold white]  :[bold yellow]{vuln.line_number}[/bold yellow]")
     meta.add_row("Rule",     f"[bright_black]{vuln.rule_id}[/bright_black]")
 
-    refs: List[str] = []
+    refs: list[str] = []
     if vuln.cwe:
         refs.append(f"[cyan]{vuln.cwe}[/cyan]")
     if vuln.owasp:
@@ -324,7 +332,8 @@ def _make_bar(count: int, max_count: int, width: int = 28, color: str = "cyan") 
 
 def print_summary(report: ScanReport) -> None:
     console.print()
-    console.print(RichRule("[bold bright_white] SCAN COMPLETE [/bold bright_white]", style="#444466"))
+    from analyzer.i18n import t as _t
+    console.print(RichRule(f"[bold bright_white] {_t('scan_complete')} [/bold bright_white]", style="#444466"))
     console.print()
 
     # ── Meta info table ───────────────────────────────────────────────────────
@@ -332,14 +341,21 @@ def print_summary(report: ScanReport) -> None:
     meta.add_column(style="dim", min_width=22)
     meta.add_column(style="bold white")
 
-    meta.add_row("Target",          f"[bright_cyan]{report.target}[/bright_cyan]")
-    meta.add_row("Files Scanned",   str(report.files_scanned))
-    meta.add_row("Files With Issues", f"[bold {'red' if report.files_with_issues else 'green'}]{report.files_with_issues}[/]")
-    meta.add_row("Total Issues",    f"[bold {'red' if report.total_vulnerabilities else 'green'}]{report.total_vulnerabilities}[/]")
-    meta.add_row("Scan Time",       f"{report.total_time:.2f}s")
+    from analyzer.i18n import t as _t
+    meta.add_row(_t("target"),          f"[bright_cyan]{report.target}[/bright_cyan]")
+    meta.add_row(_t("files_scanned"),   str(report.files_scanned))
+    meta.add_row(_t("files_with_issues"), f"[bold {'red' if report.files_with_issues else 'green'}]{report.files_with_issues}[/]")
+    meta.add_row(_t("total_issues"),    f"[bold {'red' if report.total_vulnerabilities else 'green'}]{report.total_vulnerabilities}[/]")
+    meta.add_row(_t("scan_time"),       f"{report.total_time:.2f}s")
     if report.languages_found:
-        langs = "  ".join(f"[{Language(l).color()}]{l}[/]" for l in report.languages_found)
-        meta.add_row("Languages",   langs)
+        langs = "  ".join(f"[{Language(lang).color()}]{lang}[/]" for lang in report.languages_found)
+        meta.add_row(_t("languages"),   langs)
+
+    from analyzer.risk_grade import compute_risk_grade
+    risk = compute_risk_grade(report)
+    grade_color = {"A": "bright_green", "B": "green", "C": "yellow", "D": "orange3", "F": "bright_red"}[risk.grade]
+    grade_label_key = {"A": "grade_excellent", "B": "grade_good", "C": "grade_fair", "D": "grade_bad", "F": "grade_critical"}[risk.grade]
+    meta.add_row(_t("risk_grade"), f"[bold {grade_color}]{risk.grade}[/]  [dim]({_t(grade_label_key)} · score {risk.score})[/]")
 
     # ── Severity breakdown ────────────────────────────────────────────────────
     counts = {
@@ -363,8 +379,7 @@ def print_summary(report: ScanReport) -> None:
         sev_table.add_row(label, bar, count_text)
 
     # ── Category breakdown ────────────────────────────────────────────────────
-    from analyzer.models import Vulnerability  # avoid circular at top
-    all_vulns: List[Vulnerability] = [v for r in report.results for v in r.vulnerabilities]
+    all_vulns: list[Vulnerability] = [v for r in report.results for v in r.vulnerabilities]
 
     cat_counts: dict[str, int] = defaultdict(int)
     for v in all_vulns:
@@ -382,19 +397,19 @@ def print_summary(report: ScanReport) -> None:
     # ── Layout (stacked for terminal compatibility) ───────────────────────────
     summary_content = Table.grid(padding=(0, 0))
     summary_content.add_column()
-    summary_content.add_row(Panel(meta, title="[bold bright_white] Scan Info [/]", border_style="#335588", padding=(0, 2)))
-    summary_content.add_row(Panel(sev_table, title="[bold bright_white] Severity Distribution [/]", border_style="#553388", padding=(0, 2)))
+    summary_content.add_row(Panel(meta, title=f"[bold bright_white] {_t('scan_info')} [/]", border_style="#335588", padding=(0, 2)))
+    summary_content.add_row(Panel(sev_table, title=f"[bold bright_white] {_t('severity_distribution')} [/]", border_style="#553388", padding=(0, 2)))
 
     if top_cats:
         summary_content.add_row(
-            Panel(cat_table, title="[bold bright_white] Top Vulnerability Categories [/]", border_style="#225533", padding=(0, 2))
+            Panel(cat_table, title=f"[bold bright_white] {_t('top_categories')} [/]", border_style="#225533", padding=(0, 2))
         )
 
     console.print(Panel(
         summary_content,
         box=box.DOUBLE_EDGE,
         border_style="#222244",
-        title="[bold bright_white on #222244]  VULNERABILITY SCAN REPORT  [/]",
+        title=f"[bold bright_white on #222244]  {_t('report_title')}  [/]",
         padding=(1, 1),
     ))
     console.print()
@@ -403,7 +418,7 @@ def print_summary(report: ScanReport) -> None:
         console.print(
             Align(
                 Panel(
-                    Text("✅  No vulnerabilities detected!", style="bold bright_green", justify="center"),
+                    Text(_t("no_vulns"), style="bold bright_green", justify="center"),
                     border_style="bright_green",
                     padding=(1, 4),
                 ),
@@ -412,7 +427,7 @@ def print_summary(report: ScanReport) -> None:
         )
     else:
         sev_summary = Text(justify="center")
-        sev_summary.append("  Summary:  ", style="bold white")
+        sev_summary.append(f"  {_t('summary')}  ", style="bold white")
         for sev, cnt in counts.items():
             if cnt > 0:
                 sev_summary.append(f"  {sev.name} {cnt}  ", style=f"bold {SEVERITY_COLORS[sev]} {SEVERITY_BG[sev]}")
@@ -511,7 +526,7 @@ _SEV_HTML_COLORS = {
 def export_html(report: ScanReport, output_path: str) -> None:
     from html import escape
 
-    rows: List[str] = []
+    rows: list[str] = []
     for r in report.results:
         for v in r.vulnerabilities:
             color = _SEV_HTML_COLORS.get(v.severity.name, "#888")
@@ -582,7 +597,7 @@ def export_sarif(report: ScanReport, output_path: str) -> None:
     import datetime
 
     rules_seen: dict[str, dict] = {}
-    results: List[dict] = []
+    results: list[dict] = []
 
     for r in report.results:
         for v in r.vulnerabilities:
@@ -675,7 +690,8 @@ def export_sarif(report: ScanReport, output_path: str) -> None:
 
 def export_csv(report: ScanReport, output_path: str) -> None:
     """Exporta resultados em CSV (compatível com Excel/Google Sheets)."""
-    import csv, io
+    import csv
+    import io
 
     buf = io.StringIO()
     writer = csv.writer(buf, quoting=csv.QUOTE_ALL)
@@ -701,15 +717,15 @@ def export_csv(report: ScanReport, output_path: str) -> None:
 
 def export_junit(report: ScanReport, output_path: str) -> None:
     """Exporta resultados em JUnit XML (Jenkins, GitLab CI, Azure DevOps)."""
-    from html import escape
     import datetime
+    from html import escape
 
     total     = report.total_vulnerabilities
     failures  = report.critical_count + report.high_count
     errors    = 0
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
-    cases: List[str] = []
+    cases: list[str] = []
     for r in report.results:
         for v in r.vulnerabilities:
             cls  = escape(f"vulnscan.{v.language.value}.{v.category.value}".replace(" ", "_"))
@@ -745,13 +761,12 @@ def export_junit(report: ScanReport, output_path: str) -> None:
 
 def export_markdown(report: ScanReport, output_path: str) -> None:
     """Exporta relatório em Markdown (PRs, wikis, GitHub Issues)."""
-    from collections import Counter
 
-    lines: List[str] = [
+    lines: list[str] = [
         "# Vulnerability Scan Report",
         "",
-        f"| Métrica | Valor |",
-        f"|---------|-------|",
+        "| Métrica | Valor |",
+        "|---------|-------|",
         f"| Target | `{report.target}` |",
         f"| Arquivos escaneados | {report.files_scanned} |",
         f"| Arquivos com problemas | {report.files_with_issues} |",
@@ -835,7 +850,7 @@ def export_markdown(report: ScanReport, output_path: str) -> None:
 def print_baseline_diff(diff) -> None:
     """Imprime comparação com baseline de forma legível."""
     console.print()
-    console.print(f"[bold bright_white]  📊  Comparação com Baseline  [/]")
+    console.print("[bold bright_white]  📊  Comparação com Baseline  [/]")
     console.print()
 
     t = Table(box=box.SIMPLE_HEAVY, show_header=False, padding=(0, 2))

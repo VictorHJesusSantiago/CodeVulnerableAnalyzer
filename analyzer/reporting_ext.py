@@ -1,10 +1,17 @@
 """Relatórios avançados, formatos interoperáveis, integridade, diff e heatmaps."""
 from __future__ import annotations
-import csv, hashlib, html, io, json, struct, zipfile
+
+import hashlib
+import html
+import io
+import json
+import zipfile
 from collections import Counter, defaultdict
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any
+
 
 def _jsonable(value:Any)->Any:
     if isinstance(value,dict):return {k:_jsonable(v) for k,v in value.items()}
@@ -13,7 +20,7 @@ def _jsonable(value:Any)->Any:
     if isinstance(value,(str,int,float,bool)) or value is None:return value
     return str(value)
 
-def _findings(report:Any)->List[Dict[str,Any]]:
+def _findings(report:Any)->list[dict[str,Any]]:
     if isinstance(report,dict):return _jsonable(list(report.get("findings",report.get("vulnerabilities",[]))))
     out=[]
     for result in getattr(report,"results",[]):
@@ -28,7 +35,7 @@ def interactive_html(report:Any,title:str="VulnScan Dashboard",language:str="pt-
 <body><header><h1>{html.escape(title)}</h1><div id="summary"></div></header><main><div class="toolbar"><input id="q" placeholder="{labels[0]}"><select id="sev"><option value="">{labels[1]}</option><option>critical</option><option>high</option><option>medium</option><option>low</option></select></div><div class="chart" id="chart"></div><section id="list"></section></main>
 <script>const DATA={payload};const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}}[c]));function render(){{let q=document.querySelector('#q').value.toLowerCase(),s=document.querySelector('#sev').value;let rows=DATA.filter(x=>(!s||String(x.severity).toLowerCase().includes(s))&&JSON.stringify(x).toLowerCase().includes(q));document.querySelector('#summary').textContent=rows.length+' {labels[2]}';let count={{}};DATA.forEach(x=>{{let s=String(x.severity||'info').toLowerCase();count[s]=(count[s]||0)+1}});document.querySelector('#chart').innerHTML=Object.entries(count).map(([k,v])=>`<div class="bar" style="height:${{30+v*12}}px">${{esc(k)}}<br>${{v}}</div>`).join('');document.querySelector('#list').innerHTML=rows.map(x=>`<article><b>${{esc(x.rule_id||x.name)}}</b> — ${{esc(x.message||x.description)}}<br><small>${{esc(x.file_path||x.file)}}:${{esc(x.line_number||x.line||'')}}</small></article>`).join('')}}q.oninput=sev.onchange=render;render()</script></body></html>"""
 
-def advanced_sarif(report:Any)->Dict[str,Any]:
+def advanced_sarif(report:Any)->dict[str,Any]:
     findings=_findings(report); rules={};results=[]
     for f in findings:
         rid=f.get("rule_id","UNKNOWN");rules[rid]={"id":rid,"name":f.get("name",rid),"shortDescription":{"text":f.get("description",f.get("message",rid))}}
@@ -39,7 +46,7 @@ def advanced_sarif(report:Any)->Dict[str,Any]:
         results.append(result)
     return {"version":"2.1.0","$schema":"https://json.schemastore.org/sarif-2.1.0.json","runs":[{"tool":{"driver":{"name":"CodeVulnerableAnalyzer","rules":list(rules.values())}},"results":results}]}
 
-def gitlab_sast(report:Any)->Dict[str,Any]:
+def gitlab_sast(report:Any)->dict[str,Any]:
     levels={"critical":"Critical","high":"High","medium":"Medium","low":"Low","info":"Info"}
     vulns=[]
     for i,f in enumerate(_findings(report)):
@@ -50,25 +57,25 @@ def gitlab_sast(report:Any)->Dict[str,Any]:
          "identifiers":[{"type":"cva_rule","name":f.get("rule_id","UNKNOWN"),"value":f.get("rule_id","UNKNOWN")}]})
     return {"version":"15.0.6","vulnerabilities":vulns,"scan":{"analyzer":{"id":"cva","name":"CVA","version":"2"},"scanner":{"id":"cva","name":"CVA","version":"2"},"type":"sast","start_time":datetime.now(timezone.utc).isoformat(),"end_time":datetime.now(timezone.utc).isoformat(),"status":"success"}}
 
-def scan_diff(old:Any,new:Any)->Dict[str,List[Dict[str,Any]]]:
+def scan_diff(old:Any,new:Any)->dict[str,list[dict[str,Any]]]:
     def key(f):return (f.get("rule_id"),f.get("file_path",f.get("file")),f.get("line_number",f.get("line")))
     a={key(f):f for f in _findings(old)};b={key(f):f for f in _findings(new)}
     return {"new":[b[k] for k in b.keys()-a.keys()],"fixed":[a[k] for k in a.keys()-b.keys()],"persistent":[b[k] for k in b.keys()&a.keys()]}
 
-def longitudinal(scans:Iterable[Dict[str,Any]])->Dict[str,Any]:
+def longitudinal(scans:Iterable[dict[str,Any]])->dict[str,Any]:
     rows=[]
     for s in scans:
         c=Counter(str(f.get("severity","info")).lower() for f in _findings(s))
         rows.append({"at":s.get("at"),"total":sum(c.values()),**c})
     return {"series":rows,"delta":(rows[-1]["total"]-rows[0]["total"]) if len(rows)>1 else 0}
 
-def heatmap(report:Any,authors:Optional[Dict[str,str]]=None)->List[Dict[str,Any]]:
+def heatmap(report:Any,authors:dict[str, str] | None=None)->list[dict[str,Any]]:
     grid=defaultdict(Counter)
     for f in _findings(report):
         file=f.get("file_path",f.get("file","unknown"));grid[file][str(f.get("severity","info")).lower()]+=1
     return [{"file":file,"author":(authors or {}).get(file,"unknown"),"risk":c["critical"]*10+c["high"]*5+c["medium"]*2+c["low"],**c} for file,c in sorted(grid.items())]
 
-def sign_report(data:bytes,key:bytes)->Dict[str,str]:
+def sign_report(data:bytes,key:bytes)->dict[str,str]:
     import hmac
     return {"sha256":hashlib.sha256(data).hexdigest(),"hmac_sha256":hmac.new(key,data,hashlib.sha256).hexdigest()}
 
@@ -113,5 +120,5 @@ def export_pdf(report:Any,path:str)->None:
 
 def confluence_storage(report:Any)->str:
     return "<h1>Relatório de Segurança</h1>"+''.join(f'<h2>{html.escape(str(f.get("rule_id","")))}</h2><p>{html.escape(str(f.get("description",f.get("message",""))))}</p>' for f in _findings(report))
-def jira_issues(report:Any,project:str)->List[Dict[str,Any]]:
+def jira_issues(report:Any,project:str)->list[dict[str,Any]]:
     return [{"fields":{"project":{"key":project},"summary":f'[{f.get("severity","")}] {f.get("rule_id","Achado")}',"description":f.get("description",f.get("message","")),"issuetype":{"name":"Bug"},"labels":["security","vulnscan"]}} for f in _findings(report)]
