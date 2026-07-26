@@ -11,12 +11,13 @@ payload (sem verificar assinatura — não temos a chave), e sinaliza:
     num JWT, que é apenas base64, não criptografado)
 """
 from __future__ import annotations
+
 import base64
 import json
 import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 _JWT_RE = re.compile(r'\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*')
 
@@ -28,9 +29,9 @@ class JWTFinding:
     file_path: str
     line_number: int
     token_preview: str
-    header: Optional[Dict[str, Any]]
-    payload: Optional[Dict[str, Any]]
-    issues: List[str] = field(default_factory=list)
+    header: dict[str, Any] | None
+    payload: dict[str, Any] | None
+    issues: list[str] = field(default_factory=list)
 
 
 def _b64url_decode(segment: str) -> bytes:
@@ -38,7 +39,7 @@ def _b64url_decode(segment: str) -> bytes:
     return base64.urlsafe_b64decode(segment + padding)
 
 
-def decode_jwt(token: str) -> Optional[Dict[str, Optional[dict]]]:
+def decode_jwt(token: str) -> dict[str, dict | None] | None:
     """Decodifica header e payload de um JWT (sem verificar assinatura)."""
     parts = token.split(".")
     if len(parts) != 3:
@@ -54,8 +55,8 @@ def decode_jwt(token: str) -> Optional[Dict[str, Optional[dict]]]:
     return {"header": header, "payload": payload}
 
 
-def _analyze_issues(header: Dict[str, Any], payload: Optional[Dict[str, Any]]) -> List[str]:
-    issues: List[str] = []
+def _analyze_issues(header: dict[str, Any], payload: dict[str, Any] | None) -> list[str]:
+    issues: list[str] = []
     alg = str(header.get("alg", "")).lower()
 
     if alg == "none":
@@ -86,8 +87,8 @@ def _analyze_issues(header: Dict[str, Any], payload: Optional[Dict[str, Any]]) -
     return issues
 
 
-def scan_jwt(file_path: str, content: str) -> List[JWTFinding]:
-    findings: List[JWTFinding] = []
+def scan_jwt(file_path: str, content: str) -> list[JWTFinding]:
+    findings: list[JWTFinding] = []
     for m in _JWT_RE.finditer(content):
         token = m.group(0)
         decoded = decode_jwt(token)
