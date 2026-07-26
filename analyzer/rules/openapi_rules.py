@@ -1,6 +1,7 @@
 """Regras de segurança para OpenAPI/Swagger — 9 regras (OAPI-001..009)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 OPENAPI_RULES: list[Rule] = [
