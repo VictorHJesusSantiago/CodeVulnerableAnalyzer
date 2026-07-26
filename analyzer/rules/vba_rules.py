@@ -1,7 +1,9 @@
 """Regras específicas para VBA/VB6 e macros Office, roteadas como VB.NET legado."""
 import re
-from analyzer.models import Severity,Confidence,Language,VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
+
 VBA_RULES=[
  Rule("VBA-001","Autoexec de macro Office", "Macros AutoOpen/Document_Open executam ao abrir o documento.",Severity.HIGH,VulnCategory.CODE_INJECTION,Language.VBNET,r'\b(?:Auto_Open|AutoOpen|Document_Open|Workbook_Open)\s*\(',"Desabilite autoexec e assine macros aprovadas.",cwe="CWE-284",confidence=Confidence.HIGH),
  Rule("VBA-002","Execução por WScript.Shell/Shell", "Macro cria shell ou executa comando.",Severity.CRITICAL,VulnCategory.COMMAND_INJECTION,Language.VBNET,r'(?:CreateObject\s*\(\s*"WScript\.Shell"|WScript\.Shell|Shell)\s*(?:\.Run|\()', "Remova execução de comandos e use APIs allowlisted.",cwe="CWE-78",confidence=Confidence.HIGH),

@@ -1,6 +1,5 @@
 """Regras de segurança para Vyper (Smart Contracts EVM) — 8 regras (VYPER-001..008)."""
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 VYPER_RULES: list[Rule] = [
