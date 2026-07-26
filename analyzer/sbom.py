@@ -1,12 +1,12 @@
 """Gerador de SBOM — formato CycloneDX 1.4 JSON ou SPDX 2.3 tag-value."""
 from __future__ import annotations
+
 import json
 import re
 import uuid
 from dataclasses import dataclass
-from pathlib import Path
-from typing import List
 from datetime import datetime, timezone
+from pathlib import Path
 
 
 @dataclass
@@ -31,8 +31,8 @@ _REQ_RE = re.compile(
 )
 
 
-def _from_requirements(content: str) -> List[Component]:
-    components: List[Component] = []
+def _from_requirements(content: str) -> list[Component]:
+    components: list[Component] = []
     for line in content.splitlines():
         line = line.split("#", 1)[0].split(";", 1)[0].strip()  # remove comentário e marker
         if not line or line.startswith("-"):
@@ -48,8 +48,8 @@ def _from_requirements(content: str) -> List[Component]:
     return components
 
 
-def _from_package_json(content: str) -> List[Component]:
-    components: List[Component] = []
+def _from_package_json(content: str) -> list[Component]:
+    components: list[Component] = []
     try:
         data = json.loads(content)
     except Exception:
@@ -65,8 +65,8 @@ def _from_package_json(content: str) -> List[Component]:
     return components
 
 
-def _from_pom_xml(content: str) -> List[Component]:
-    components: List[Component] = []
+def _from_pom_xml(content: str) -> list[Component]:
+    components: list[Component] = []
     dep_re = re.compile(
         r"<dependency>.*?<groupId>(.*?)</groupId>.*?"
         r"<artifactId>(.*?)</artifactId>.*?<version>(.*?)</version>",
@@ -84,8 +84,8 @@ def _from_pom_xml(content: str) -> List[Component]:
     return components
 
 
-def _from_cargo_toml(content: str) -> List[Component]:
-    components: List[Component] = []
+def _from_cargo_toml(content: str) -> list[Component]:
+    components: list[Component] = []
     in_deps = False
     for line in content.splitlines():
         stripped = line.strip()
@@ -108,8 +108,8 @@ def _from_cargo_toml(content: str) -> List[Component]:
     return components
 
 
-def _from_go_mod(content: str) -> List[Component]:
-    components: List[Component] = []
+def _from_go_mod(content: str) -> list[Component]:
+    components: list[Component] = []
     for line in content.splitlines():
         m = re.match(r"\s*(?:require\s+)?(\S+)\s+v([\d\.]+)", line)
         if m and not line.strip().startswith("//"):
@@ -122,9 +122,9 @@ def _from_go_mod(content: str) -> List[Component]:
     return components
 
 
-def _from_csproj(content: str) -> List[Component]:
+def _from_csproj(content: str) -> list[Component]:
     """Projetos .NET: <PackageReference Include="X" Version="Y" /> → NuGet."""
-    components: List[Component] = []
+    components: list[Component] = []
     for m in re.finditer(
         r'<PackageReference\b[^>]*?\bInclude\s*=\s*"([^"]+)"[^>]*?'
         r'(?:\bVersion\s*=\s*"([^"]+)"|/?>(?:\s*<Version>\s*([^<]+)\s*</Version>)?)',
@@ -152,9 +152,9 @@ _MANIFEST_MAP = {
 }
 
 
-def collect_components(directory: str) -> List[Component]:
+def collect_components(directory: str) -> list[Component]:
     """Coleta todos os componentes de dependência de um diretório."""
-    components: List[Component] = []
+    components: list[Component] = []
     seen: set[str] = set()
 
     def _add(parser, content: str) -> None:
@@ -179,7 +179,7 @@ def collect_components(directory: str) -> List[Component]:
 
 # ── CycloneDX 1.4 JSON ────────────────────────────────────────────────────────
 
-def export_cyclonedx(components: List[Component], output_path: str, project_name: str = "project") -> None:
+def export_cyclonedx(components: list[Component], output_path: str, project_name: str = "project") -> None:
     now = datetime.now(timezone.utc).isoformat()
     bom = {
         "bomFormat":    "CycloneDX",
@@ -207,11 +207,11 @@ def export_cyclonedx(components: List[Component], output_path: str, project_name
 
 # ── SPDX 2.3 tag-value ────────────────────────────────────────────────────────
 
-def export_spdx(components: List[Component], output_path: str, project_name: str = "project") -> None:
+def export_spdx(components: list[Component], output_path: str, project_name: str = "project") -> None:
     now   = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     doc_ns = f"https://spdx.org/spdxdocs/{project_name}-{uuid.uuid4()}"
 
-    lines: List[str] = [
+    lines: list[str] = [
         "SPDXVersion: SPDX-2.3",
         "DataLicense: CC0-1.0",
         "SPDXID: SPDXRef-DOCUMENT",

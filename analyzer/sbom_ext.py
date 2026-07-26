@@ -15,6 +15,7 @@ documento" — útil para uma cadeia de custódia interna, não para verificaç�
 pública de terceiros.
 """
 from __future__ import annotations
+
 import hashlib
 import hmac
 import json
@@ -22,11 +23,9 @@ import secrets
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
 from xml.dom import minidom
 
 from analyzer.sbom import Component
-
 
 # ════════════════════════════════════════════════════════════════════════════
 #  CycloneDX 1.4 XML
@@ -35,7 +34,7 @@ from analyzer.sbom import Component
 _CDX_NS = "http://cyclonedx.org/schema/bom/1.4"
 
 
-def export_cyclonedx_xml(components: List[Component], output_path: str, project_name: str = "project") -> None:
+def export_cyclonedx_xml(components: list[Component], output_path: str, project_name: str = "project") -> None:
     ET.register_namespace("", _CDX_NS)
     bom = ET.Element(f"{{{_CDX_NS}}}bom", attrib={
         "version": "1", "serialNumber": f"urn:uuid:{secrets.token_hex(16)}",
@@ -68,7 +67,7 @@ def export_cyclonedx_xml(components: List[Component], output_path: str, project_
 #  SPDX 2.3 JSON
 # ════════════════════════════════════════════════════════════════════════════
 
-def export_spdx_json(components: List[Component], output_path: str, project_name: str = "project") -> None:
+def export_spdx_json(components: list[Component], output_path: str, project_name: str = "project") -> None:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     doc = {
         "spdxVersion": "SPDX-2.3",
@@ -117,7 +116,7 @@ def export_spdx_json(components: List[Component], output_path: str, project_name
 _PREDICATE_TYPE = "https://vulnscan.local/attestation/local-hmac/v1"
 
 
-def create_local_attestation(sbom_path: str, signing_key: bytes, predicate_extra: Optional[dict] = None) -> dict:
+def create_local_attestation(sbom_path: str, signing_key: bytes, predicate_extra: dict | None = None) -> dict:
     """Gera uma attestation no formato in-toto Statement (in-toto.io/Statement/v1)
     sobre o hash do SBOM, assinada localmente via HMAC-SHA256.
 
