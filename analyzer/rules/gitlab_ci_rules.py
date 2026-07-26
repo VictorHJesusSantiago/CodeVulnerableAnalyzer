@@ -1,6 +1,7 @@
 """Regras de segurança para GitLab CI/CD — 9 regras (GLCI-001..009)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 GITLAB_CI_RULES: list[Rule] = [
