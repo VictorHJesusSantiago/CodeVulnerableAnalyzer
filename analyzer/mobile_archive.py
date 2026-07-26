@@ -1,12 +1,18 @@
 """Inspeção estática de APK/IPA e artefatos mobile descompactados."""
 from __future__ import annotations
-import hashlib,io,re,zipfile,plistlib,subprocess,tempfile
+
+import hashlib
+import plistlib
+import re
+import subprocess
+import zipfile
 from pathlib import Path
-from typing import Any,Dict,List
-from analyzer.domain_security import scan_android_manifest,scan_mobile_code
+from typing import Any
+
+from analyzer.domain_security import scan_android_manifest, scan_mobile_code
 
 TEXT_EXT={".xml",".plist",".json",".js",".java",".kt",".swift",".m",".properties",".txt"}
-def scan_mobile_archive(path:str|Path,max_entry_bytes:int=8*1024*1024)->Dict[str,Any]:
+def scan_mobile_archive(path:str|Path,max_entry_bytes:int=8*1024*1024)->dict[str,Any]:
     path=Path(path);kind="apk" if path.suffix.lower()==".apk" else "ipa" if path.suffix.lower()==".ipa" else "archive"
     findings=[];files=[];certificates=[]
     with zipfile.ZipFile(path) as archive:
@@ -54,7 +60,7 @@ def decompile_apk(path:str|Path,output_dir:str|Path,apktool_binary:str="apktool"
     if result.returncode:raise RuntimeError(result.stderr.strip() or "Falha no apktool")
     return output
 
-def scan_decompiled_mobile(root:str|Path)->Dict[str,Any]:
+def scan_decompiled_mobile(root:str|Path)->dict[str,Any]:
     root=Path(root);findings=[];count=0
     for path in root.rglob("*"):
         if not path.is_file() or path.suffix.lower() not in TEXT_EXT:continue

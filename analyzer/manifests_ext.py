@@ -12,17 +12,16 @@ para poder alimentar SBOM e o scanner de CVEs locais/OSV sem duplicar
 estruturas de dado.
 """
 from __future__ import annotations
+
 import json
 import re
 from pathlib import Path
-from typing import List
 
 from analyzer.sbom import Component, _make_purl
 
-
 # ── Composer (PHP) ──────────────────────────────────────────────────────────
 
-def parse_composer_json(content: str) -> List[Component]:
+def parse_composer_json(content: str) -> list[Component]:
     components = []
     try:
         data = json.loads(content)
@@ -39,7 +38,7 @@ def parse_composer_json(content: str) -> List[Component]:
     return components
 
 
-def parse_composer_lock(content: str) -> List[Component]:
+def parse_composer_lock(content: str) -> list[Component]:
     components = []
     try:
         data = json.loads(content)
@@ -62,7 +61,7 @@ _GEMFILE_GEM_RE = re.compile(r'''^\s*gem\s+["']([^"']+)["'](?:\s*,\s*["']([^"']+
 _GEMFILE_LOCK_ENTRY_RE = re.compile(r'^\s{4}([A-Za-z0-9_.-]+)\s+\(([^)]+)\)')
 
 
-def parse_gemfile(content: str) -> List[Component]:
+def parse_gemfile(content: str) -> list[Component]:
     components = []
     for line in content.splitlines():
         m = _GEMFILE_GEM_RE.match(line)
@@ -75,7 +74,7 @@ def parse_gemfile(content: str) -> List[Component]:
     return components
 
 
-def parse_gemfile_lock(content: str) -> List[Component]:
+def parse_gemfile_lock(content: str) -> list[Component]:
     components = []
     in_specs = False
     for line in content.splitlines():
@@ -99,7 +98,7 @@ def parse_gemfile_lock(content: str) -> List[Component]:
 _NUGET_PKG_RE = re.compile(r'<package\s+id="([^"]+)"\s+version="([^"]+)"')
 
 
-def parse_packages_config(content: str) -> List[Component]:
+def parse_packages_config(content: str) -> list[Component]:
     components = []
     for m in _NUGET_PKG_RE.finditer(content):
         name, ver = m.groups()
@@ -114,7 +113,7 @@ def parse_packages_config(content: str) -> List[Component]:
 _PUBSPEC_DEP_RE = re.compile(r'^\s{2}([a-zA-Z0-9_]+):\s*\^?([0-9][0-9.]*)')
 
 
-def parse_pubspec_yaml(content: str) -> List[Component]:
+def parse_pubspec_yaml(content: str) -> list[Component]:
     components = []
     in_deps = False
     for line in content.splitlines():
@@ -136,7 +135,7 @@ def parse_pubspec_yaml(content: str) -> List[Component]:
 
 # ── Swift Package Manager (Package.resolved) ─────────────────────────────────
 
-def parse_package_resolved(content: str) -> List[Component]:
+def parse_package_resolved(content: str) -> list[Component]:
     components = []
     try:
         data = json.loads(content)
@@ -159,7 +158,7 @@ def parse_package_resolved(content: str) -> List[Component]:
 _PODFILE_LOCK_ENTRY_RE = re.compile(r'^\s*-\s*([A-Za-z0-9_+./-]+)\s*\(([^)]+)\)')
 
 
-def parse_podfile_lock(content: str) -> List[Component]:
+def parse_podfile_lock(content: str) -> list[Component]:
     components = []
     in_pods = False
     for line in content.splitlines():
@@ -184,7 +183,7 @@ def parse_podfile_lock(content: str) -> List[Component]:
 _CARTFILE_RE = re.compile(r'^(?:github|git|binary)\s+"([^"]+)"\s+"([^"]+)"')
 
 
-def parse_cartfile_resolved(content: str) -> List[Component]:
+def parse_cartfile_resolved(content: str) -> list[Component]:
     components = []
     for line in content.splitlines():
         m = _CARTFILE_RE.match(line.strip())
@@ -202,7 +201,7 @@ def parse_cartfile_resolved(content: str) -> List[Component]:
 _CONAN_REQ_RE = re.compile(r'^([A-Za-z0-9_.-]+)/([0-9][A-Za-z0-9.+-]*)')
 
 
-def parse_conanfile_txt(content: str) -> List[Component]:
+def parse_conanfile_txt(content: str) -> list[Component]:
     components = []
     in_requires = False
     for line in content.splitlines():
@@ -222,7 +221,7 @@ def parse_conanfile_txt(content: str) -> List[Component]:
 
 # ── vcpkg.json ────────────────────────────────────────────────────────────────
 
-def parse_vcpkg_json(content: str) -> List[Component]:
+def parse_vcpkg_json(content: str) -> list[Component]:
     components = []
     try:
         data = json.loads(content)
@@ -242,7 +241,7 @@ def parse_vcpkg_json(content: str) -> List[Component]:
 _MIX_DEP_RE = re.compile(r'\{:([a-z0-9_]+),\s*"~?>?=?\s*([0-9][0-9.]*)"')
 
 
-def parse_mix_exs(content: str) -> List[Component]:
+def parse_mix_exs(content: str) -> list[Component]:
     components = []
     for m in _MIX_DEP_RE.finditer(content):
         name, ver = m.groups()
@@ -257,7 +256,7 @@ def parse_mix_exs(content: str) -> List[Component]:
 _CPANFILE_RE = re.compile(r'''^\s*requires\s+["']([^"']+)["'](?:\s*,\s*["']([^"']+)["'])?''')
 
 
-def parse_cpanfile(content: str) -> List[Component]:
+def parse_cpanfile(content: str) -> list[Component]:
     components = []
     for line in content.splitlines():
         m = _CPANFILE_RE.match(line)
@@ -272,7 +271,7 @@ def parse_cpanfile(content: str) -> List[Component]:
 
 # ── CRAN (DESCRIPTION) ────────────────────────────────────────────────────────
 
-def parse_description_cran(content: str) -> List[Component]:
+def parse_description_cran(content: str) -> list[Component]:
     components = []
     m = re.search(r'^Imports:\s*(.+?)(?:^\S|\Z)', content, re.MULTILINE | re.DOTALL)
     if not m:
@@ -297,7 +296,7 @@ def parse_description_cran(content: str) -> List[Component]:
 _CONDA_DEP_RE = re.compile(r'^\s*-\s*([A-Za-z0-9_.-]+)(?:[=<>]+([0-9][0-9.]*))?')
 
 
-def parse_conda_environment(content: str) -> List[Component]:
+def parse_conda_environment(content: str) -> list[Component]:
     components = []
     in_deps = False
     for line in content.splitlines():
@@ -324,7 +323,7 @@ _HELM_DEP_NAME_RE = re.compile(r'^\s*-?\s*name:\s*(\S+)')
 _HELM_DEP_VER_RE = re.compile(r'^\s*version:\s*"?([^"\s]+)"?')
 
 
-def parse_helm_chart_yaml(content: str) -> List[Component]:
+def parse_helm_chart_yaml(content: str) -> list[Component]:
     """Extrai as 'dependencies:' de um Chart.yaml (subcharts)."""
     components = []
     in_deps = False
@@ -358,7 +357,7 @@ _APK_ADD_RE = re.compile(r'apk\s+add\s+(?:--no-cache\s+)?([^\n&|]+)')
 _YUM_INSTALL_RE = re.compile(r'(?:yum|dnf)\s+install\s+(?:-y\s+)?([^\n&|]+)')
 
 
-def parse_dockerfile(content: str) -> List[Component]:
+def parse_dockerfile(content: str) -> list[Component]:
     components = []
     for m in _DOCKER_FROM_RE.finditer(content):
         image, tag = m.groups()
@@ -407,8 +406,8 @@ _MANIFEST_PARSERS = {
 }
 
 
-def collect_extended_components(directory: str) -> List[Component]:
-    components: List[Component] = []
+def collect_extended_components(directory: str) -> list[Component]:
+    components: list[Component] = []
     seen: set = set()
     for fname, parser in _MANIFEST_PARSERS.items():
         for mpath in Path(directory).rglob(fname):

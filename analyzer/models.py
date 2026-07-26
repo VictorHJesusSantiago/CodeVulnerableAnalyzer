@@ -1,7 +1,7 @@
 from __future__ import annotations
+
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, List
 
 
 class Severity(Enum):
@@ -177,6 +177,7 @@ class Language(Enum):
     # ── Científicas / Acadêmicas ──────────────────────────────────────────────
     MATLAB      = "MATLAB"
     R           = "R"
+    SAS         = "SAS"
     SCRATCH     = "Scratch"
 
     # ── Hardware Description ──────────────────────────────────────────────────
@@ -360,6 +361,7 @@ class Language(Enum):
             # Científicas
             Language.MATLAB:      "bright_red",
             Language.R:           "bright_blue",
+            Language.SAS:         "bright_blue",
             Language.SCRATCH:     "bright_yellow",
             # Meta
             Language.GENERIC:     "white",
@@ -367,7 +369,7 @@ class Language(Enum):
         }.get(self, "white")
 
     @classmethod
-    def by_category(cls) -> dict[str, list["Language"]]:
+    def by_category(cls) -> dict[str, list[Language]]:
         return {
             "Sistemas / Low-level":    [cls.C, cls.CPP, cls.RUST, cls.GO, cls.ASSEMBLY, cls.ADA, cls.FORTRAN, cls.ZIG, cls.NIM, cls.CRYSTAL, cls.VLANG],
             "JVM / .NET / Desktop":    [cls.JAVA, cls.KOTLIN, cls.SCALA, cls.CSHARP, cls.VBNET, cls.FSHARP, cls.GROOVY, cls.COLDFUSION],
@@ -381,7 +383,7 @@ class Language(Enum):
             "IaC / DevOps":            [cls.TERRAFORM, cls.DOCKERFILE],
             "Blockchain":              [cls.SOLIDITY, cls.VYPER, cls.MOVE, cls.CAIRO],
             "Enterprise / Legado":     [cls.COBOL, cls.ABAP, cls.APEX, cls.PASCAL, cls.PLI, cls.RPG, cls.MODULA2, cls.SMALLTALK, cls.ACTIONSCRIPT, cls.COLDFUSION],
-            "Científicas":             [cls.MATLAB, cls.R, cls.JULIA, cls.SCRATCH],
+            "Científicas":             [cls.MATLAB, cls.R, cls.SAS, cls.JULIA, cls.SCRATCH],
         }
 
 
@@ -477,28 +479,28 @@ class Vulnerability:
     line_number: int
     line_content: str
     remediation: str
-    cwe: Optional[str] = None
-    owasp: Optional[str] = None
+    cwe: str | None = None
+    owasp: str | None = None
     confidence: Confidence = Confidence.MEDIUM
-    snippet: List[str] = field(default_factory=list)
+    snippet: list[str] = field(default_factory=list)
     snippet_start_line: int = 0
     in_comment: bool = False
-    function_context: Optional[str] = None
+    function_context: str | None = None
 
 
 @dataclass
 class ScanResult:
     file_path: str
     language: Language
-    vulnerabilities: List[Vulnerability]
+    vulnerabilities: list[Vulnerability]
     lines_scanned: int
     scan_time: float
-    error: Optional[str] = None
+    error: str | None = None
 
 
 @dataclass
 class ScanReport:
-    results: List[ScanResult]
+    results: list[ScanResult]
     total_time: float
     files_scanned: int
     files_with_issues: int
@@ -509,4 +511,4 @@ class ScanReport:
     low_count: int
     info_count: int
     target: str
-    languages_found: List[str] = field(default_factory=list)
+    languages_found: list[str] = field(default_factory=list)
