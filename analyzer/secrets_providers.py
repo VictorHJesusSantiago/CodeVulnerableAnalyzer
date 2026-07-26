@@ -6,9 +6,9 @@ regex de detecção, o nome do provedor e a URL onde o token pode ser revogado
 (revogação assistida).
 """
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
 
 @dataclass
@@ -25,7 +25,7 @@ def _p(provider: str, secret_type: str, regex: str, revoke_url: str,
     return ProviderSignature(provider, secret_type, re.compile(regex), revoke_url, confidence)
 
 
-PROVIDER_SIGNATURES: List[ProviderSignature] = [
+PROVIDER_SIGNATURES: list[ProviderSignature] = [
     # ── Cloud (AWS/GCP/Azure) ──────────────────────────────────────────────────
     _p("AWS", "Access Key ID", r'\bAKIA[0-9A-Z]{16}\b', "https://console.aws.amazon.com/iam/home#/security_credentials"),
     _p("AWS", "Secret Access Key", r'(?i)aws_secret_access_key\s*[:=]\s*["\']?[A-Za-z0-9/+=]{40}["\']?', "https://console.aws.amazon.com/iam/home#/security_credentials"),
@@ -204,7 +204,7 @@ for _provider in _CONTEXTUAL_PROVIDERS:
     ))
 
 
-def classify_secret(text: str) -> List[Tuple[str, str, str, str]]:
+def classify_secret(text: str) -> list[tuple[str, str, str, str]]:
     """Retorna [(provider, secret_type, matched_text, revoke_url), ...] para
     todas as assinaturas que casarem no texto."""
     results = []

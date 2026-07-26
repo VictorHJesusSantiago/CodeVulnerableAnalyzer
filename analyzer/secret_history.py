@@ -10,12 +10,13 @@ diretório não for um repositório, falha graciosamente (lista vazia +
 mensagem de erro), sem lançar exceção para o chamador.
 """
 from __future__ import annotations
+
 import hashlib
 import re
 import shutil
 import subprocess
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from analyzer.secrets_providers import classify_secret
 
@@ -49,8 +50,8 @@ def _is_git_repo(directory: str) -> bool:
         return False
 
 
-def _run_git_log(directory: str, max_commits: Optional[int] = None,
-                  since: Optional[str] = None) -> str:
+def _run_git_log(directory: str, max_commits: int | None = None,
+                  since: str | None = None) -> str:
     cmd = ["git", "-C", directory, "log", "-p", "--no-color",
            "--pretty=format:commit %H%nAuthor: %an <%ae>%nDate: %aI"]
     if max_commits:
@@ -64,10 +65,10 @@ def _run_git_log(directory: str, max_commits: Optional[int] = None,
     return result.stdout
 
 
-def parse_git_log_output(log_text: str) -> List[GitSecretFinding]:
+def parse_git_log_output(log_text: str) -> list[GitSecretFinding]:
     """Faz o parsing do texto de `git log -p` e roda a classificação de
     segredos sobre cada linha ADICIONADA (+) em cada commit."""
-    findings: List[GitSecretFinding] = []
+    findings: list[GitSecretFinding] = []
     seen: set = set()
 
     commit = author = date = current_file = "unknown"
@@ -113,8 +114,8 @@ def parse_git_log_output(log_text: str) -> List[GitSecretFinding]:
     return findings
 
 
-def scan_git_history(directory: str, max_commits: Optional[int] = None,
-                      since: Optional[str] = None) -> Dict[str, Any]:
+def scan_git_history(directory: str, max_commits: int | None = None,
+                      since: str | None = None) -> dict[str, Any]:
     """Varre o histórico git de `directory` procurando segredos introduzidos
     em qualquer commit (não apenas no working tree atual).
 
@@ -138,7 +139,7 @@ def scan_git_history(directory: str, max_commits: Optional[int] = None,
 
 # ── Compatibilidade retroativa: análise de um patch já fornecido ─────────────
 
-def scan_patch_history(patch_text: str) -> List[Dict[str, Any]]:
+def scan_patch_history(patch_text: str) -> list[dict[str, Any]]:
     """Mantido por compatibilidade: analisa um texto de patch/diff já obtido
     (não invoca git). Útil quando o chamador já tem o patch em mãos (ex.:
     diff de PR recebido via webhook, sem acesso ao repositório completo)."""

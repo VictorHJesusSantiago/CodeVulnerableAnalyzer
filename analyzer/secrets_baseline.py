@@ -11,11 +11,11 @@ Fingerprint = SHA-256 de (arquivo relativo, linha, provedor, valor mascarado)
 versão mascarada para auditoria humana.
 """
 from __future__ import annotations
+
 import hashlib
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Set
 
 
 def _mask(value: str) -> str:
@@ -42,12 +42,12 @@ class SecretBaselineEntry:
 
 @dataclass
 class SecretsDiff:
-    new_secrets: List[dict] = field(default_factory=list)
-    resolved_secrets: List[str] = field(default_factory=list)
+    new_secrets: list[dict] = field(default_factory=list)
+    resolved_secrets: list[str] = field(default_factory=list)
     unchanged_count: int = 0
 
 
-def load_secrets_baseline(path: str) -> Dict[str, SecretBaselineEntry]:
+def load_secrets_baseline(path: str) -> dict[str, SecretBaselineEntry]:
     p = Path(path)
     if not p.exists():
         return {}
@@ -62,7 +62,7 @@ def load_secrets_baseline(path: str) -> Dict[str, SecretBaselineEntry]:
     return entries
 
 
-def save_secrets_baseline(path: str, findings: List[dict]) -> None:
+def save_secrets_baseline(path: str, findings: list[dict]) -> None:
     """findings: lista de dicts com file_path, line_number, provider,
     secret_type, matched (mesmo formato retornado pelos scanners deste projeto)."""
     entries = []
@@ -81,11 +81,11 @@ def save_secrets_baseline(path: str, findings: List[dict]) -> None:
     Path(path).write_text(json.dumps(doc, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def filter_new_secrets(findings: List[dict], baseline_path: str) -> SecretsDiff:
+def filter_new_secrets(findings: list[dict], baseline_path: str) -> SecretsDiff:
     """Retorna apenas os achados cujo fingerprint NÃO está no baseline."""
     baseline = load_secrets_baseline(baseline_path)
-    baseline_fps: Set[str] = set(baseline.keys())
-    seen_fps: Set[str] = set()
+    baseline_fps: set[str] = set(baseline.keys())
+    seen_fps: set[str] = set()
 
     diff = SecretsDiff()
     for f in findings:
