@@ -1,6 +1,5 @@
 """Regras de segurança para Kubernetes / Helm — 10 regras (K8S-001..010)."""
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 K8S_RULES: list[Rule] = [
