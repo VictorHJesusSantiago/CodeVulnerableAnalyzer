@@ -1,6 +1,5 @@
 """Regras de segurança para Perl — 10 regras (PERL-001..010)."""
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 PERL_RULES: list[Rule] = [
