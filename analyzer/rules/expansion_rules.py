@@ -7,9 +7,11 @@ linguagens de sistemas modernas, provas dependentes, quântica e legados.
 Exporta EXPANSION_RULES: dict[Language, list[Rule]] — registrado em rules/__init__.py.
 """
 from __future__ import annotations
+
 import re
-from typing import List, Dict
-from analyzer.models import Severity, Confidence, Language, VulnCategory as VC
+
+from analyzer.models import Confidence, Language, Severity
+from analyzer.models import VulnCategory as VC
 from analyzer.rules.base import Rule
 
 S = Severity
@@ -25,10 +27,10 @@ def _r(rid, name, lang, pattern, sev, cat, desc, rem, cwe=None, owasp=None, ic=F
     )
 
 
-EXPANSION_RULES: Dict[Language, List[Rule]] = {}
+EXPANSION_RULES: dict[Language, list[Rule]] = {}
 
 
-def _reg(lang: Language, rules: List[Rule]) -> None:
+def _reg(lang: Language, rules: list[Rule]) -> None:
     EXPANSION_RULES.setdefault(lang, []).extend(rules)
 
 

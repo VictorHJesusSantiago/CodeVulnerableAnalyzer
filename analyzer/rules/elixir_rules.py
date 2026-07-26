@@ -1,6 +1,7 @@
 """Regras de segurança para Elixir — 9 regras (ELIXIR-001..009)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 ELIXIR_RULES: list[Rule] = [
