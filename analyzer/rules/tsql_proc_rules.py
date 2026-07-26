@@ -1,6 +1,7 @@
 """Regras de segurança para T-SQL Stored Procedures — 9 regras (TSQLP-001..009)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 TSQL_PROC_RULES: list[Rule] = [
