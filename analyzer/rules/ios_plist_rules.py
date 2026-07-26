@@ -1,6 +1,5 @@
 """Regras de segurança para iOS Info.plist e Entitlements — 8 regras (IPLIST-001..008)."""
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 IOS_PLIST_RULES: list[Rule] = [
