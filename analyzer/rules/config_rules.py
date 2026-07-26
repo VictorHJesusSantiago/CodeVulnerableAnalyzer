@@ -3,7 +3,8 @@ Regras de segurança para arquivos de configuração: YAML, TOML, INI, JSON, .en
 Detecta credenciais, chaves e configurações inseguras hardcoded em config files.
 """
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 CONFIG_RULES: list[Rule] = [

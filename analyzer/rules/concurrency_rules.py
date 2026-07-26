@@ -3,8 +3,7 @@ Regras de anti-patterns de concorrência e programação assíncrona.
 Baseadas em: Java Concurrency in Practice (Goetz), The Art of Multiprocessor Programming,
 Concurrency in Go, async/await best practices.
 """
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 CONCURRENCY_RULES: list[Rule] = [
