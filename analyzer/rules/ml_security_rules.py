@@ -1,6 +1,7 @@
 """Regras de segurança para Python ML/AI — 9 regras (MLSEC-001..009)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 ML_SECURITY_RULES: list[Rule] = [
