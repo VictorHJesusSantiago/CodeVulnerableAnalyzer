@@ -1,6 +1,7 @@
 """Regras de segurança para Clojure — 9 regras (CLOJ-001..009)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 CLOJURE_RULES: list[Rule] = [
