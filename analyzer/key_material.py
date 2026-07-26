@@ -13,10 +13,10 @@ navegar SEQUENCE/INTEGER/OCTET STRING/BIT STRING/OBJECT IDENTIFIER — não é
 um parser ASN.1 genérico completo (não cobre todos os tipos/tags exóticos).
 """
 from __future__ import annotations
+
 import base64
 import re
 from dataclasses import dataclass
-from typing import List, Optional, Tuple
 
 
 @dataclass
@@ -25,7 +25,7 @@ class KeyFinding:
     line_number: int
     key_type: str            # RSA | EC | Ed25519 | DSA | OPENSSH | PGP | SSH_PUBLIC | UNKNOWN
     is_encrypted: bool
-    bits: Optional[int]       # tamanho estimado em bits (quando aplicável, ex. RSA)
+    bits: int | None       # tamanho estimado em bits (quando aplicável, ex. RSA)
     valid_der: bool
     header: str
 
@@ -45,7 +45,7 @@ _ENCRYPTED_MARKERS = ("ENCRYPTED", "Proc-Type: 4,ENCRYPTED", "DEK-Info")
 
 # ── Parser DER mínimo (TLV) ────────────────────────────────────────────────────
 
-def _parse_der_length(data: bytes, offset: int) -> Tuple[int, int]:
+def _parse_der_length(data: bytes, offset: int) -> tuple[int, int]:
     """Retorna (length, novo_offset) para o campo de comprimento DER em offset."""
     first = data[offset]
     if first & 0x80 == 0:
@@ -55,7 +55,7 @@ def _parse_der_length(data: bytes, offset: int) -> Tuple[int, int]:
     return length, offset + 1 + num_bytes
 
 
-def _parse_der_tlv(data: bytes, offset: int = 0) -> Optional[Tuple[int, bytes, int]]:
+def _parse_der_tlv(data: bytes, offset: int = 0) -> tuple[int, bytes, int] | None:
     """Retorna (tag, value_bytes, next_offset) do primeiro TLV a partir de offset."""
     if offset >= len(data):
         return None
@@ -78,7 +78,7 @@ def _der_int_bit_length(value: bytes) -> int:
     return (len(v) - 1) * 8 + (8 - (bin(v[0])[2:].zfill(8).find("1") if v[0] else 8))
 
 
-def analyze_der_structure(der_bytes: bytes) -> Tuple[bool, Optional[int]]:
+def analyze_der_structure(der_bytes: bytes) -> tuple[bool, int | None]:
     """Valida que der_bytes começa com uma SEQUENCE (tag 0x30) bem formada e,
     se for uma chave RSA (primeiro INTEGER pequeno = versão, segundo INTEGER
     grande = módulo), estima o tamanho em bits do módulo."""
@@ -91,7 +91,7 @@ def analyze_der_structure(der_bytes: bytes) -> Tuple[bool, Optional[int]]:
 
     # Tenta navegar como RSAPrivateKey: SEQUENCE { version INTEGER, n INTEGER, ... }
     inner_offset = 0
-    ints_found: List[bytes] = []
+    ints_found: list[bytes] = []
     while True:
         item = _parse_der_tlv(value, inner_offset)
         if item is None:
@@ -130,8 +130,8 @@ def _key_type_from_header(header: str) -> str:
     return "UNKNOWN"
 
 
-def scan_key_material(file_path: str, content: str) -> List[KeyFinding]:
-    findings: List[KeyFinding] = []
+def scan_key_material(file_path: str, content: str) -> list[KeyFinding]:
+    findings: list[KeyFinding] = []
 
     for m in _PEM_BLOCK_RE.finditer(content):
         header = m.group(1)
@@ -178,7 +178,7 @@ def scan_key_material(file_path: str, content: str) -> List[KeyFinding]:
     return findings
 
 
-def scan_ssh_public_keys(file_path: str, content: str) -> List[KeyFinding]:
+def scan_ssh_public_keys(file_path: str, content: str) -> list[KeyFinding]:
     """Chaves públicas SSH não são segredo, mas sua presença pode indicar
     'authorized_keys' versionado indevidamente ou testar pareamento com a
     chave privada correspondente."""
