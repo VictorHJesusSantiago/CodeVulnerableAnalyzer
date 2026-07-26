@@ -1,6 +1,7 @@
 """Regras de segurança para PostgreSQL DDL — 9 regras (PGDDL-001..009)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 PG_DDL_RULES: list[Rule] = [
