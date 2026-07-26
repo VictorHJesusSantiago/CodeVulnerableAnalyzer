@@ -1,5 +1,4 @@
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 C_CPP_RULES: list[Rule] = [
