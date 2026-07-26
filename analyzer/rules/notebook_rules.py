@@ -1,6 +1,7 @@
 """Regras de segurança para Jupyter Notebooks — 8 regras (NB-001..008)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 NOTEBOOK_RULES: list[Rule] = [
