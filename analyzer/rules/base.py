@@ -1,8 +1,17 @@
 from __future__ import annotations
+
 import re
+import threading
 from dataclasses import dataclass, field
-from typing import Optional
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
+
+# Regras são singletons compartilhados (ver analyzer.rules.get_rules) e a
+# compilação de regex é preguiçosa. Sob um scan paralelo (futuro --jobs), dois
+# workers poderiam compilar o mesmo Rule simultaneamente. re.compile é
+# idempotente, mas guardamos a atribuição com um lock (double-checked locking)
+# para que a preparação nunca dependa de sorte de agendamento.
+_COMPILE_LOCK = threading.Lock()
 
 
 @dataclass
@@ -15,23 +24,32 @@ class Rule:
     language: Language
     pattern: str
     remediation: str
-    cwe: Optional[str] = None
-    owasp: Optional[str] = None
+    cwe: str | None = None
+    owasp: str | None = None
     confidence: Confidence = Confidence.MEDIUM
     flags: int = 0
-    negative_pattern: Optional[str] = None
+    negative_pattern: str | None = None
     multiline: bool = False
-    depends_on: Optional[str] = None
+    depends_on: str | None = None
 
-    _compiled: Optional[re.Pattern] = field(default=None, init=False, repr=False)
-    _neg_compiled: Optional[re.Pattern] = field(default=None, init=False, repr=False)
+    _compiled: re.Pattern | None = field(default=None, init=False, repr=False)
+    _neg_compiled: re.Pattern | None = field(default=None, init=False, repr=False)
 
     def _ensure_compiled(self) -> None:
-        if self._compiled is None:
-            ml_flags = (re.MULTILINE | re.DOTALL) if self.multiline else 0
-            self._compiled = re.compile(self.pattern, self.flags | ml_flags)
-        if self.negative_pattern and self._neg_compiled is None:
-            self._neg_compiled = re.compile(self.negative_pattern, self.flags)
+        # Fast path sem lock: já compilado (leitura de atributo é atômica).
+        if self._compiled is not None and (self._neg_compiled is not None or not self.negative_pattern):
+            return
+        with _COMPILE_LOCK:
+            if self._compiled is None:
+                ml_flags = (re.MULTILINE | re.DOTALL) if self.multiline else 0
+                self._compiled = re.compile(self.pattern, self.flags | ml_flags)
+            if self.negative_pattern and self._neg_compiled is None:
+                self._neg_compiled = re.compile(self.negative_pattern, self.flags)
+
+    def compile(self) -> None:
+        """Compila o regex agora (eager). Útil para pré-aquecer regras antes de
+        um scan paralelo, evitando qualquer contenção de lock no hot path."""
+        self._ensure_compiled()
 
     def match(self, line: str) -> bool:
         """Match against a single line. Multiline rules always return False here."""
