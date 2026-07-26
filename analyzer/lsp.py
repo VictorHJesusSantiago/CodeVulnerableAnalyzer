@@ -1,11 +1,10 @@
 """Language Server Protocol (LSP) JSON-RPC 2.0 sobre stdio."""
 from __future__ import annotations
+
 import json
 import sys
 import threading
-from pathlib import Path
-from typing import Any, Dict, Optional
-
+from typing import Any
 
 _SEV_MAP = {"CRITICAL": 1, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
 
@@ -15,12 +14,12 @@ class LSPServer:
 
     def __init__(self):
         self._running    = True
-        self._open_docs: Dict[str, str] = {}
+        self._open_docs: dict[str, str] = {}
         self._lock       = threading.Lock()
 
     # ── Transport ────────────────────────────────────────────────────────────
 
-    def _read_message(self) -> Optional[dict]:
+    def _read_message(self) -> dict | None:
         header = b""
         while b"\r\n\r\n" not in header:
             chunk = sys.stdin.buffer.read(1)

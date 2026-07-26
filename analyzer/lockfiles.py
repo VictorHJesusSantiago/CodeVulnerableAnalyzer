@@ -14,11 +14,11 @@ Formatos suportados:
   - go.sum
 """
 from __future__ import annotations
+
 import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set
 
 
 @dataclass
@@ -26,26 +26,26 @@ class LockedPackage:
     name: str
     version: str
     ecosystem: str
-    dependencies: List[str] = field(default_factory=list)  # nomes de deps diretas (quando disponível)
-    integrity: Optional[str] = None
+    dependencies: list[str] = field(default_factory=list)  # nomes de deps diretas (quando disponível)
+    integrity: str | None = None
 
 
 @dataclass
 class DependencyTree:
-    packages: Dict[str, LockedPackage] = field(default_factory=dict)  # nome -> pacote
-    edges: Dict[str, Set[str]] = field(default_factory=dict)          # pai -> filhos
+    packages: dict[str, LockedPackage] = field(default_factory=dict)  # nome -> pacote
+    edges: dict[str, set[str]] = field(default_factory=dict)          # pai -> filhos
 
     def add(self, pkg: LockedPackage) -> None:
         self.packages[pkg.name] = pkg
         for dep in pkg.dependencies:
             self.edges.setdefault(pkg.name, set()).add(dep)
 
-    def transitive_of(self, name: str, max_depth: int = 20) -> Set[str]:
-        seen: Set[str] = set()
+    def transitive_of(self, name: str, max_depth: int = 20) -> set[str]:
+        seen: set[str] = set()
         frontier = {name}
         depth = 0
         while frontier and depth < max_depth:
-            nxt: Set[str] = set()
+            nxt: set[str] = set()
             for n in frontier:
                 for child in self.edges.get(n, set()):
                     if child not in seen:
@@ -147,7 +147,7 @@ def parse_yarn_lock(content: str) -> DependencyTree:
         if header_match and line.endswith(":"):
             name = header_match.group(1).strip('"')
             version = ""
-            deps: List[str] = []
+            deps: list[str] = []
             i += 1
             in_deps = False
             while i < len(lines) and lines[i].startswith((" ", "\t")):
@@ -174,15 +174,15 @@ def parse_yarn_lock(content: str) -> DependencyTree:
 #  poetry.lock (TOML) — parser TOML mínimo suficiente para este formato
 # ════════════════════════════════════════════════════════════════════════════
 
-def _parse_toml_simple(content: str) -> List[dict]:
+def _parse_toml_simple(content: str) -> list[dict]:
     """Parser TOML simplificado para arrays de tabelas [[package]] com pares
     chave=valor de uma linha, incluindo arrays multi-linha (suficiente para
     poetry.lock/Cargo.lock)."""
-    entries: List[dict] = []
-    current: Optional[dict] = None
+    entries: list[dict] = []
+    current: dict | None = None
     in_target_table = False
-    in_array_key: Optional[str] = None
-    array_items: List[str] = []
+    in_array_key: str | None = None
+    array_items: list[str] = []
 
     def _flush_array() -> None:
         nonlocal in_array_key, array_items
@@ -319,7 +319,7 @@ _LOCKFILE_PARSERS = {
 }
 
 
-def parse_lockfile(file_path: str, content: str) -> Optional[DependencyTree]:
+def parse_lockfile(file_path: str, content: str) -> DependencyTree | None:
     fname = Path(file_path).name
     parser = _LOCKFILE_PARSERS.get(fname)
     return parser(content) if parser else None
