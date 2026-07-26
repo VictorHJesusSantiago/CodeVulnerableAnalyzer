@@ -4,23 +4,23 @@ dashboard de métricas, histórico de scans e configuração inline.
 Zero dependências extras: usa apenas stdlib (msvcrt/termios) + rich.
 """
 from __future__ import annotations
-import os
-import sys
-import subprocess
-from pathlib import Path
-from typing import Optional, List, Set
 
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+from rich import box as rbox
+from rich.align import Align
 from rich.console import Console
 from rich.panel import Panel
+from rich.rule import Rule as RichRule
+from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
-from rich.syntax import Syntax
-from rich.align import Align
-from rich.rule import Rule as RichRule
-from rich import box as rbox
 
-from analyzer.models import Severity, Vulnerability, ScanReport
-from analyzer.detector import is_scannable, SKIP_DIRS
+from analyzer.detector import SKIP_DIRS, is_scannable
+from analyzer.models import ScanReport, Severity, Vulnerability
 
 # ── Leitura de teclado (cross-platform, stdlib puro) ─────────────────────────
 if sys.platform == "win32":
@@ -43,8 +43,8 @@ if sys.platform == "win32":
         except Exception:
             return ""
 else:
-    import tty
     import termios
+    import tty
 
     def _key() -> str:
         fd  = sys.stdin.fileno()
@@ -70,21 +70,20 @@ else:
             termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 
-# ── Paleta ────────────────────────────────────────────────────────────────────
-_SC = {
-    Severity.CRITICAL: "#ff2244",
-    Severity.HIGH:     "#ff6600",
-    Severity.MEDIUM:   "#ffcc00",
-    Severity.LOW:      "#33aaff",
-    Severity.INFO:     "#888888",
-}
-_SB = {
-    Severity.CRITICAL: "on #550010",
-    Severity.HIGH:     "on #552000",
-    Severity.MEDIUM:   "on #4a3800",
-    Severity.LOW:      "on #00224d",
-    Severity.INFO:     "on #222222",
-}
+# ── Paleta (dinâmica por tema ativo — ver analyzer.theme) ──────────────────────
+from analyzer import theme as _theme_mod
+
+
+class _ThemeDict:
+    def __init__(self, resolver):
+        self._resolver = resolver
+
+    def __getitem__(self, key):
+        return self._resolver()[key]
+
+
+_SC = _ThemeDict(_theme_mod.severity_colors)
+_SB = _ThemeDict(_theme_mod.severity_backgrounds)
 
 _ICONS     = {True: "📁", False: "📄"}
 _SORT_MODES  = ["severity", "file", "rule", "line"]
@@ -97,22 +96,22 @@ class TUIApp:
                              → metrics → history → config.
     """
 
-    def __init__(self, start_path: Optional[Path] = None):
+    def __init__(self, start_path: Path | None = None):
         self.con = Console(highlight=False)
         self.screen = "browser"
 
         # ── Browser ───────────────────────────────────────────────────────
         self.cwd:      Path       = (start_path or Path.cwd()).resolve()
-        self.entries:  List[Path] = []
+        self.entries:  list[Path] = []
         self.cursor:   int        = 0
         self.scroll:   int        = 0
-        self.selected: Set[Path]  = set()
+        self.selected: set[Path]  = set()
 
         # ── Resultados ────────────────────────────────────────────────────
-        self.report:     Optional[ScanReport] = None
+        self.report:     ScanReport | None = None
         self.res_cursor: int                  = 0
         self.res_scroll: int                  = 0
-        self.sev_filter: Optional[Severity]   = None
+        self.sev_filter: Severity | None   = None
         self.min_sev:    Severity             = Severity.INFO
 
         # ── Busca em tempo real ───────────────────────────────────────────
@@ -126,6 +125,12 @@ class TUIApp:
         # ── Detalhe ───────────────────────────────────────────────────────
         self.det_idx: int = 0
 
+        # ── Revisão de achados (persistida em .vulnscan_reviewed.json) ──────
+        self.reviewed:      set[tuple] = set()
+        self.hide_reviewed: bool       = False
+        self._reviewed_path: Path      = self.cwd / ".vulnscan_reviewed.json"
+        self._load_reviewed()
+
         # ── Histórico ─────────────────────────────────────────────────────
         self.hist_cursor: int = 0
 
@@ -136,7 +141,7 @@ class TUIApp:
 
     # ── Carregamento de entradas ──────────────────────────────────────────────
     def _load(self) -> None:
-        items: List[Path] = []
+        items: list[Path] = []
         try:
             for p in sorted(self.cwd.iterdir(),
                             key=lambda x: (not x.is_dir(), x.name.lower())):
@@ -161,7 +166,7 @@ class TUIApp:
         elif self.cursor >= self.scroll + lh:
             self.scroll = self.cursor - lh + 1
 
-    def _vis(self) -> List[tuple]:
+    def _vis(self) -> list[tuple]:
         lh = self._lh()
         return list(enumerate(self.entries[self.scroll:self.scroll + lh], start=self.scroll))
 
@@ -317,10 +322,12 @@ class TUIApp:
         filt_tag  = f"  [Filtro:{self.sev_filter.name}]" if self.sev_filter else ""
         q_tag     = f"  [Busca:'{self.search_query}']" if self.search_query else ""
 
+        rev_tag = f"  [{len(self.reviewed)} revisados]" if self.reviewed else ""
+        hide_tag = "  [ocultando revisados]" if self.hide_reviewed else ""
         self._topbar(
-            f"⚡ Resultados{filt_tag}{q_tag}",
+            f"⚡ Resultados{filt_tag}{q_tag}{rev_tag}{hide_tag}",
             f"[/]busca  [O]sort:{sort_lbl}  [G]grup:{group_lbl}"
-            "  [F]filtro  [D]dash  [H]hist  [Q]sair"
+            "  [F]filtro  [R]revisar  [D]dash  [H]hist  [Q]sair"
         )
 
         # ── Barra de busca inline ──────────────────────────────────────────
@@ -389,13 +396,17 @@ class TUIApp:
             sv     = Text(f" {vuln.severity.name:8}", style=f"bold {sc}")
             nm     = Path(vuln.file_path).name
             pre    = "▶ " if active else "  "
+            reviewed = self._is_reviewed(vuln)
             dname  = vuln.name if len(vuln.name) <= nome_w else vuln.name[:nome_w - 1] + "…"
+            if reviewed:
+                dname = f"✓ {dname}"
             fn_ctx = (vuln.function_context or "—")[:12]
             t.add_row(
                 str(rel + 1), sv,
                 pre + (nm[:20] if len(nm) > 20 else nm),
-                str(vuln.line_number), vuln.rule_id, fn_ctx, dname,
-                style="on #111128" if active else "",
+                str(vuln.line_number), vuln.rule_id, fn_ctx,
+                Text(dname, style="dim strike" if reviewed else ""),
+                style="on #111128" if active else ("on #0a1a0a" if reviewed else ""),
             )
         self.con.print(t)
 
@@ -407,7 +418,7 @@ class TUIApp:
                 cnt = sum(1 for v in vulns if v.severity == s)
                 if cnt:
                     st.append(f"   {s.name[0]} {cnt}", style=f"bold {_SC[s]}")
-        st.append("   [Enter] detalhe  [J] JSON  [E] HTML  [B] voltar", style="dim")
+        st.append("   [Enter] detalhe  [R] revisar  [J] JSON  [E] HTML  [B] voltar", style="dim")
         self._statusbar(st)
 
     # ──────────────────────────────────────────────────────────── DETAIL ──
@@ -421,14 +432,17 @@ class TUIApp:
         vuln = vulns[idx]
         sc   = _SC[vuln.severity]
 
+        reviewed = self._is_reviewed(vuln)
         self._topbar(
             f"⚡ Detalhe  {idx + 1}/{len(vulns)}",
-            "[←→] navegar  [O] abrir editor  [X] suprimir  [B] lista  [Q] sair"
+            "[←→] navegar  [O] abrir editor  [X] suprimir  [R] revisar  [B] lista  [Q] sair"
         )
 
         badge = Text()
         badge.append(f" {vuln.severity.name:8} ", style=f"bold {sc} {_SB[vuln.severity]}")
         badge.append(f"   {vuln.name}", style=f"bold {sc}")
+        if reviewed:
+            badge.append("   ✓ REVISADO", style="bold bright_green")
 
         meta = Table(box=None, show_header=False, padding=(0, 2))
         meta.add_column(style="dim", min_width=12)
@@ -696,7 +710,7 @@ class TUIApp:
         self._statusbar(hint)
 
     # ── Helpers ───────────────────────────────────────────────────────────────
-    def _fvulns(self) -> List[Vulnerability]:
+    def _fvulns(self) -> list[Vulnerability]:
         if not self.report:
             return []
         all_v = [v for r in self.report.results for v in r.vulnerabilities]
@@ -704,6 +718,10 @@ class TUIApp:
         # Filtro de severidade
         if self.sev_filter:
             all_v = [v for v in all_v if v.severity == self.sev_filter]
+
+        # Filtro de revisados
+        if self.hide_reviewed:
+            all_v = [v for v in all_v if not self._is_reviewed(v)]
 
         # Filtro de busca
         if self.search_query:
@@ -745,6 +763,42 @@ class TUIApp:
         if mode == "language":
             return vuln.language.value
         return ""
+
+    # ── Revisão de achados ───────────────────────────────────────────────────
+    @staticmethod
+    def _vuln_key(vuln: Vulnerability) -> tuple:
+        return (vuln.rule_id, vuln.file_path, vuln.line_number)
+
+    def _load_reviewed(self) -> None:
+        try:
+            if self._reviewed_path.exists():
+                import json
+                data = json.loads(self._reviewed_path.read_text(encoding="utf-8"))
+                self.reviewed = {tuple(item) for item in data.get("reviewed", [])}
+        except Exception:
+            self.reviewed = set()
+
+    def _save_reviewed(self) -> None:
+        try:
+            import json
+            if self.reviewed:
+                data = {"reviewed": [list(k) for k in sorted(self.reviewed)]}
+                self._reviewed_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+            elif self._reviewed_path.exists():
+                self._reviewed_path.unlink()
+        except Exception:
+            pass
+
+    def _toggle_reviewed(self, vuln: Vulnerability) -> None:
+        key = self._vuln_key(vuln)
+        if key in self.reviewed:
+            self.reviewed.discard(key)
+        else:
+            self.reviewed.add(key)
+        self._save_reviewed()
+
+    def _is_reviewed(self, vuln: Vulnerability) -> bool:
+        return self._vuln_key(vuln) in self.reviewed
 
     def _cycle_sev(self) -> None:
         order = [None, Severity.CRITICAL, Severity.HIGH,
@@ -964,6 +1018,13 @@ class TUIApp:
             self.res_scroll = 0
         elif k == "f":
             self._cycle_sev()
+        elif k == "r":
+            if vulns and self.res_cursor < len(vulns):
+                self._toggle_reviewed(vulns[self.res_cursor])
+        elif k == "R":
+            self.hide_reviewed  = not self.hide_reviewed
+            self.res_cursor = 0
+            self.res_scroll = 0
         elif k == "d":
             self.screen = "metrics"
         elif k == "h":
@@ -1008,6 +1069,8 @@ class TUIApp:
             self._open_in_editor(vulns[self.det_idx])
         elif k == "x" and vulns:
             self._inline_suppress(vulns[self.det_idx])
+        elif k == "r" and vulns:
+            self._toggle_reviewed(vulns[self.det_idx])
         elif k in ("b", "BS", "ESC"):
             self.screen = "results"
         elif k == "q":
@@ -1083,5 +1146,5 @@ class TUIApp:
 
 
 # ── Ponto de entrada público ──────────────────────────────────────────────────
-def run_tui(start_path: Optional[Path] = None) -> None:
+def run_tui(start_path: Path | None = None) -> None:
     TUIApp(start_path).run()

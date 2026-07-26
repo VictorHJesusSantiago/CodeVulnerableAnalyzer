@@ -1,12 +1,11 @@
 """Histórico de scans via SQLite + gráfico ASCII de tendência."""
 from __future__ import annotations
+
 import sqlite3
 import time
 from dataclasses import dataclass
-from pathlib import Path
-from typing import List, Optional
 from datetime import datetime
-
+from pathlib import Path
 
 DEFAULT_DB = Path.home() / ".vulnscan" / "trend.db"
 
@@ -38,7 +37,7 @@ class TrendEntry:
 
 
 class TrendDB:
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None):
         self.db_path = Path(db_path) if db_path else DEFAULT_DB
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_schema()
@@ -79,7 +78,7 @@ class TrendDB:
             conn.commit()
             return cur.lastrowid
 
-    def history(self, limit: int = 20) -> List[TrendEntry]:
+    def history(self, limit: int = 20) -> list[TrendEntry]:
         with self._conn() as conn:
             rows = conn.execute(
                 "SELECT id,timestamp,target,files_scanned,total_vulns,"
@@ -100,7 +99,7 @@ class TrendDB:
             conn.commit()
 
 
-def ascii_trend(entries: List[TrendEntry], width: int = 40, height: int = 8) -> str:
+def ascii_trend(entries: list[TrendEntry], width: int = 40, height: int = 8) -> str:
     """Gráfico ASCII de total de vulnerabilidades ao longo do tempo."""
     if not entries:
         return "  (sem histórico de scans)"
@@ -112,7 +111,7 @@ def ascii_trend(entries: List[TrendEntry], width: int = 40, height: int = 8) -> 
     vals     = values[-cols:]
     dates    = [e.dt for e in ordered[-cols:]]
 
-    chart_lines: List[str] = []
+    chart_lines: list[str] = []
     for row in range(height, 0, -1):
         threshold = max_val * row / height
         bar_chars = ""
