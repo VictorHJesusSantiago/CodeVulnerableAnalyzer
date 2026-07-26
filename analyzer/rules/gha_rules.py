@@ -1,6 +1,7 @@
 """Regras de segurança para GitHub Actions — 10 regras (GHA-001..010)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 GHA_RULES: list[Rule] = [
