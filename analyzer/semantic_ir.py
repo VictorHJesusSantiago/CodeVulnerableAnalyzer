@@ -1,24 +1,28 @@
 """IR semântica, CFG/SSA, dataflow, interpretação abstrata e execução simbólica."""
 from __future__ import annotations
-import ast,collections,operator
-from dataclasses import dataclass,field
-from typing import Any,Dict,Iterable,List,Optional,Set,Tuple
+
+import ast
+import collections
+from collections.abc import Iterable
+from dataclasses import dataclass, field
+from typing import Any
+
 
 @dataclass
 class Instruction:
-    op:str;target:Optional[str]=None;args:Tuple[Any,...]=();line:int=0
+    op:str;target:str | None=None;args:tuple[Any,...]=();line:int=0
 @dataclass
 class BasicBlock:
-    id:int;instructions:List[Instruction]=field(default_factory=list);successors:Set[int]=field(default_factory=set)
+    id:int;instructions:list[Instruction]=field(default_factory=list);successors:set[int]=field(default_factory=set)
 @dataclass
 class ControlFlowGraph:
-    blocks:Dict[int,BasicBlock];entry:int=0;exit:int=-1
-    def predecessors(self)->Dict[int,Set[int]]:
+    blocks:dict[int,BasicBlock];entry:int=0;exit:int=-1
+    def predecessors(self)->dict[int,set[int]]:
         out={k:set() for k in self.blocks}
         for src,b in self.blocks.items():
             for dst in b.successors:out.setdefault(dst,set()).add(src)
         return out
-    def reachable(self)->Set[int]:
+    def reachable(self)->set[int]:
         seen=set();stack=[self.entry]
         while stack:
             n=stack.pop()
@@ -62,7 +66,7 @@ def cfg_from_python(source:str)->ControlFlowGraph:
     return ControlFlowGraph(blocks,0,exit_id)
 
 def to_ssa(cfg:ControlFlowGraph)->ControlFlowGraph:
-    versions:Dict[str,int]=collections.defaultdict(int);renamed={}
+    versions:dict[str,int]=collections.defaultdict(int);renamed={}
     for bid in sorted(cfg.blocks):
         block=cfg.blocks[bid];new=[]
         for ins in block.instructions:
@@ -73,13 +77,13 @@ def to_ssa(cfg:ControlFlowGraph)->ControlFlowGraph:
             new.append(Instruction(ins.op,target,args,ins.line))
         block.instructions=new
     return cfg
-def _rename_expr(expr:str,names:Dict[str,str])->str:
+def _rename_expr(expr:str,names:dict[str,str])->str:
     for old,new in sorted(names.items(),key=lambda x:len(x[0]),reverse=True):
         import re
         expr=re.sub(r"\b"+re.escape(old)+r"\b",new,expr)
     return expr
 
-def reaching_definitions(cfg:ControlFlowGraph)->Dict[int,Set[Tuple[str,int]]]:
+def reaching_definitions(cfg:ControlFlowGraph)->dict[int,set[tuple[str,int]]]:
     pred=cfg.predecessors();gen={b:{(i.target,i.line) for i in block.instructions if i.target} for b,block in cfg.blocks.items()}
     incoming={b:set() for b in cfg.blocks};out={b:set(gen[b]) for b in cfg.blocks};changed=True
     while changed:
@@ -90,7 +94,7 @@ def reaching_definitions(cfg:ControlFlowGraph)->Dict[int,Set[Tuple[str,int]]]:
             if new_in!=incoming[b] or new_out!=out[b]:incoming[b],out[b],changed=new_in,new_out,True
     return incoming
 
-def live_variables(cfg:ControlFlowGraph)->Dict[int,Set[str]]:
+def live_variables(cfg:ControlFlowGraph)->dict[int,set[str]]:
     use,defs={},{}
     for b,block in cfg.blocks.items():
         defs[b]={i.target for i in block.instructions if i.target}
@@ -110,12 +114,12 @@ def live_variables(cfg:ControlFlowGraph)->Dict[int,Set[str]]:
 @dataclass(frozen=True)
 class Interval:
     low:float=float("-inf");high:float=float("inf")
-    def join(self,other:"Interval")->"Interval":return Interval(min(self.low,other.low),max(self.high,other.high))
-    def add(self,other:"Interval")->"Interval":return Interval(self.low+other.low,self.high+other.high)
-    def mul(self,other:"Interval")->"Interval":
+    def join(self,other:Interval)->Interval:return Interval(min(self.low,other.low),max(self.high,other.high))
+    def add(self,other:Interval)->Interval:return Interval(self.low+other.low,self.high+other.high)
+    def mul(self,other:Interval)->Interval:
         vals=(self.low*other.low,self.low*other.high,self.high*other.low,self.high*other.high);return Interval(min(vals),max(vals))
 
-def interpret_intervals(instructions:Iterable[Instruction],initial:Optional[Dict[str,Interval]]=None)->Dict[str,Interval]:
+def interpret_intervals(instructions:Iterable[Instruction],initial:dict[str, Interval] | None=None)->dict[str,Interval]:
     env=dict(initial or {})
     for ins in instructions:
         if ins.op!="assign" or not ins.target:continue
@@ -124,7 +128,7 @@ def interpret_intervals(instructions:Iterable[Instruction],initial:Optional[Dict
             env[ins.target]=_eval_interval(node,env)
         except (SyntaxError,ValueError,TypeError):env[ins.target]=Interval()
     return env
-def _eval_interval(node:ast.AST,env:Dict[str,Interval])->Interval:
+def _eval_interval(node:ast.AST,env:dict[str,Interval])->Interval:
     if isinstance(node,ast.Constant) and isinstance(node.value,(int,float)):return Interval(node.value,node.value)
     if isinstance(node,ast.Name):return env.get(node.id,Interval())
     if isinstance(node,ast.BinOp):
@@ -134,7 +138,7 @@ def _eval_interval(node:ast.AST,env:Dict[str,Interval])->Interval:
         if isinstance(node.op,ast.Mult):return a.mul(b)
     return Interval()
 
-def memory_lifetime_findings(instructions:Iterable[Instruction])->List[Dict[str,Any]]:
+def memory_lifetime_findings(instructions:Iterable[Instruction])->list[dict[str,Any]]:
     state={};locks=[];out=[]
     for ins in instructions:
         name=str(ins.args[0]) if ins.args else ins.target or ""
@@ -151,7 +155,7 @@ def memory_lifetime_findings(instructions:Iterable[Instruction])->List[Dict[str,
         if status=="allocated":out.append({"rule_id":"IR-MEMORY-LEAK","line":0,"variable":name})
     return out
 
-def symbolic_paths(cfg:ControlFlowGraph,max_paths:int=128)->List[Dict[str,Any]]:
+def symbolic_paths(cfg:ControlFlowGraph,max_paths:int=128)->list[dict[str,Any]]:
     paths=[];stack=[(cfg.entry,[],[])]
     while stack and len(paths)<max_paths:
         bid,constraints,trace=stack.pop()
