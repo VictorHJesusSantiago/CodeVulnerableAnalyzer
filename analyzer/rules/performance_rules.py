@@ -5,7 +5,8 @@ Java Performance (Scott Oaks), Database Internals (Petrov),
 Site Reliability Engineering (Google).
 """
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 PERFORMANCE_RULES: list[Rule] = [
