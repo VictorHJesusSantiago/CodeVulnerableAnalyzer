@@ -1,5 +1,6 @@
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 GENERIC_RULES: list[Rule] = [
@@ -163,6 +164,34 @@ GENERIC_RULES: list[Rule] = [
         pattern=r'(?:TODO|FIXME|HACK|XXX|BUG)\s*[:\-]?\s*.*(?:auth|security|vuln|injection|xss|csrf|encrypt|password|secret|token|sanitize|validate)',
         remediation="Address the security concern identified in this comment and remove the TODO.",
         cwe="CWE-1164",
+        owasp="A05:2021",
+        confidence=Confidence.LOW,
+        flags=re.IGNORECASE,
+    ),
+    Rule(
+        id="GEN-013",
+        name="Hardcoded Internal/Private IP Address",
+        description="A private/internal-range IP address (RFC 1918: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) is hardcoded in source. This leaks internal network topology if the code/artifact is ever exposed publicly, and makes deployments brittle across environments (dev/staging/prod).",
+        severity=Severity.LOW,
+        category=VulnCategory.INFO_DISCLOSURE,
+        language=Language.GENERIC,
+        pattern=r'\b(?:10(?:\.\d{1,3}){3}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d{1,3}){2}|192\.168(?:\.\d{1,3}){2})\b',
+        negative_pattern=r'192\.168\.1\.1\b.{0,20}(?:example|router|default[_-]?gateway)',
+        remediation="Externalize hosts to environment variables, service discovery, or DNS names. Avoid embedding topology-specific addresses in source code.",
+        cwe="CWE-200",
+        owasp="A05:2021",
+        confidence=Confidence.LOW,
+    ),
+    Rule(
+        id="GEN-014",
+        name="Hardcoded Internal Hostname/Domain",
+        description="A hostname pointing to an internal-only domain (.local, .internal, .corp, .lan, .intranet) is hardcoded. This can leak internal naming conventions and infrastructure details to anyone with source access.",
+        severity=Severity.LOW,
+        category=VulnCategory.INFO_DISCLOSURE,
+        language=Language.GENERIC,
+        pattern=r'(?:https?://|@|\b)[a-zA-Z0-9][a-zA-Z0-9\-\.]*\.(?:local|internal|corp|lan|intranet)\b',
+        remediation="Use configuration variables or environment-specific DNS names resolved at deploy time instead of hardcoding internal domains.",
+        cwe="CWE-200",
         owasp="A05:2021",
         confidence=Confidence.LOW,
         flags=re.IGNORECASE,
