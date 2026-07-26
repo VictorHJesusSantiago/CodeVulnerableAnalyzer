@@ -1,5 +1,6 @@
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 PHP_RULES: list[Rule] = [
@@ -160,6 +161,19 @@ PHP_RULES: list[Rule] = [
         remediation="Validate and whitelist URLs. Block private IP ranges (RFC1918), link-local, and cloud metadata endpoints.",
         cwe="CWE-918",
         owasp="A10:2021",
+        confidence=Confidence.HIGH,
+    ),
+    Rule(
+        id="PHP-013",
+        name="SQL Injection via mysqli_query/pg_query with Concatenation",
+        description="mysqli_query()/pg_query()/sqlite_query() called with a query string built via concatenation (the '.' operator) directly in the call. Unlike mysql_query() (deprecated), these modern APIs still allow SQL injection when the query is not built with placeholders/bind_param().",
+        severity=Severity.CRITICAL,
+        category=VulnCategory.SQL_INJECTION,
+        language=Language.PHP,
+        pattern=r'\b(?:mysqli_query|pg_query|sqlite_query)\s*\([^)]*\.\s*\$',
+        remediation="Use prepared statements: $stmt = $mysqli->prepare('SELECT * FROM users WHERE id = ?'); $stmt->bind_param('i', $id); $stmt->execute();",
+        cwe="CWE-89",
+        owasp="A03:2021",
         confidence=Confidence.HIGH,
     ),
 ]
