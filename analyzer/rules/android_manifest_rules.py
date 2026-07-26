@@ -1,6 +1,5 @@
 """Regras de segurança para Android Manifest (XML) — 9 regras (AXML-001..009)."""
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 ANDROID_MANIFEST_RULES: list[Rule] = [
