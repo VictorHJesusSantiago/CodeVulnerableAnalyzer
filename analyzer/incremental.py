@@ -5,15 +5,13 @@ o conjunto completo de regras. Armazenamento: SQLite (stdlib), mesmo padrão
 usado em analyzer/trend.py.
 """
 from __future__ import annotations
+
 import hashlib
 import json
 import sqlite3
 from pathlib import Path
-from typing import List, Optional, Tuple
 
-from analyzer.models import (
-    Language, Severity, Vulnerability, VulnCategory, Confidence
-)
+from analyzer.models import Confidence, Language, Severity, VulnCategory, Vulnerability
 
 DEFAULT_DB = Path.home() / ".vulnscan" / "incremental.db"
 
@@ -50,7 +48,7 @@ def _dict_to_vuln(d: dict) -> Vulnerability:
 
 
 class IncrementalCache:
-    def __init__(self, db_path: Optional[str] = None):
+    def __init__(self, db_path: str | None = None):
         self.db_path = Path(db_path) if db_path else DEFAULT_DB
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_schema()
@@ -73,7 +71,7 @@ class IncrementalCache:
             """)
             conn.commit()
 
-    def get(self, file_path: str, content: str) -> Optional[Tuple[List[Vulnerability], int]]:
+    def get(self, file_path: str, content: str) -> tuple[list[Vulnerability], int] | None:
         """Retorna (vulnerabilidades, lines_scanned) se o hash bater, senão None."""
         h = content_hash(content)
         with self._conn() as conn:
@@ -88,7 +86,7 @@ class IncrementalCache:
         vulns = [_dict_to_vuln(d) for d in json.loads(row[1])]
         return vulns, row[2]
 
-    def put(self, file_path: str, content: str, vulns: List[Vulnerability],
+    def put(self, file_path: str, content: str, vulns: list[Vulnerability],
             lines_scanned: int, scan_time: float) -> None:
         h = content_hash(content)
         payload = json.dumps([_vuln_to_dict(v) for v in vulns])
