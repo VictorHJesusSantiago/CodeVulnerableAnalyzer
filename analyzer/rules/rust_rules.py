@@ -1,5 +1,5 @@
 """Regras de segurança para Rust."""
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 RUST_RULES: list[Rule] = [
