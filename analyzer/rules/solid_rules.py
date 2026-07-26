@@ -4,7 +4,8 @@ Baseadas em: Clean Architecture (Martin), Design Patterns (GoF),
 Refactoring (Fowler), Agile Software Development (Martin).
 """
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 SOLID_RULES: list[Rule] = [
