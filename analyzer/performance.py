@@ -1,20 +1,30 @@
 """Execução paralela/distribuída, cache AST, streaming, automato e limites."""
 from __future__ import annotations
-import ast,concurrent.futures,hashlib,json,multiprocessing,os,re,sqlite3,time,tracemalloc
+
+import ast
+import concurrent.futures
+import hashlib
+import os
+import re
+import sqlite3
+import time
+import tracemalloc
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any,Callable,Dict,Iterable,Iterator,List,Optional,Sequence,Tuple
+from typing import Any
 
-def stream_lines(path:str|Path,chunk_size:int=1024*1024)->Iterator[Tuple[int,str]]:
-    with open(path,"r",encoding="utf-8",errors="replace",buffering=chunk_size) as f:
-        for number,line in enumerate(f,1):yield number,line
 
-def _call_task(task:Tuple[Callable[[str],Any],str])->Tuple[str,Any]:
+def stream_lines(path:str|Path,chunk_size:int=1024*1024)->Iterator[tuple[int,str]]:
+    with open(path,encoding="utf-8",errors="replace",buffering=chunk_size) as f:
+        yield from enumerate(f,1)
+
+def _call_task(task:tuple[Callable[[str],Any],str])->tuple[str,Any]:
     fn,path=task
     try:return path,fn(path)
     except Exception as e:return path,{"error":type(e).__name__+": "+str(e)}
-def parallel_map(scanner:Callable[[str],Any],paths:Sequence[str],workers:Optional[int]=None,timeout:float=30)->Dict[str,Any]:
+def parallel_map(scanner:Callable[[str],Any],paths:Sequence[str],workers:int | None=None,timeout:float=30)->dict[str,Any]:
     result={}
     with concurrent.futures.ProcessPoolExecutor(max_workers=workers or max(1,(os.cpu_count() or 2)-1)) as pool:
         futures={pool.submit(_call_task,(scanner,p)):p for p in paths}
@@ -39,7 +49,7 @@ class ASTCache:
 
 class RuleAutomaton:
     """Agrupa regex compatíveis numa única busca, com fallback isolado por regra."""
-    def __init__(self,rules:Sequence[Tuple[str,str,int]]):
+    def __init__(self,rules:Sequence[tuple[str,str,int]]):
         self.rules=rules;self.combined=None;self.fallback=[]
         parts=[]
         for i,(rid,pattern,flags) in enumerate(rules):
@@ -47,7 +57,7 @@ class RuleAutomaton:
             try:re.compile(pattern,flags);parts.append(f"(?P<R{i}>{pattern})")
             except re.error:self.fallback.append((rid,re.compile(r"(?!x)x")))
         if parts:self.combined=re.compile("|".join(parts),re.IGNORECASE if any(x[2]&re.IGNORECASE for x in rules) else 0)
-    def scan(self,text:str)->List[Dict[str,Any]]:
+    def scan(self,text:str)->list[dict[str,Any]]:
         out=[]
         if self.combined:
             for m in self.combined.finditer(text):
@@ -73,7 +83,7 @@ def profile(label:str="scan"):
 
 class DistributedCoordinator:
     def __init__(self,queue:Any,result_queue:Any):self.queue,self.results=queue,result_queue
-    def submit(self,paths:Iterable[str])->List[str]:
+    def submit(self,paths:Iterable[str])->list[str]:
         ids=[]
         for path in paths:
             job=hashlib.sha256(f"{path}:{time.time_ns()}".encode()).hexdigest()[:16];self.queue.publish("scan.jobs",{"id":job,"path":path});ids.append(job)

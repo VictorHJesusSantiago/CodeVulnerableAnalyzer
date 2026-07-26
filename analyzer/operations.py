@@ -1,8 +1,13 @@
 """Telemetria opt-in, atualização assinada, versão de regras, i18n e catálogo."""
 from __future__ import annotations
-import hashlib,hmac,json,locale,urllib.request
+
+import hashlib
+import hmac
+import json
+import urllib.request
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any,Dict,Iterable,List
+from typing import Any
 
 MESSAGES={
  "pt-BR":{"scan.complete":"Análise concluída","finding.count":"{count} achados","education.why":"Por que isso importa"},
@@ -13,7 +18,7 @@ def translate(key:str,lang:str="pt-BR",**values:Any)->str:return MESSAGES.get(la
 
 class Telemetry:
     def __init__(self,enabled:bool=False,endpoint:str=""):self.enabled,self.endpoint=enabled,endpoint;self.events=[]
-    def record(self,name:str,properties:Dict[str,Any])->None:
+    def record(self,name:str,properties:dict[str,Any])->None:
         if not self.enabled:return
         safe={k:v for k,v in properties.items() if k in {"duration_ms","file_count","finding_count","version","platform"}}
         self.events.append({"name":name,"properties":safe})
@@ -28,9 +33,9 @@ def install_rule_pack(data:bytes,signature:str,key:bytes,target:str|Path)->Path:
     doc=json.loads(data);version=doc.get("version")
     if not version or not isinstance(doc.get("rules"),list):raise ValueError("Pacote de regras inválido")
     path=Path(target)/f"rules-{version}.json";path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(data);return path
-def rule_catalog(rules:Iterable[Any])->List[Dict[str,Any]]:
+def rule_catalog(rules:Iterable[Any])->list[dict[str,Any]]:
     return [{"id":getattr(r,"id",""),"name":getattr(r,"name",""),"language":getattr(getattr(r,"language",None),"value",""),
              "severity":getattr(getattr(r,"severity",None),"name",""),"category":getattr(getattr(r,"category",None),"value",""),
              "cwe":getattr(r,"cwe",None),"description":getattr(r,"description",""),"remediation":getattr(r,"remediation","")} for r in rules]
-def search_catalog(catalog:Iterable[Dict[str,Any]],query:str)->List[Dict[str,Any]]:
+def search_catalog(catalog:Iterable[dict[str,Any]],query:str)->list[dict[str,Any]]:
     words=query.lower().split();return [r for r in catalog if all(w in json.dumps(r,ensure_ascii=False).lower() for w in words)]

@@ -1,8 +1,8 @@
 """PII detector — CPF, CNPJ, cartão de crédito, e-mail, telefone BR em código-fonte."""
 from __future__ import annotations
+
 import re
 from dataclasses import dataclass
-from typing import List
 
 
 @dataclass
@@ -70,41 +70,44 @@ def _mask(s: str, show_first: int = 4, show_last: int = 4) -> str:
     return raw[:show_first] + "*" * (len(raw) - show_first - show_last) + raw[-show_last:]
 
 
-def scan_pii(file_path: str, content: str) -> List[PIIFinding]:
+def scan_pii(file_path: str, content: str) -> list[PIIFinding]:
     """Detecta PII em código-fonte: CPF, CNPJ, cartão, e-mail e telefone BR."""
-    findings: List[PIIFinding] = []
+    findings: list[PIIFinding] = []
     seen: set[tuple] = set()
     lines = content.splitlines()
+
+    # Definida uma vez fora do loop, com line_no/line ligados como parâmetros
+    # explícitos (evita capturar variáveis de loop numa closure — B023).
+    def _add(line_no: int, line: str, pii_type: str, masked: str) -> None:
+        key = (file_path, line_no, pii_type, masked)
+        if key in seen:
+            return
+        seen.add(key)
+        findings.append(PIIFinding(
+            file_path=file_path,
+            line_number=line_no,
+            line_content=line.rstrip(),
+            pii_type=pii_type,
+            masked_value=masked,
+        ))
 
     for line_no, line in enumerate(lines, start=1):
         stripped = line.strip()
         if stripped.startswith(("#", "//", "--", "*", "'")):
             continue
 
-        def _add(pii_type: str, masked: str) -> None:
-            key = (file_path, line_no, pii_type, masked)
-            if key not in seen:
-                seen.add(key)
-                findings.append(PIIFinding(
-                    file_path=file_path,
-                    line_number=line_no,
-                    line_content=line.rstrip(),
-                    pii_type=pii_type,
-                    masked_value=masked,
-                ))
-
         for m in _CPF_RE.finditer(line):
             if _cpf_valid(*m.groups()):
-                _add("CPF", _mask(m.group(0)))
+                _add(line_no, line, "CPF", _mask(m.group(0)))
 
         for m in _CNPJ_RE.finditer(line):
             if _cnpj_valid(*m.groups()):
-                _add("CNPJ", _mask(m.group(0)))
+                _add(line_no, line, "CNPJ", _mask(m.group(0)))
 
         for m in _CARD_RE.finditer(line):
             raw = re.sub(r"\D", "", m.group(0))
             if _luhn(raw):
-                _add("CartaoCredito", _mask(raw))
+                _add(line_no, line, "CartaoCredito", _mask(raw))
 
         if re.search(r'(?:print|log|insert|update|values|=|:)\s', line, re.IGNORECASE):
             for m in _EMAIL_RE.finditer(line):
@@ -113,10 +116,10 @@ def scan_pii(file_path: str, content: str) -> List[PIIFinding]:
                     continue
                 local, domain = email.rsplit("@", 1)
                 masked = local[:2] + "*" * max(0, len(local) - 2) + "@" + domain
-                _add("Email", masked)
+                _add(line_no, line, "Email", masked)
 
         for m in _PHONE_RE.finditer(line):
             ddd, num1, num2 = m.groups()
-            _add("TelefoneBR", f"({ddd}) ****-{num2}")
+            _add(line_no, line, "TelefoneBR", f"({ddd}) ****-{num2}")
 
     return findings

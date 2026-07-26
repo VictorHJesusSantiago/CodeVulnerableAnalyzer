@@ -32,14 +32,12 @@ para isso), e a granularidade do CFG é por statement-list, suficiente para
 os checks acima mas não para um compilador otimizador completo.
 """
 from __future__ import annotations
+
 import ast
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
 
-from analyzer.models import (
-    Language, Severity, Vulnerability, VulnCategory, Confidence
-)
+from analyzer.models import Confidence, Language, Severity, VulnCategory, Vulnerability
 
 # ════════════════════════════════════════════════════════════════════════════
 #  1. Detecção de código morto (unreachable code)
@@ -48,12 +46,12 @@ from analyzer.models import (
 _TERMINATORS = (ast.Return, ast.Raise, ast.Break, ast.Continue)
 
 
-def _find_unreachable(tree: ast.AST) -> List[ast.stmt]:
+def _find_unreachable(tree: ast.AST) -> list[ast.stmt]:
     """Percorre toda lista de statements da árvore e marca o que vem depois
     de um terminador incondicional dentro do mesmo bloco linear."""
-    unreachable: List[ast.stmt] = []
+    unreachable: list[ast.stmt] = []
 
-    def _scan_body(body: List[ast.stmt]) -> None:
+    def _scan_body(body: list[ast.stmt]) -> None:
         terminated = False
         for stmt in body:
             if terminated:
@@ -65,8 +63,8 @@ def _find_unreachable(tree: ast.AST) -> List[ast.stmt]:
             for child_body in _sub_bodies(stmt):
                 _scan_body(child_body)
 
-    def _sub_bodies(stmt: ast.stmt) -> List[List[ast.stmt]]:
-        bodies: List[List[ast.stmt]] = []
+    def _sub_bodies(stmt: ast.stmt) -> list[list[ast.stmt]]:
+        bodies: list[list[ast.stmt]] = []
         if isinstance(stmt, (ast.If, ast.For, ast.While)):
             bodies.append(stmt.body)
             if stmt.orelse:
@@ -102,20 +100,20 @@ def _find_unreachable(tree: ast.AST) -> List[ast.stmt]:
 class CFGNode:
     id: int
     stmt: ast.stmt
-    succ: Set[int] = field(default_factory=set)
-    pred: Set[int] = field(default_factory=set)
-    defs: Set[str] = field(default_factory=set)   # variáveis definidas neste nó
-    uses: Set[str] = field(default_factory=set)   # variáveis lidas neste nó
+    succ: set[int] = field(default_factory=set)
+    pred: set[int] = field(default_factory=set)
+    defs: set[str] = field(default_factory=set)   # variáveis definidas neste nó
+    uses: set[str] = field(default_factory=set)   # variáveis lidas neste nó
 
 
 class CFG:
     """CFG simplificado por statement, construído para o corpo de uma função."""
 
-    def __init__(self, body: List[ast.stmt]):
-        self.nodes: Dict[int, CFGNode] = {}
+    def __init__(self, body: list[ast.stmt]):
+        self.nodes: dict[int, CFGNode] = {}
         self._next_id = 0
-        self.entry: Optional[int] = None
-        self.exits: Set[int] = set()
+        self.entry: int | None = None
+        self.exits: set[int] = set()
         if body:
             self.entry = self._build(body)
 
@@ -131,11 +129,11 @@ class CFG:
         self.nodes[a].succ.add(b)
         self.nodes[b].pred.add(a)
 
-    def _build(self, body: List[ast.stmt]) -> Optional[int]:
+    def _build(self, body: list[ast.stmt]) -> int | None:
         """Constrói o CFG de uma lista de statements; retorna o id de entrada.
         Mantém self.exits atualizado com os pontos de saída (fall-through)."""
-        prev_exits: Set[int] = set()
-        first_id: Optional[int] = None
+        prev_exits: set[int] = set()
+        first_id: int | None = None
 
         for stmt in body:
             node = self._new_node(stmt)
@@ -180,11 +178,11 @@ class CFG:
         return first_id
 
 
-def _defs_uses(stmt: ast.stmt) -> Tuple[Set[str], Set[str]]:
+def _defs_uses(stmt: ast.stmt) -> tuple[set[str], set[str]]:
     """Extrai variáveis definidas (Store) e usadas (Load) num statement,
     sem descer em sub-blocos aninhados (If/For/While/Try tratados pelo CFG)."""
-    defs: Set[str] = set()
-    uses: Set[str] = set()
+    defs: set[str] = set()
+    uses: set[str] = set()
 
     class _V(ast.NodeVisitor):
         def visit_Name(self, n: ast.Name) -> None:
@@ -220,10 +218,10 @@ def _defs_uses(stmt: ast.stmt) -> Tuple[Set[str], Set[str]]:
 
 
 def _worklist(cfg: CFG, forward: bool,
-              gen_kill) -> Dict[int, Tuple[Set, Set]]:
+              gen_kill) -> dict[int, tuple[set, set]]:
     """Algoritmo de worklist genérico (união como meet operator)."""
-    IN: Dict[int, Set] = {nid: set() for nid in cfg.nodes}
-    OUT: Dict[int, Set] = {nid: set() for nid in cfg.nodes}
+    IN: dict[int, set] = {nid: set() for nid in cfg.nodes}
+    OUT: dict[int, set] = {nid: set() for nid in cfg.nodes}
     order = list(cfg.nodes.keys()) if forward else list(reversed(cfg.nodes.keys()))
     changed = True
     while changed:
@@ -247,13 +245,13 @@ def _worklist(cfg: CFG, forward: bool,
     return {nid: (IN[nid], OUT[nid]) for nid in cfg.nodes}
 
 
-def reaching_definitions(cfg: CFG) -> Dict[int, Tuple[Set[str], Set[str]]]:
+def reaching_definitions(cfg: CFG) -> dict[int, tuple[set[str], set[str]]]:
     def gk(node: CFGNode):
         return set(node.defs), set()  # simplificado: sem 'kill' de defs antigas (over-approx conservador)
     return _worklist(cfg, forward=True, gen_kill=gk)
 
 
-def live_variables(cfg: CFG) -> Dict[int, Tuple[Set[str], Set[str]]]:
+def live_variables(cfg: CFG) -> dict[int, tuple[set[str], set[str]]]:
     def gk(node: CFGNode):
         return set(node.uses), set(node.defs)
     return _worklist(cfg, forward=False, gen_kill=gk)
@@ -315,7 +313,7 @@ def cognitive_complexity(func: ast.AST) -> int:
             else:
                 walk(child, nesting)
 
-    def walk_body(body: List[ast.stmt], nesting: int) -> None:
+    def walk_body(body: list[ast.stmt], nesting: int) -> None:
         for stmt in body:
             walk(stmt, nesting)
 
@@ -330,8 +328,8 @@ _OPERATOR_TYPES = (
 
 def halstead_metrics(func: ast.AST) -> dict:
     """Métricas de Halstead aproximadas via tokens da AST."""
-    operators: List[str] = []
-    operands: List[str] = []
+    operators: list[str] = []
+    operands: list[str] = []
 
     for node in ast.walk(func):
         if isinstance(node, ast.BinOp):
@@ -393,10 +391,10 @@ def _self_recursive_without_base_case(func: ast.FunctionDef) -> bool:
     return not has_return_or_yield
 
 
-def _toctou_pairs(func: ast.FunctionDef) -> List[Tuple[ast.Call, ast.Call]]:
+def _toctou_pairs(func: ast.FunctionDef) -> list[tuple[ast.Call, ast.Call]]:
     """Detecta os.path.exists(X) seguido de open(X) no mesmo corpo (TOCTOU)."""
     pairs = []
-    checks: Dict[str, ast.Call] = {}
+    checks: dict[str, ast.Call] = {}
 
     for node in ast.walk(func):
         if isinstance(node, ast.Call):
@@ -418,13 +416,13 @@ def _toctou_pairs(func: ast.FunctionDef) -> List[Tuple[ast.Call, ast.Call]]:
     return pairs
 
 
-def _use_after_close(func: ast.FunctionDef) -> List[Tuple[str, int]]:
+def _use_after_close(func: ast.FunctionDef) -> list[tuple[str, int]]:
     """obj.close() seguido de uso posterior de obj (sem reatribuição) no
     mesmo corpo linear (heurística simples, um nível)."""
-    findings: List[Tuple[str, int]] = []
-    closed: Dict[str, int] = {}
+    findings: list[tuple[str, int]] = []
+    closed: dict[str, int] = {}
 
-    def scan(body: List[ast.stmt]) -> None:
+    def scan(body: list[ast.stmt]) -> None:
         for stmt in body:
             for node in ast.walk(stmt):
                 if isinstance(node, ast.Assign):
@@ -442,14 +440,14 @@ def _use_after_close(func: ast.FunctionDef) -> List[Tuple[str, int]]:
     return findings
 
 
-def _null_deref_candidates(func: ast.FunctionDef) -> List[Tuple[str, int]]:
+def _null_deref_candidates(func: ast.FunctionDef) -> list[tuple[str, int]]:
     """var = None seguido de var.attr / var[...] sem guarda 'if var' entre
     os dois pontos, no corpo linear da função (heurística, não flow-sensitive
     completa: não rastreia branches, é conservadora e propositalmente
     reportada com confiança MEDIUM/LOW)."""
-    findings: List[Tuple[str, int]] = []
-    none_assigned: Dict[str, int] = {}
-    guarded: Set[str] = set()
+    findings: list[tuple[str, int]] = []
+    none_assigned: dict[str, int] = {}
+    guarded: set[str] = set()
 
     for stmt in func.body:
         for node in ast.walk(stmt):
@@ -476,7 +474,7 @@ MAX_CYCLOMATIC_AST  = 10
 MAX_COGNITIVE_AST   = 15
 
 
-def analyze_python_ast(file_path: str, content: str) -> List[Vulnerability]:
+def analyze_python_ast(file_path: str, content: str) -> list[Vulnerability]:
     """Roda toda a análise AST-based sobre um arquivo Python e retorna
     Vulnerability's no mesmo formato do resto do engine."""
     try:
@@ -485,7 +483,7 @@ def analyze_python_ast(file_path: str, content: str) -> List[Vulnerability]:
         return []
 
     lines = content.splitlines()
-    results: List[Vulnerability] = []
+    results: list[Vulnerability] = []
 
     def _line(n: int) -> str:
         return lines[n - 1].rstrip() if 0 < n <= len(lines) else ""
