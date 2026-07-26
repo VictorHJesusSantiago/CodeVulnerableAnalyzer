@@ -13,11 +13,11 @@ reduzindo ruído sem esconder a informação (ela fica registrada no VEX,
 com a justificativa).
 """
 from __future__ import annotations
+
 import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
 
 _VALID_STATUSES = {"not_affected", "affected", "fixed", "under_investigation"}
 _JUSTIFICATIONS = {
@@ -34,8 +34,8 @@ class VexStatement:
     vulnerability: str          # ex.: "CVE-2023-1234"
     product: str                # nome do pacote/componente afetado
     status: str                 # not_affected | affected | fixed | under_investigation
-    justification: Optional[str] = None
-    impact_statement: Optional[str] = None
+    justification: str | None = None
+    impact_statement: str | None = None
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def __post_init__(self):
@@ -48,12 +48,12 @@ class VexStatement:
 class VexDocument:
     def __init__(self, author: str = "vulnscan"):
         self.author = author
-        self.statements: List[VexStatement] = []
+        self.statements: list[VexStatement] = []
 
     def add_statement(self, stmt: VexStatement) -> None:
         self.statements.append(stmt)
 
-    def status_for(self, cve_id: str, product: str) -> Optional[VexStatement]:
+    def status_for(self, cve_id: str, product: str) -> VexStatement | None:
         for s in self.statements:
             if s.vulnerability == cve_id and s.product == product:
                 return s
@@ -83,7 +83,7 @@ class VexDocument:
         Path(path).write_text(json.dumps(self.to_dict(), indent=2, ensure_ascii=False), encoding="utf-8")
 
     @classmethod
-    def load(cls, path: str) -> "VexDocument":
+    def load(cls, path: str) -> VexDocument:
         doc = cls()
         p = Path(path)
         if not p.exists():
