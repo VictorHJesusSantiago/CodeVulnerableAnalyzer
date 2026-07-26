@@ -21,21 +21,20 @@ numeradas tipo v1/v2/v3 — a inserção de φ e a análise de definite-assignme
 são o núcleo real e verificável entregue aqui).
 """
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set
 
-from analyzer.pyast_engine import CFG, CFGNode
-
+from analyzer.pyast_engine import CFG
 
 # ════════════════════════════════════════════════════════════════════════════
 #  1. Pós-ordem via DFS a partir da entrada
 # ════════════════════════════════════════════════════════════════════════════
 
-def _postorder(cfg: CFG) -> List[int]:
+def _postorder(cfg: CFG) -> list[int]:
     if cfg.entry is None:
         return []
-    visited: Set[int] = set()
-    order: List[int] = []
+    visited: set[int] = set()
+    order: list[int] = []
 
     def dfs(nid: int) -> None:
         visited.add(nid)
@@ -57,7 +56,7 @@ def _postorder(cfg: CFG) -> List[int]:
 #  2. Dominadores (Cooper-Harvey-Kennedy)
 # ════════════════════════════════════════════════════════════════════════════
 
-def compute_dominators(cfg: CFG) -> Dict[int, int]:
+def compute_dominators(cfg: CFG) -> dict[int, int]:
     """Retorna idom[n] = id do dominador imediato de n. idom[entry] = entry."""
     if cfg.entry is None:
         return {}
@@ -66,7 +65,7 @@ def compute_dominators(cfg: CFG) -> Dict[int, int]:
     order_index = {nid: i for i, nid in enumerate(postorder)}
     reverse_postorder = list(reversed(postorder))
 
-    idom: Dict[int, Optional[int]] = {nid: None for nid in cfg.nodes}
+    idom: dict[int, int | None] = {nid: None for nid in cfg.nodes}
     idom[cfg.entry] = cfg.entry
 
     def intersect(b1: int, b2: int) -> int:
@@ -101,8 +100,8 @@ def compute_dominators(cfg: CFG) -> Dict[int, int]:
 #  3. Fronteira de dominância (Cytron et al.)
 # ════════════════════════════════════════════════════════════════════════════
 
-def compute_dominance_frontier(cfg: CFG, idom: Dict[int, int]) -> Dict[int, Set[int]]:
-    df: Dict[int, Set[int]] = {nid: set() for nid in cfg.nodes}
+def compute_dominance_frontier(cfg: CFG, idom: dict[int, int]) -> dict[int, set[int]]:
+    df: dict[int, set[int]] = {nid: set() for nid in cfg.nodes}
     for b in cfg.nodes:
         preds = cfg.nodes[b].pred
         if len(preds) < 2:
@@ -127,13 +126,13 @@ def compute_dominance_frontier(cfg: CFG, idom: Dict[int, int]) -> Dict[int, Set[
 class PhiPlacement:
     """φ-nodes necessários por variável: var -> conjunto de node ids onde o
     φ deve ser inserido (porque múltiplas definições convergem ali)."""
-    phi_sites: Dict[str, Set[int]] = field(default_factory=dict)
+    phi_sites: dict[str, set[int]] = field(default_factory=dict)
 
 
-def place_phi_nodes(cfg: CFG, dom_frontier: Dict[int, Set[int]]) -> PhiPlacement:
+def place_phi_nodes(cfg: CFG, dom_frontier: dict[int, set[int]]) -> PhiPlacement:
     placement = PhiPlacement()
 
-    all_vars: Set[str] = set()
+    all_vars: set[str] = set()
     for node in cfg.nodes.values():
         all_vars |= node.defs
 
@@ -141,7 +140,7 @@ def place_phi_nodes(cfg: CFG, dom_frontier: Dict[int, Set[int]]) -> PhiPlacement
         def_sites = {nid for nid, node in cfg.nodes.items() if var in node.defs}
         worklist = list(def_sites)
         ever_on_worklist = set(def_sites)
-        has_phi: Set[int] = set()
+        has_phi: set[int] = set()
 
         while worklist:
             n = worklist.pop()
@@ -169,7 +168,7 @@ def build_ssa(cfg: CFG) -> tuple:
 #  5. Definite assignment (atribuição definitiva) — usa os φ-sites reais
 # ════════════════════════════════════════════════════════════════════════════
 
-def definite_assignment(cfg: CFG, params: Set[str]) -> Dict[int, Set[str]]:
+def definite_assignment(cfg: CFG, params: set[str]) -> dict[int, set[str]]:
     """Dataflow forward com meet = INTERSEÇÃO (não união): IN[n] = variáveis
     que estão DEFINITIVAMENTE atribuídas em TODOS os caminhos até n. Isso é
     o que Java/C# usam para acusar 'variable might not have been initialized'.
@@ -179,8 +178,8 @@ def definite_assignment(cfg: CFG, params: Set[str]) -> Dict[int, Set[str]]:
         return {}
 
     all_nodes = set(cfg.nodes.keys())
-    IN: Dict[int, Set[str]] = {nid: set(all_nodes) if nid != cfg.entry else set(params) for nid in cfg.nodes}
-    OUT: Dict[int, Set[str]] = {nid: set() for nid in cfg.nodes}
+    IN: dict[int, set[str]] = {nid: set(all_nodes) if nid != cfg.entry else set(params) for nid in cfg.nodes}
+    OUT: dict[int, set[str]] = {nid: set() for nid in cfg.nodes}
 
     order = _postorder(cfg)  # qualquer ordem estável funciona com fixed-point
     changed = True
