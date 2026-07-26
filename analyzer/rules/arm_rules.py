@@ -1,6 +1,7 @@
 """Regras de segurança para Azure ARM Templates e Bicep — 9 regras (ARM-001..009)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 ARM_RULES: list[Rule] = [

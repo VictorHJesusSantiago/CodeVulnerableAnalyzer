@@ -5,7 +5,8 @@ Domain-Driven Design (Evans), Microservices Patterns (Richardson),
 12-Factor App, Cloud Design Patterns (Microsoft).
 """
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 ARCHITECTURE_RULES: list[Rule] = [
