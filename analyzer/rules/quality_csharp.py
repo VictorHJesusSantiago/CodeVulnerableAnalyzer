@@ -3,8 +3,7 @@ Regras de qualidade para C# / .NET.
 Baseadas em: Microsoft C# Coding Conventions, Effective C# (Wagoner),
 .NET Design Guidelines, Roslyn Analyzers CA-series.
 """
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 QUALITY_CSHARP_RULES: list[Rule] = [

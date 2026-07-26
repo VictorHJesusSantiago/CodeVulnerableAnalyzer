@@ -3,8 +3,7 @@ Regras de qualidade para Java, Kotlin e Scala.
 Baseadas em: Effective Java (Bloch), Clean Code, Oracle Java Coding Guidelines,
 Google Java Style Guide, Kotlin Coding Conventions.
 """
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 QUALITY_JAVA_RULES: list[Rule] = [

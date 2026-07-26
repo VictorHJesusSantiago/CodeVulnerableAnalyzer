@@ -4,7 +4,8 @@ Baseadas em: Clean Code (Robert C. Martin), Code Complete (McConnell),
 Refactoring (Fowler), MISRA C, e boas práticas da indústria.
 """
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 QUALITY_GENERIC_RULES: list[Rule] = [

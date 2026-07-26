@@ -3,8 +3,7 @@ Regras de qualidade para JavaScript e TypeScript.
 Baseadas em: Airbnb JS Style Guide, TypeScript Handbook, Clean Code JS,
 "You Don't Know JS" (Kyle Simpson), ECMA-262.
 """
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 QUALITY_JS_RULES: list[Rule] = [

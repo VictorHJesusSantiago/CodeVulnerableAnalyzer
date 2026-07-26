@@ -3,8 +3,7 @@ Regras de qualidade específicas para Python.
 Baseadas em: PEP 8, PEP 20 (Zen of Python), Google Python Style Guide,
 Effective Python (Brett Slatkin), Python Anti-Patterns.
 """
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 QUALITY_PYTHON_RULES: list[Rule] = [
