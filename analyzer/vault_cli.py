@@ -5,11 +5,11 @@ Senha mestre: lida da variável de ambiente VULNVAULT_PASSWORD; se ausente,
 solicitada interativamente via getpass (não ecoa no terminal).
 """
 from __future__ import annotations
+
+import getpass
+import json
 import os
 import sys
-import json
-import getpass
-from typing import Optional
 
 from analyzer.vault import SecretVault, VaultError
 
@@ -167,7 +167,7 @@ def run_vault_server(path: str, port: int) -> int:
             token = self.headers.get("X-Vault-Token", "")
             return _hmac.compare_digest(token, master)
 
-        def _name(self) -> Optional[str]:
+        def _name(self) -> str | None:
             parts = self.path.strip("/").split("/")
             if len(parts) == 2 and parts[0] == "secrets":
                 from urllib.parse import unquote

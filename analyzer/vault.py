@@ -20,14 +20,13 @@ Cada segredo usa IV aleatório de 16 bytes; o ciphertext é autenticado com
 HMAC-SHA256 sobre (iv || ct) usando mac_key (encrypt-then-MAC).
 """
 from __future__ import annotations
-import json
-import hmac
+
 import hashlib
+import hmac
+import json
 import secrets as _secrets
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
-
 
 # ════════════════════════════════════════════════════════════════════════════
 #  AES-256 — núcleo em Python puro (FIPS-197)
@@ -87,9 +86,9 @@ class AES:
         self._round_keys = self._expand_key(key)
 
     # ── Expansão de chave ─────────────────────────────────────────────────────
-    def _expand_key(self, key: bytes) -> List[List[int]]:
+    def _expand_key(self, key: bytes) -> list[list[int]]:
         nk, nr = self.nk, self.nr
-        words: List[List[int]] = [list(key[4 * i:4 * i + 4]) for i in range(nk)]
+        words: list[list[int]] = [list(key[4 * i:4 * i + 4]) for i in range(nk)]
         for i in range(nk, 4 * (nr + 1)):
             temp = list(words[i - 1])
             if i % nk == 0:
@@ -100,9 +99,9 @@ class AES:
                 temp = [_SBOX[b] for b in temp]                 # SubWord
             words.append([words[i - nk][j] ^ temp[j] for j in range(4)])
         # Agrupa em blocos de 16 bytes por round (coluna-major)
-        round_keys: List[List[int]] = []
+        round_keys: list[list[int]] = []
         for r in range(nr + 1):
-            rk: List[int] = []
+            rk: list[int] = []
             for c in range(4):
                 rk.extend(words[4 * r + c])
             round_keys.append(rk)
@@ -110,17 +109,17 @@ class AES:
 
     # ── Operações de estado (estado = 16 bytes, índice = linha + 4*coluna) ─────
     @staticmethod
-    def _add_round_key(state: List[int], rk: List[int]) -> None:
+    def _add_round_key(state: list[int], rk: list[int]) -> None:
         for i in range(16):
             state[i] ^= rk[i]
 
     @staticmethod
-    def _sub_bytes(state: List[int], box) -> None:
+    def _sub_bytes(state: list[int], box) -> None:
         for i in range(16):
             state[i] = box[state[i]]
 
     @staticmethod
-    def _shift_rows(state: List[int]) -> None:
+    def _shift_rows(state: list[int]) -> None:
         new = state[:]
         for r in range(1, 4):
             for c in range(4):
@@ -128,7 +127,7 @@ class AES:
         state[:] = new
 
     @staticmethod
-    def _inv_shift_rows(state: List[int]) -> None:
+    def _inv_shift_rows(state: list[int]) -> None:
         new = state[:]
         for r in range(1, 4):
             for c in range(4):
@@ -136,7 +135,7 @@ class AES:
         state[:] = new
 
     @staticmethod
-    def _mix_columns(state: List[int]) -> None:
+    def _mix_columns(state: list[int]) -> None:
         for c in range(4):
             i = 4 * c
             a0, a1, a2, a3 = state[i], state[i + 1], state[i + 2], state[i + 3]
@@ -146,7 +145,7 @@ class AES:
             state[i + 3] = (_xtime(a0) ^ a0) ^ a1 ^ a2 ^ _xtime(a3)
 
     @staticmethod
-    def _inv_mix_columns(state: List[int]) -> None:
+    def _inv_mix_columns(state: list[int]) -> None:
         for c in range(4):
             i = 4 * c
             a0, a1, a2, a3 = state[i], state[i + 1], state[i + 2], state[i + 3]
@@ -253,7 +252,7 @@ class SecretVault:
     """Gerenciador de segredos criptografado em arquivo único."""
 
     def __init__(self, path: str, keys: _Keys, salt: bytes,
-                 iterations: int, secrets: Dict[str, dict]):
+                 iterations: int, secrets: dict[str, dict]):
         self.path       = Path(path)
         self._keys      = keys
         self._salt      = salt
@@ -262,7 +261,7 @@ class SecretVault:
 
     # ── Criação / abertura ─────────────────────────────────────────────────────
     @classmethod
-    def create(cls, path: str, password: str, iterations: int = _DEFAULT_ITERS) -> "SecretVault":
+    def create(cls, path: str, password: str, iterations: int = _DEFAULT_ITERS) -> SecretVault:
         p = Path(path)
         if p.exists():
             raise VaultError(f"Cofre já existe: {path}")
@@ -275,7 +274,7 @@ class SecretVault:
         return vault
 
     @classmethod
-    def open(cls, path: str, password: str) -> "SecretVault":
+    def open(cls, path: str, password: str) -> SecretVault:
         p = Path(path)
         if not p.exists():
             raise VaultError(f"Cofre não encontrado: {path}")
@@ -321,7 +320,7 @@ class SecretVault:
             raise VaultError(f"Segredo não encontrado: {name}")
         del self._secrets[name]
 
-    def list_secrets(self) -> List[str]:
+    def list_secrets(self) -> list[str]:
         return sorted(self._secrets.keys())
 
     def change_password(self, new_password: str) -> None:
