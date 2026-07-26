@@ -1,6 +1,7 @@
 """Regras de segurança para Julia — 9 regras (JULIA-001..009)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 JULIA_RULES: list[Rule] = [
