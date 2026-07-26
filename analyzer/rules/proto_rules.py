@@ -1,6 +1,7 @@
 """Regras de segurança para Protocol Buffers (Protobuf) — 8 regras (PROTO-001..008)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 PROTO_RULES: list[Rule] = [
