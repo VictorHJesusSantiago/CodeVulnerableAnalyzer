@@ -1,6 +1,5 @@
 """Regras de segurança para GraphQL — 10 regras (GQL-001..010)."""
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 GRAPHQL_RULES: list[Rule] = [

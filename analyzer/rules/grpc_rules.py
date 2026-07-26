@@ -1,6 +1,5 @@
 """Regras de segurança para gRPC — 8 regras (GRPC-001..008)."""
-import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 GRPC_RULES: list[Rule] = [
