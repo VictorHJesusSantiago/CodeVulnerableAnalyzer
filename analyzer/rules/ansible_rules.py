@@ -1,6 +1,7 @@
 """Regras de segurança para Ansible — 9 regras (ANSIBLE-001..009)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 ANSIBLE_RULES: list[Rule] = [
