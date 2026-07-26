@@ -1,6 +1,7 @@
 """Regras de segurança para Apex (Salesforce) — 10 regras (APEX-001..010)."""
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 APEX_RULES: list[Rule] = [
