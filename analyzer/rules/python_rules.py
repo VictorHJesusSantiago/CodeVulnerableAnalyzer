@@ -1,5 +1,6 @@
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 PYTHON_RULES: list[Rule] = [
@@ -84,11 +85,11 @@ PYTHON_RULES: list[Rule] = [
     Rule(
         id="PY-007",
         name="SQL Injection via String Formatting",
-        description="SQL query constructed using Python f-strings or % formatting. User-controlled variables inserted directly into SQL enable SQL injection.",
+        description="SQL query constructed using Python f-strings, .format(), or the % operator applied to the query string itself. User-controlled variables inserted directly into SQL enable SQL injection. This is distinct from passing a placeholder like %s/? plus a separate params tuple to execute() — the DB-API's own parameterization, which is the safe pattern and is NOT flagged.",
         severity=Severity.HIGH,
         category=VulnCategory.SQL_INJECTION,
         language=Language.PYTHON,
-        pattern=r'(?:execute|executemany)\s*\(\s*(?:f["\']|["\'].*\{|.*%\s*(?:\(|\w))',
+        pattern=r'(?:execute|executemany)\s*\(\s*(?:f["\']|["\'][^"\']*["\']\s*\.\s*format\s*\(|["\'][^"\']*["\']\s*%\s*[\(\w])',
         remediation="Use parameterized queries: cursor.execute('SELECT ... WHERE id = %s', (user_id,)). Never build SQL with string formatting.",
         cwe="CWE-89",
         owasp="A03:2021",
