@@ -15,19 +15,20 @@ Limitações declaradas: não implementa token pasting (##), stringizing (#),
 macros recursivas, nem expansão de macro função que se espalha por várias
 linhas — essas ficam sem expansão (documentado, não fingido).
 """
+
 from __future__ import annotations
 
 import re
 
-_DEFINE_OBJ_RE  = re.compile(r'^\s*#\s*define\s+(\w+)\s+(.+?)\s*$')
-_DEFINE_FUNC_RE = re.compile(r'^\s*#\s*define\s+(\w+)\s*\(([^)]*)\)\s+(.+?)\s*$')
-_UNDEF_RE       = re.compile(r'^\s*#\s*undef\s+(\w+)\s*$')
-_IFDEF_RE       = re.compile(r'^\s*#\s*ifdef\s+(\w+)\s*$')
-_IFNDEF_RE      = re.compile(r'^\s*#\s*ifndef\s+(\w+)\s*$')
-_IF_DEFINED_RE  = re.compile(r'^\s*#\s*if\s+defined\s*\(\s*(\w+)\s*\)\s*$')
-_IF_LITERAL_RE  = re.compile(r'^\s*#\s*if\s+([01])\s*$')
-_ELSE_RE        = re.compile(r'^\s*#\s*else\s*$')
-_ENDIF_RE       = re.compile(r'^\s*#\s*endif\s*$')
+_DEFINE_OBJ_RE = re.compile(r"^\s*#\s*define\s+(\w+)\s+(.+?)\s*$")
+_DEFINE_FUNC_RE = re.compile(r"^\s*#\s*define\s+(\w+)\s*\(([^)]*)\)\s+(.+?)\s*$")
+_UNDEF_RE = re.compile(r"^\s*#\s*undef\s+(\w+)\s*$")
+_IFDEF_RE = re.compile(r"^\s*#\s*ifdef\s+(\w+)\s*$")
+_IFNDEF_RE = re.compile(r"^\s*#\s*ifndef\s+(\w+)\s*$")
+_IF_DEFINED_RE = re.compile(r"^\s*#\s*if\s+defined\s*\(\s*(\w+)\s*\)\s*$")
+_IF_LITERAL_RE = re.compile(r"^\s*#\s*if\s+([01])\s*$")
+_ELSE_RE = re.compile(r"^\s*#\s*else\s*$")
+_ENDIF_RE = re.compile(r"^\s*#\s*endif\s*$")
 
 _MAX_EXPAND_DEPTH = 5
 
@@ -47,7 +48,7 @@ def _split_args(s: str) -> list[str]:
     depth = 0
     current = ""
     for ch in s:
-        if ch == "(" :
+        if ch == "(":
             depth += 1
             current += ch
         elif ch == ")":
@@ -70,12 +71,12 @@ def _expand_line(line: str, macros: dict[str, Macro], depth: int = 0) -> str:
     changed = False
     for name, macro in macros.items():
         if macro.params is None:
-            pattern = re.compile(r'\b' + re.escape(name) + r'\b')
+            pattern = re.compile(r"\b" + re.escape(name) + r"\b")
             if pattern.search(line):
                 line = pattern.sub(macro.body, line)
                 changed = True
         else:
-            pattern = re.compile(r'\b' + re.escape(name) + r'\s*\(')
+            pattern = re.compile(r"\b" + re.escape(name) + r"\s*\(")
             m = pattern.search(line)
             if not m:
                 continue
@@ -90,12 +91,14 @@ def _expand_line(line: str, macros: dict[str, Macro], depth: int = 0) -> str:
                 i += 1
             if depth_paren != 0:
                 continue  # chamada multi-linha: não suportado, deixa como está
-            call_args_str = line[start:i - 1]
+            call_args_str = line[start : i - 1]
             call_args = _split_args(call_args_str)
             body = macro.body
-            for pname, pval in zip(macro.params, call_args):
-                body = re.sub(r'\b' + re.escape(pname) + r'\b', pval, body)
-            line = line[:m.start()] + body + line[i:]
+            # strict=False: params × args podem divergir em código escaneado
+            # (macros variádicas ou invocação com aridade errada) — não deve quebrar.
+            for pname, pval in zip(macro.params, call_args, strict=False):
+                body = re.sub(r"\b" + re.escape(pname) + r"\b", pval, body)
+            line = line[: m.start()] + body + line[i:]
             changed = True
 
     if changed:

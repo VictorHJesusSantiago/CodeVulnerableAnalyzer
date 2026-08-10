@@ -11,6 +11,7 @@ Aviso ético: só use isto em credenciais que você tem autorização para testa
 (seu próprio ambiente / engajamento de pentest autorizado). Uma chamada de
 validação é, por definição, uma tentativa de autenticação real no provedor.
 """
+
 from __future__ import annotations
 
 import datetime
@@ -27,7 +28,7 @@ _TIMEOUT = 8.0
 @dataclass
 class ValidationResult:
     provider: str
-    status: str        # VALID | INVALID | UNKNOWN
+    status: str  # VALID | INVALID | UNKNOWN
     detail: str
 
 
@@ -52,7 +53,8 @@ def validate_github_token(token: str) -> ValidationResult:
 
 def validate_slack_token(token: str) -> ValidationResult:
     req = urllib.request.Request(
-        "https://slack.com/api/auth.test", method="POST",
+        "https://slack.com/api/auth.test",
+        method="POST",
         headers={"Authorization": f"Bearer {token}"},
     )
     try:
@@ -66,6 +68,7 @@ def validate_slack_token(token: str) -> ValidationResult:
 
 def validate_stripe_key(secret_key: str) -> ValidationResult:
     import base64
+
     auth = base64.b64encode(f"{secret_key}:".encode()).decode()
     r = _get("https://api.stripe.com/v1/balance", {"Authorization": f"Basic {auth}"})
     r.provider = "Stripe"
@@ -74,6 +77,7 @@ def validate_stripe_key(secret_key: str) -> ValidationResult:
 
 def validate_twilio_credentials(account_sid: str, auth_token: str) -> ValidationResult:
     import base64
+
     auth = base64.b64encode(f"{account_sid}:{auth_token}".encode()).decode()
     url = f"https://api.twilio.com/2010-04-01/Accounts/{account_sid}.json"
     r = _get(url, {"Authorization": f"Basic {auth}"})
@@ -100,9 +104,13 @@ def validate_openai_key(api_key: str) -> ValidationResult:
 
 
 def validate_anthropic_key(api_key: str) -> ValidationResult:
-    r = _get("https://api.anthropic.com/v1/models", {
-        "x-api-key": api_key, "anthropic-version": "2023-06-01",
-    })
+    r = _get(
+        "https://api.anthropic.com/v1/models",
+        {
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+        },
+    )
     r.provider = "Anthropic"
     return r
 
@@ -115,6 +123,7 @@ def validate_gitlab_token(token: str) -> ValidationResult:
 
 def validate_mailgun_key(api_key: str) -> ValidationResult:
     import base64
+
     auth = base64.b64encode(f"api:{api_key}".encode()).decode()
     r = _get("https://api.mailgun.net/v3/domains", {"Authorization": f"Basic {auth}"})
     r.provider = "Mailgun"
@@ -152,9 +161,13 @@ def validate_huggingface_token(token: str) -> ValidationResult:
 
 
 def validate_notion_token(token: str) -> ValidationResult:
-    r = _get("https://api.notion.com/v1/users/me", {
-        "Authorization": f"Bearer {token}", "Notion-Version": "2022-06-28",
-    })
+    r = _get(
+        "https://api.notion.com/v1/users/me",
+        {
+            "Authorization": f"Bearer {token}",
+            "Notion-Version": "2022-06-28",
+        },
+    )
     r.provider = "Notion"
     return r
 
@@ -219,6 +232,7 @@ def validate_linode_token(token: str) -> ValidationResult:
 #  de verificar se uma credencial AWS é válida.
 # ════════════════════════════════════════════════════════════════════════════
 
+
 def _sigv4_sign(key: bytes, msg: str) -> bytes:
     return hmac.new(key, msg.encode("utf-8"), hashlib.sha256).digest()
 
@@ -232,8 +246,11 @@ def _sigv4_signing_key(secret_key: str, date_stamp: str, region: str, service: s
 
 
 def build_sigv4_headers(
-    access_key: str, secret_key: str, region: str = "us-east-1",
-    service: str = "sts", session_token: str | None = None,
+    access_key: str,
+    secret_key: str,
+    region: str = "us-east-1",
+    service: str = "sts",
+    session_token: str | None = None,
 ) -> dict:
     """Constrói os headers assinados (Signature V4) para uma requisição
     GET https://sts.amazonaws.com/?Action=GetCallerIdentity&Version=2011-06-15
@@ -252,34 +269,39 @@ def build_sigv4_headers(
 
     # Nomes de headers assinados devem estar em ordem alfabética (exigência SigV4)
     if session_token:
-        canonical_headers = (
-            f"host:{host}\n"
-            f"x-amz-date:{amz_date}\n"
-            f"x-amz-security-token:{session_token}\n"
-        )
+        canonical_headers = f"host:{host}\nx-amz-date:{amz_date}\nx-amz-security-token:{session_token}\n"
         signed_headers = "host;x-amz-date;x-amz-security-token"
     else:
         canonical_headers = f"host:{host}\nx-amz-date:{amz_date}\n"
         signed_headers = "host;x-amz-date"
 
-    canonical_request = "\n".join([
-        method, endpoint_path, query_string,
-        canonical_headers, signed_headers, payload_hash,
-    ])
+    canonical_request = "\n".join(
+        [
+            method,
+            endpoint_path,
+            query_string,
+            canonical_headers,
+            signed_headers,
+            payload_hash,
+        ]
+    )
 
     algorithm = "AWS4-HMAC-SHA256"
     credential_scope = f"{date_stamp}/{region}/{service}/aws4_request"
-    string_to_sign = "\n".join([
-        algorithm, amz_date, credential_scope,
-        hashlib.sha256(canonical_request.encode("utf-8")).hexdigest(),
-    ])
+    string_to_sign = "\n".join(
+        [
+            algorithm,
+            amz_date,
+            credential_scope,
+            hashlib.sha256(canonical_request.encode("utf-8")).hexdigest(),
+        ]
+    )
 
     signing_key = _sigv4_signing_key(secret_key, date_stamp, region, service)
     signature = hmac.new(signing_key, string_to_sign.encode("utf-8"), hashlib.sha256).hexdigest()
 
     authorization_header = (
-        f"{algorithm} Credential={access_key}/{credential_scope}, "
-        f"SignedHeaders={signed_headers}, Signature={signature}"
+        f"{algorithm} Credential={access_key}/{credential_scope}, SignedHeaders={signed_headers}, Signature={signature}"
     )
 
     headers = {
@@ -293,7 +315,9 @@ def build_sigv4_headers(
 
 
 def validate_aws_credentials(
-    access_key: str, secret_key: str, region: str = "us-east-1",
+    access_key: str,
+    secret_key: str,
+    region: str = "us-east-1",
     session_token: str | None = None,
 ) -> ValidationResult:
     """Valida credenciais AWS via sts:GetCallerIdentity (não-destrutivo,

@@ -12,6 +12,7 @@ Escopo declarado honestamente: a resolução de chamada é por NOME de função
 dynamic dispatch complexo ou funções de mesmo nome em classes diferentes
 como entidades distintas (elas são tratadas como o mesmo nó do grafo).
 """
+
 from __future__ import annotations
 
 import ast
@@ -23,13 +24,22 @@ from analyzer.models import Confidence, Language, Severity, VulnCategory, Vulner
 
 # Reaproveita os padrões de taint já usados no engine principal
 _TAINT_SOURCE_RE = re.compile(
-    r'\b(\w+)\s*=\s*(?:'
-    r'request\.(?:args|form|json|data|values|get|params|cookies|headers)\b|'
-    r'sys\.argv\[|input\s*\(|os\.environ\b|os\.getenv\s*\('
-    r')'
+    r"\b(\w+)\s*=\s*(?:"
+    r"request\.(?:args|form|json|data|values|get|params|cookies|headers)\b|"
+    r"sys\.argv\[|input\s*\(|os\.environ\b|os\.getenv\s*\("
+    r")"
 )
-_SINK_FUNCS = {"eval", "exec", "os.system", "subprocess.run", "subprocess.call",
-               "subprocess.Popen", "cursor.execute", "engine.execute", "__import__"}
+_SINK_FUNCS = {
+    "eval",
+    "exec",
+    "os.system",
+    "subprocess.run",
+    "subprocess.call",
+    "subprocess.Popen",
+    "cursor.execute",
+    "engine.execute",
+    "__import__",
+}
 
 
 @dataclass
@@ -40,7 +50,7 @@ class FuncNode:
     lineno: int
     node: ast.AST
     params: list[str]
-    calls: list[tuple[str, ast.Call]] = field(default_factory=list)   # (callee_name, call_node)
+    calls: list[tuple[str, ast.Call]] = field(default_factory=list)  # (callee_name, call_node)
     tainted_params: set[str] = field(default_factory=set)
     returns_tainted: bool = False
 
@@ -65,8 +75,12 @@ class CallGraph:
                 continue
             params = [a.arg for a in node.args.args]
             fn = FuncNode(
-                name=node.name, qualname=f"{Path(file_path).stem}.{node.name}",
-                file_path=file_path, lineno=node.lineno, node=node, params=params,
+                name=node.name,
+                qualname=f"{Path(file_path).stem}.{node.name}",
+                file_path=file_path,
+                lineno=node.lineno,
+                node=node,
+                params=params,
             )
             for call in ast.walk(node):
                 if isinstance(call, ast.Call):
@@ -165,7 +179,7 @@ class CallGraph:
         for _ in range(max_iterations):
             changed = False
 
-            for fname, defs in self.functions.items():
+            for _fname, defs in self.functions.items():
                 for fn in defs:
                     tainted_vars = self._intraproc_tainted_vars(fn)
 
@@ -199,7 +213,7 @@ class CallGraph:
 
         # ── Geração dos achados: parâmetro tainted alcançando sink no calee ──
         seen_keys: set[tuple] = set()
-        for fname, defs in self.functions.items():
+        for _fname, defs in self.functions.items():
             for fn in defs:
                 if not fn.tainted_params:
                     continue
@@ -207,30 +221,38 @@ class CallGraph:
                 for node in ast.walk(fn.node):
                     if isinstance(node, ast.Call):
                         sink_name = self._sink_dotted_name(node)
-                        if sink_name in _SINK_FUNCS or (isinstance(node.func, ast.Name) and node.func.id in ("eval", "exec")):
+                        if sink_name in _SINK_FUNCS or (
+                            isinstance(node.func, ast.Name) and node.func.id in ("eval", "exec")
+                        ):
                             used = {n.id for n in ast.walk(node) if isinstance(n, ast.Name)} & tainted_vars
                             if used:
                                 key = (fn.file_path, node.lineno, sink_name)
                                 if key in seen_keys:
                                     continue
                                 seen_keys.add(key)
-                                findings.append(Vulnerability(
-                                    rule_id="INTERPROC-TAINT-001",
-                                    name=f"Taint Interprocedural até Sink ({sink_name or 'call'})",
-                                    description=(
-                                        f"A função '{fn.name}' recebe um parâmetro contaminado "
-                                        f"({', '.join(sorted(used))}) — propagado a partir de um "
-                                        f"call-site em outra função/arquivo através do call graph "
-                                        f"— e o utiliza em '{sink_name}' na linha {node.lineno}, "
-                                        f"sem sanitização aparente."
-                                    ),
-                                    severity=Severity.HIGH, category=VulnCategory.CODE_INJECTION,
-                                    language=Language.PYTHON, file_path=fn.file_path,
-                                    line_number=node.lineno,
-                                    line_content=_line_of(fn, node.lineno),
-                                    remediation="Sanitize o parâmetro no início da função ou no call-site antes de repassá-lo; use APIs parametrizadas no sink.",
-                                    cwe="CWE-20", owasp="A03:2021 - Injection", confidence=Confidence.MEDIUM,
-                                ))
+                                findings.append(
+                                    Vulnerability(
+                                        rule_id="INTERPROC-TAINT-001",
+                                        name=f"Taint Interprocedural até Sink ({sink_name or 'call'})",
+                                        description=(
+                                            f"A função '{fn.name}' recebe um parâmetro contaminado "
+                                            f"({', '.join(sorted(used))}) — propagado a partir de um "
+                                            f"call-site em outra função/arquivo através do call graph "
+                                            f"— e o utiliza em '{sink_name}' na linha {node.lineno}, "
+                                            f"sem sanitização aparente."
+                                        ),
+                                        severity=Severity.HIGH,
+                                        category=VulnCategory.CODE_INJECTION,
+                                        language=Language.PYTHON,
+                                        file_path=fn.file_path,
+                                        line_number=node.lineno,
+                                        line_content=_line_of(fn, node.lineno),
+                                        remediation="Sanitize o parâmetro no início da função ou no call-site antes de repassá-lo; use APIs parametrizadas no sink.",
+                                        cwe="CWE-20",
+                                        owasp="A03:2021 - Injection",
+                                        confidence=Confidence.MEDIUM,
+                                    )
+                                )
         return findings
 
     @staticmethod
