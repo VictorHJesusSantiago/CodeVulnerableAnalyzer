@@ -1,4 +1,5 @@
 """Shannon entropy detector — encontra API keys, tokens e hashes em código-fonte."""
+
 from __future__ import annotations
 
 import math
@@ -18,17 +19,40 @@ class EntropyFinding:
 
 
 _ASSIGN_RE = re.compile(
-    r'(?:const|let|var|final|private|public|static|readonly|protected)?\s*'
+    r"(?:const|let|var|final|private|public|static|readonly|protected)?\s*"
     r'(\w+)\s*(?:=|:=|:)\s*["\']([^"\']{16,})["\']',
     re.IGNORECASE,
 )
 
-_SECRET_HINTS = frozenset([
-    "key", "token", "secret", "password", "passwd", "pwd", "auth",
-    "api", "jwt", "bearer", "credential", "cred", "cert", "private",
-    "access", "refresh", "signing", "encryption", "hmac", "salt",
-    "nonce", "seed", "hash", "signature", "passphrase",
-])
+_SECRET_HINTS = frozenset(
+    [
+        "key",
+        "token",
+        "secret",
+        "password",
+        "passwd",
+        "pwd",
+        "auth",
+        "api",
+        "jwt",
+        "bearer",
+        "credential",
+        "cred",
+        "cert",
+        "private",
+        "access",
+        "refresh",
+        "signing",
+        "encryption",
+        "hmac",
+        "salt",
+        "nonce",
+        "seed",
+        "hash",
+        "signature",
+        "passphrase",
+    ]
+)
 
 
 def _shannon(s: str) -> float:
@@ -87,14 +111,16 @@ def scan_entropy(file_path: str, content: str, threshold: float = 4.0) -> list[E
             seen.add(dedup)
 
             masked = value[:8] + "..." + value[-4:] if len(value) > 16 else value
-            findings.append(EntropyFinding(
-                file_path=file_path,
-                line_number=line_idx,
-                line_content=line.rstrip(),
-                variable_name=var_name,
-                secret_value=masked,
-                entropy=round(entropy, 3),
-                charset=charset,
-            ))
+            findings.append(
+                EntropyFinding(
+                    file_path=file_path,
+                    line_number=line_idx,
+                    line_content=line.rstrip(),
+                    variable_name=var_name,
+                    secret_value=masked,
+                    entropy=round(entropy, 3),
+                    charset=charset,
+                )
+            )
 
     return findings
