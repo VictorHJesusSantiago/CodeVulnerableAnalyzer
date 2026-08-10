@@ -10,6 +10,7 @@ payload (sem verificar assinatura — não temos a chave), e sinaliza:
   - claims sensíveis no payload (senha, segredo, etc. — não deveriam estar
     num JWT, que é apenas base64, não criptografado)
 """
+
 from __future__ import annotations
 
 import base64
@@ -19,7 +20,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
 
-_JWT_RE = re.compile(r'\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*')
+_JWT_RE = re.compile(r"\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*")
 
 _SENSITIVE_CLAIM_KEYS = {"password", "senha", "secret", "api_key", "private_key", "credit_card"}
 
@@ -82,7 +83,9 @@ def _analyze_issues(header: dict[str, Any], payload: dict[str, Any] | None) -> l
 
         sensitive_found = [k for k in payload if str(k).lower() in _SENSITIVE_CLAIM_KEYS]
         if sensitive_found:
-            issues.append(f"Claims sensíveis no payload (JWT NÃO é criptografado, apenas codificado): {', '.join(sensitive_found)}")
+            issues.append(
+                f"Claims sensíveis no payload (JWT NÃO é criptografado, apenas codificado): {', '.join(sensitive_found)}"
+            )
 
     return issues
 
@@ -94,12 +97,16 @@ def scan_jwt(file_path: str, content: str) -> list[JWTFinding]:
         decoded = decode_jwt(token)
         if decoded is None or decoded["header"] is None:
             continue
-        line_number = content[:m.start()].count("\n") + 1
+        line_number = content[: m.start()].count("\n") + 1
         issues = _analyze_issues(decoded["header"], decoded["payload"])
-        findings.append(JWTFinding(
-            file_path=file_path, line_number=line_number,
-            token_preview=token[:24] + "...",
-            header=decoded["header"], payload=decoded["payload"],
-            issues=issues,
-        ))
+        findings.append(
+            JWTFinding(
+                file_path=file_path,
+                line_number=line_number,
+                token_preview=token[:24] + "...",
+                header=decoded["header"],
+                payload=decoded["payload"],
+                issues=issues,
+            )
+        )
     return findings

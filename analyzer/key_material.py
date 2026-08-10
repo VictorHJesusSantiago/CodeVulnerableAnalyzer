@@ -12,6 +12,7 @@ Escopo declarado: implementa um parser DER simplificado o bastante para
 navegar SEQUENCE/INTEGER/OCTET STRING/BIT STRING/OBJECT IDENTIFIER — não é
 um parser ASN.1 genérico completo (não cobre todos os tipos/tags exóticos).
 """
+
 from __future__ import annotations
 
 import base64
@@ -23,27 +24,28 @@ from dataclasses import dataclass
 class KeyFinding:
     file_path: str
     line_number: int
-    key_type: str            # RSA | EC | Ed25519 | DSA | OPENSSH | PGP | SSH_PUBLIC | UNKNOWN
+    key_type: str  # RSA | EC | Ed25519 | DSA | OPENSSH | PGP | SSH_PUBLIC | UNKNOWN
     is_encrypted: bool
-    bits: int | None       # tamanho estimado em bits (quando aplicável, ex. RSA)
+    bits: int | None  # tamanho estimado em bits (quando aplicável, ex. RSA)
     valid_der: bool
     header: str
 
 
 _PEM_BLOCK_RE = re.compile(
-    r'-----BEGIN ((?:[A-Z0-9]+ )*PRIVATE KEY)-----\s*(.*?)\s*-----END \1-----',
+    r"-----BEGIN ((?:[A-Z0-9]+ )*PRIVATE KEY)-----\s*(.*?)\s*-----END \1-----",
     re.DOTALL,
 )
 _PGP_BLOCK_RE = re.compile(
-    r'-----BEGIN PGP PRIVATE KEY BLOCK-----\s*(.*?)\s*-----END PGP PRIVATE KEY BLOCK-----',
+    r"-----BEGIN PGP PRIVATE KEY BLOCK-----\s*(.*?)\s*-----END PGP PRIVATE KEY BLOCK-----",
     re.DOTALL,
 )
-_SSH_PUB_RE = re.compile(r'\bssh-(?:rsa|ed25519|dss) [A-Za-z0-9+/=]{50,}(?: \S+)?')
+_SSH_PUB_RE = re.compile(r"\bssh-(?:rsa|ed25519|dss) [A-Za-z0-9+/=]{50,}(?: \S+)?")
 
 _ENCRYPTED_MARKERS = ("ENCRYPTED", "Proc-Type: 4,ENCRYPTED", "DEK-Info")
 
 
 # ── Parser DER mínimo (TLV) ────────────────────────────────────────────────────
+
 
 def _parse_der_length(data: bytes, offset: int) -> tuple[int, int]:
     """Retorna (length, novo_offset) para o campo de comprimento DER em offset."""
@@ -51,7 +53,7 @@ def _parse_der_length(data: bytes, offset: int) -> tuple[int, int]:
     if first & 0x80 == 0:
         return first, offset + 1
     num_bytes = first & 0x7F
-    length = int.from_bytes(data[offset + 1: offset + 1 + num_bytes], "big")
+    length = int.from_bytes(data[offset + 1 : offset + 1 + num_bytes], "big")
     return length, offset + 1 + num_bytes
 
 
@@ -115,6 +117,7 @@ def analyze_der_structure(der_bytes: bytes) -> tuple[bool, int | None]:
 
 # ── Extração e classificação ───────────────────────────────────────────────────
 
+
 def _key_type_from_header(header: str) -> str:
     h = header.upper()
     if "RSA" in h:
@@ -136,12 +139,12 @@ def scan_key_material(file_path: str, content: str) -> list[KeyFinding]:
     for m in _PEM_BLOCK_RE.finditer(content):
         header = m.group(1)
         body = m.group(2)
-        line_number = content[:m.start()].count("\n") + 1
+        line_number = content[: m.start()].count("\n") + 1
         is_encrypted = any(marker in body or marker in m.group(0) for marker in _ENCRYPTED_MARKERS)
 
-        b64_clean = re.sub(r'\s+', '', body)
+        b64_clean = re.sub(r"\s+", "", body)
         # Remove possíveis linhas de cabeçalho de criptografia (Proc-Type/DEK-Info)
-        b64_clean = re.sub(r'(?:Proc-Type|DEK-Info)[^,]*,[^\n]*', '', b64_clean)
+        b64_clean = re.sub(r"(?:Proc-Type|DEK-Info)[^,]*,[^\n]*", "", b64_clean)
 
         valid_der = False
         bits = None
@@ -159,21 +162,31 @@ def scan_key_material(file_path: str, content: str) -> list[KeyFinding]:
             except Exception:
                 valid_der = False
 
-        findings.append(KeyFinding(
-            file_path=file_path, line_number=line_number,
-            key_type=_key_type_from_header(header),
-            is_encrypted=is_encrypted, bits=bits, valid_der=valid_der,
-            header=header,
-        ))
+        findings.append(
+            KeyFinding(
+                file_path=file_path,
+                line_number=line_number,
+                key_type=_key_type_from_header(header),
+                is_encrypted=is_encrypted,
+                bits=bits,
+                valid_der=valid_der,
+                header=header,
+            )
+        )
 
     for m in _PGP_BLOCK_RE.finditer(content):
-        line_number = content[:m.start()].count("\n") + 1
-        findings.append(KeyFinding(
-            file_path=file_path, line_number=line_number, key_type="PGP",
-            is_encrypted=("ENCRYPTED" in m.group(1).upper()), bits=None,
-            valid_der=True,  # PGP usa OpenPGP packet format, não DER — assume presente
-            header="PGP PRIVATE KEY BLOCK",
-        ))
+        line_number = content[: m.start()].count("\n") + 1
+        findings.append(
+            KeyFinding(
+                file_path=file_path,
+                line_number=line_number,
+                key_type="PGP",
+                is_encrypted=("ENCRYPTED" in m.group(1).upper()),
+                bits=None,
+                valid_der=True,  # PGP usa OpenPGP packet format, não DER — assume presente
+                header="PGP PRIVATE KEY BLOCK",
+            )
+        )
 
     return findings
 
@@ -184,9 +197,16 @@ def scan_ssh_public_keys(file_path: str, content: str) -> list[KeyFinding]:
     chave privada correspondente."""
     findings = []
     for m in _SSH_PUB_RE.finditer(content):
-        line_number = content[:m.start()].count("\n") + 1
-        findings.append(KeyFinding(
-            file_path=file_path, line_number=line_number, key_type="SSH_PUBLIC",
-            is_encrypted=False, bits=None, valid_der=True, header="SSH PUBLIC KEY",
-        ))
+        line_number = content[: m.start()].count("\n") + 1
+        findings.append(
+            KeyFinding(
+                file_path=file_path,
+                line_number=line_number,
+                key_type="SSH_PUBLIC",
+                is_encrypted=False,
+                bits=None,
+                valid_der=True,
+                header="SSH PUBLIC KEY",
+            )
+        )
     return findings
