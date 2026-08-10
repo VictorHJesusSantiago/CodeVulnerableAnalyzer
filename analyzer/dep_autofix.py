@@ -8,6 +8,7 @@
 Isso permite ao usuário revisar e aplicar manualmente (ou integrar num fluxo
 de PR próprio) sem que esta ferramenta jamais toque no repositório git.
 """
+
 from __future__ import annotations
 
 import difflib
@@ -54,7 +55,7 @@ def _bump_requirements_txt(content: str, plan: dict[str, BumpPlanEntry]) -> str:
     out = []
     for line in lines:
         stripped = line.strip()
-        m = re.match(r'^([A-Za-z0-9_.\-]+)', stripped)
+        m = re.match(r"^([A-Za-z0-9_.\-]+)", stripped)
         if m and m.group(1).lower() in {k.lower() for k in plan}:
             pkg_key = next(k for k in plan if k.lower() == m.group(1).lower())
             newline_suffix = "\n" if line.endswith("\n") else ""
@@ -69,6 +70,7 @@ def _bump_requirements_txt(content: str, plan: dict[str, BumpPlanEntry]) -> str:
 
 def _bump_package_json(content: str, plan: dict[str, BumpPlanEntry]) -> str:
     import json
+
     try:
         data = json.loads(content)
     except json.JSONDecodeError:
@@ -98,9 +100,12 @@ def build_bump_plan(manifest_path: str, manifest_content: str, vulns: list[DepVu
     else:
         updated = manifest_content  # formato sem suporte de auto-edição
 
-    diff_lines = list(difflib.unified_diff(
-        manifest_content.splitlines(keepends=True),
-        updated.splitlines(keepends=True),
-        fromfile=f"a/{name}", tofile=f"b/{name}",
-    ))
+    diff_lines = list(
+        difflib.unified_diff(
+            manifest_content.splitlines(keepends=True),
+            updated.splitlines(keepends=True),
+            fromfile=f"a/{name}",
+            tofile=f"b/{name}",
+        )
+    )
     return BumpPlan(entries=list(plan_dict.values()), updated_content=updated, diff="".join(diff_lines))

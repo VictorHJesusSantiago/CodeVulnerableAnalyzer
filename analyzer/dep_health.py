@@ -17,6 +17,7 @@ pacotes abandonados/pouco mantidos.
   - Pacotes abandonados: via consulta opcional (rede) às APIs públicas do
     PyPI/npm para data do último release.
 """
+
 from __future__ import annotations
 
 import json
@@ -31,22 +32,76 @@ from datetime import datetime, timezone
 # cobre os alvos mais comuns de ataques de typosquatting documentados.
 POPULAR_PACKAGES: dict[str, list[str]] = {
     "pypi": [
-        "requests", "numpy", "pandas", "flask", "django", "urllib3", "boto3",
-        "pytest", "setuptools", "pyyaml", "click", "jinja2", "cryptography",
-        "pillow", "scipy", "sqlalchemy", "matplotlib", "beautifulsoup4",
-        "selenium", "scrapy", "tensorflow", "torch", "fastapi", "pydantic",
+        "requests",
+        "numpy",
+        "pandas",
+        "flask",
+        "django",
+        "urllib3",
+        "boto3",
+        "pytest",
+        "setuptools",
+        "pyyaml",
+        "click",
+        "jinja2",
+        "cryptography",
+        "pillow",
+        "scipy",
+        "sqlalchemy",
+        "matplotlib",
+        "beautifulsoup4",
+        "selenium",
+        "scrapy",
+        "tensorflow",
+        "torch",
+        "fastapi",
+        "pydantic",
     ],
     "npm": [
-        "react", "lodash", "express", "axios", "vue", "webpack", "typescript",
-        "eslint", "jest", "babel", "chalk", "commander", "moment", "underscore",
-        "async", "request", "debug", "colors", "yargs", "react-dom", "next",
+        "react",
+        "lodash",
+        "express",
+        "axios",
+        "vue",
+        "webpack",
+        "typescript",
+        "eslint",
+        "jest",
+        "babel",
+        "chalk",
+        "commander",
+        "moment",
+        "underscore",
+        "async",
+        "request",
+        "debug",
+        "colors",
+        "yargs",
+        "react-dom",
+        "next",
     ],
     "cargo": [
-        "serde", "tokio", "rand", "clap", "reqwest", "regex", "log", "anyhow",
-        "thiserror", "futures", "hyper", "actix-web",
+        "serde",
+        "tokio",
+        "rand",
+        "clap",
+        "reqwest",
+        "regex",
+        "log",
+        "anyhow",
+        "thiserror",
+        "futures",
+        "hyper",
+        "actix-web",
     ],
     "gem": [
-        "rails", "rack", "rspec", "devise", "nokogiri", "puma", "sidekiq",
+        "rails",
+        "rack",
+        "rspec",
+        "devise",
+        "nokogiri",
+        "puma",
+        "sidekiq",
     ],
 }
 
@@ -89,6 +144,7 @@ class AbandonedFinding:
 
 
 # ── Levenshtein (stdlib puro) ──────────────────────────────────────────────────
+
 
 def levenshtein(a: str, b: str) -> int:
     if a == b:
@@ -143,16 +199,23 @@ def check_license(package_name: str, declared_license: str | None = None) -> Lic
     lower = package_name.lower()
     if lower in _GPL_LICENSED_PACKAGES:
         lic = _GPL_LICENSED_PACKAGES[lower]
-        return LicenseFinding(package_name, lic,
-                               f"Licença copyleft forte ({lic}) — pode exigir que seu projeto "
-                               f"também seja distribuído sob a mesma licença se vinculado estaticamente.")
-    if declared_license and re.search(r'(?i)\b(?:AGPL|GPL)\b', declared_license):
-        return LicenseFinding(package_name, declared_license,
-                               "Licença copyleft declarada no manifesto — revise compatibilidade com seu modelo de distribuição.")
+        return LicenseFinding(
+            package_name,
+            lic,
+            f"Licença copyleft forte ({lic}) — pode exigir que seu projeto "
+            f"também seja distribuído sob a mesma licença se vinculado estaticamente.",
+        )
+    if declared_license and re.search(r"(?i)\b(?:AGPL|GPL)\b", declared_license):
+        return LicenseFinding(
+            package_name,
+            declared_license,
+            "Licença copyleft declarada no manifesto — revise compatibilidade com seu modelo de distribuição.",
+        )
     return None
 
 
 # ── Pacotes abandonados (rede, opt-in) ────────────────────────────────────────
+
 
 def query_pypi_last_release(package_name: str, timeout: float = 8.0) -> str | None:
     url = f"https://pypi.org/pypi/{package_name}/json"
