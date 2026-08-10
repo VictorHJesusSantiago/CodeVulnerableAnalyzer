@@ -4,6 +4,7 @@ conteúdo (hash SHA-256) não mudou desde o último scan, evitando reprocessar
 o conjunto completo de regras. Armazenamento: SQLite (stdlib), mesmo padrão
 usado em analyzer/trend.py.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -22,25 +23,42 @@ def content_hash(content: str) -> str:
 
 def _vuln_to_dict(v: Vulnerability) -> dict:
     return {
-        "rule_id": v.rule_id, "name": v.name, "description": v.description,
-        "severity": v.severity.name, "category": v.category.name,
-        "language": v.language.name, "file_path": v.file_path,
-        "line_number": v.line_number, "line_content": v.line_content,
-        "remediation": v.remediation, "cwe": v.cwe, "owasp": v.owasp,
-        "confidence": v.confidence.name, "snippet": v.snippet,
-        "snippet_start_line": v.snippet_start_line, "in_comment": v.in_comment,
+        "rule_id": v.rule_id,
+        "name": v.name,
+        "description": v.description,
+        "severity": v.severity.name,
+        "category": v.category.name,
+        "language": v.language.name,
+        "file_path": v.file_path,
+        "line_number": v.line_number,
+        "line_content": v.line_content,
+        "remediation": v.remediation,
+        "cwe": v.cwe,
+        "owasp": v.owasp,
+        "confidence": v.confidence.name,
+        "snippet": v.snippet,
+        "snippet_start_line": v.snippet_start_line,
+        "in_comment": v.in_comment,
         "function_context": v.function_context,
     }
 
 
 def _dict_to_vuln(d: dict) -> Vulnerability:
     return Vulnerability(
-        rule_id=d["rule_id"], name=d["name"], description=d["description"],
-        severity=Severity[d["severity"]], category=VulnCategory[d["category"]],
-        language=Language[d["language"]], file_path=d["file_path"],
-        line_number=d["line_number"], line_content=d["line_content"],
-        remediation=d["remediation"], cwe=d.get("cwe"), owasp=d.get("owasp"),
-        confidence=Confidence[d["confidence"]], snippet=d.get("snippet", []),
+        rule_id=d["rule_id"],
+        name=d["name"],
+        description=d["description"],
+        severity=Severity[d["severity"]],
+        category=VulnCategory[d["category"]],
+        language=Language[d["language"]],
+        file_path=d["file_path"],
+        line_number=d["line_number"],
+        line_content=d["line_content"],
+        remediation=d["remediation"],
+        cwe=d.get("cwe"),
+        owasp=d.get("owasp"),
+        confidence=Confidence[d["confidence"]],
+        snippet=d.get("snippet", []),
         snippet_start_line=d.get("snippet_start_line", 0),
         in_comment=d.get("in_comment", False),
         function_context=d.get("function_context"),
@@ -86,8 +104,9 @@ class IncrementalCache:
         vulns = [_dict_to_vuln(d) for d in json.loads(row[1])]
         return vulns, row[2]
 
-    def put(self, file_path: str, content: str, vulns: list[Vulnerability],
-            lines_scanned: int, scan_time: float) -> None:
+    def put(
+        self, file_path: str, content: str, vulns: list[Vulnerability], lines_scanned: int, scan_time: float
+    ) -> None:
         h = content_hash(content)
         payload = json.dumps([_vuln_to_dict(v) for v in vulns])
         with self._conn() as conn:
