@@ -7,6 +7,7 @@ Checagem de integridade de hash / pinning de dependências:
     como "não fixadas" — permitem que uma versão futura (potencialmente
     comprometida) seja instalada silenciosamente.
 """
+
 from __future__ import annotations
 
 import json
@@ -20,13 +21,13 @@ class PinningFinding:
     file_path: str
     line_number: int
     package: str
-    issue: str          # "sem_hash" | "versao_nao_fixada" | "sem_checksum"
-    severity: str        # HIGH | MEDIUM | LOW
+    issue: str  # "sem_hash" | "versao_nao_fixada" | "sem_checksum"
+    severity: str  # HIGH | MEDIUM | LOW
 
 
-_REQ_PINNED_RE = re.compile(r'^([A-Za-z0-9_.\-]+)\s*==\s*[0-9][A-Za-z0-9.\-]*')
-_REQ_HASH_RE = re.compile(r'--hash=sha256:[a-f0-9]{64}')
-_REQ_RANGE_RE = re.compile(r'^([A-Za-z0-9_.\-]+)\s*(?:>=|<=|~=|\^|>|<|!=)')
+_REQ_PINNED_RE = re.compile(r"^([A-Za-z0-9_.\-]+)\s*==\s*[0-9][A-Za-z0-9.\-]*")
+_REQ_HASH_RE = re.compile(r"--hash=sha256:[a-f0-9]{64}")
+_REQ_RANGE_RE = re.compile(r"^([A-Za-z0-9_.\-]+)\s*(?:>=|<=|~=|\^|>|<|!=)")
 
 
 def check_requirements_pinning(content: str) -> list[PinningFinding]:
@@ -38,16 +39,28 @@ def check_requirements_pinning(content: str) -> list[PinningFinding]:
 
         range_m = _REQ_RANGE_RE.match(stripped)
         if range_m:
-            findings.append(PinningFinding(
-                "requirements.txt", i, range_m.group(1), "versao_nao_fixada", "MEDIUM",
-            ))
+            findings.append(
+                PinningFinding(
+                    "requirements.txt",
+                    i,
+                    range_m.group(1),
+                    "versao_nao_fixada",
+                    "MEDIUM",
+                )
+            )
             continue
 
         pinned_m = _REQ_PINNED_RE.match(stripped)
         if pinned_m and not _REQ_HASH_RE.search(stripped):
-            findings.append(PinningFinding(
-                "requirements.txt", i, pinned_m.group(1), "sem_hash", "LOW",
-            ))
+            findings.append(
+                PinningFinding(
+                    "requirements.txt",
+                    i,
+                    pinned_m.group(1),
+                    "sem_hash",
+                    "LOW",
+                )
+            )
     return findings
 
 
