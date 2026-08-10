@@ -1,4 +1,5 @@
 """PII detector — CPF, CNPJ, cartão de crédito, e-mail, telefone BR em código-fonte."""
+
 from __future__ import annotations
 
 import re
@@ -14,11 +15,11 @@ class PIIFinding:
     masked_value: str
 
 
-_CPF_RE   = re.compile(r'\b(\d{3})[.\s]?(\d{3})[.\s]?(\d{3})[-\s]?(\d{2})\b')
-_CNPJ_RE  = re.compile(r'\b(\d{2})[.\s]?(\d{3})[.\s]?(\d{3})[/\s]?(\d{4})[-\s]?(\d{2})\b')
-_CARD_RE  = re.compile(r'\b([3-6]\d{3})[\s\-]?(\d{4})[\s\-]?(\d{4})[\s\-]?(\d{4,7})\b')
-_EMAIL_RE = re.compile(r'\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Z]{2,}\b', re.IGNORECASE)
-_PHONE_RE = re.compile(r'\(?\b(\d{2})\)?[\s.\-]?([9]?\d{4})[\s.\-]?(\d{4})\b')
+_CPF_RE = re.compile(r"\b(\d{3})[.\s]?(\d{3})[.\s]?(\d{3})[-\s]?(\d{2})\b")
+_CNPJ_RE = re.compile(r"\b(\d{2})[.\s]?(\d{3})[.\s]?(\d{3})[/\s]?(\d{4})[-\s]?(\d{2})\b")
+_CARD_RE = re.compile(r"\b([3-6]\d{3})[\s\-]?(\d{4})[\s\-]?(\d{4})[\s\-]?(\d{4,7})\b")
+_EMAIL_RE = re.compile(r"\b[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Z]{2,}\b", re.IGNORECASE)
+_PHONE_RE = re.compile(r"\(?\b(\d{2})\)?[\s.\-]?([9]?\d{4})[\s.\-]?(\d{4})\b")
 
 _SKIP_EMAILS = ("@example.", "@test.", "@domain.", "@foo.", "@bar.", "@email.")
 
@@ -55,10 +56,10 @@ def _cnpj_valid(p1: str, p2: str, p3: str, p4: str, p5: str) -> bool:
     if len(digits) != 12 or len(check) != 2:
         return False
     weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
-    s = sum(d * w for d, w in zip(digits, weights1))
+    s = sum(d * w for d, w in zip(digits, weights1, strict=True))
     r1 = 0 if (s % 11) < 2 else 11 - (s % 11)
     weights2 = [6] + weights1
-    s = sum(d * w for d, w in zip(digits + [r1], weights2))
+    s = sum(d * w for d, w in zip(digits + [r1], weights2, strict=True))
     r2 = 0 if (s % 11) < 2 else 11 - (s % 11)
     return r1 == check[0] and r2 == check[1]
 
@@ -83,13 +84,15 @@ def scan_pii(file_path: str, content: str) -> list[PIIFinding]:
         if key in seen:
             return
         seen.add(key)
-        findings.append(PIIFinding(
-            file_path=file_path,
-            line_number=line_no,
-            line_content=line.rstrip(),
-            pii_type=pii_type,
-            masked_value=masked,
-        ))
+        findings.append(
+            PIIFinding(
+                file_path=file_path,
+                line_number=line_no,
+                line_content=line.rstrip(),
+                pii_type=pii_type,
+                masked_value=masked,
+            )
+        )
 
     for line_no, line in enumerate(lines, start=1):
         stripped = line.strip()
@@ -109,7 +112,7 @@ def scan_pii(file_path: str, content: str) -> list[PIIFinding]:
             if _luhn(raw):
                 _add(line_no, line, "CartaoCredito", _mask(raw))
 
-        if re.search(r'(?:print|log|insert|update|values|=|:)\s', line, re.IGNORECASE):
+        if re.search(r"(?:print|log|insert|update|values|=|:)\s", line, re.IGNORECASE):
             for m in _EMAIL_RE.finditer(line):
                 email = m.group(0)
                 if any(skip in email.lower() for skip in _SKIP_EMAILS):
