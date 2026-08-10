@@ -1,4 +1,5 @@
 """Comparação com baseline — reporta apenas novos achados em relação a scan anterior."""
+
 from __future__ import annotations
 
 import json
@@ -10,10 +11,10 @@ from analyzer.models import ScanReport
 
 @dataclass
 class BaselineDiff:
-    new_findings:        list[dict] = field(default_factory=list)
-    resolved_findings:   list[dict] = field(default_factory=list)
+    new_findings: list[dict] = field(default_factory=list)
+    resolved_findings: list[dict] = field(default_factory=list)
     regression_findings: list[dict] = field(default_factory=list)
-    unchanged_count:     int = 0
+    unchanged_count: int = 0
 
     @property
     def new_count(self) -> int:
@@ -53,25 +54,27 @@ def compare_with_baseline(report: ScanReport, baseline_path: str) -> BaselineDif
     """Compara o scan atual com o baseline JSON e retorna as diferenças."""
     baseline = load_baseline(baseline_path)
     base_keys: set[tuple] = {_key(f) for f in baseline}
-    base_sev:  dict[tuple, str] = {_key(f): f.get("severity", "") for f in baseline}
+    base_sev: dict[tuple, str] = {_key(f): f.get("severity", "") for f in baseline}
 
     current: list[dict] = []
     for result in report.results:
         for v in result.vulnerabilities:
-            current.append({
-                "rule_id":  v.rule_id,
-                "file":     v.file_path,
-                "line":     v.line_number,
-                "severity": v.severity.name,
-                "name":     v.name,
-                "category": v.category.value,
-            })
+            current.append(
+                {
+                    "rule_id": v.rule_id,
+                    "file": v.file_path,
+                    "line": v.line_number,
+                    "severity": v.severity.name,
+                    "name": v.name,
+                    "category": v.category.value,
+                }
+            )
 
     current_keys: set[tuple] = {_key(f) for f in current}
 
-    new_findings      = [f for f in current  if _key(f) not in base_keys]
+    new_findings = [f for f in current if _key(f) not in base_keys]
     resolved_findings = [f for f in baseline if _key(f) not in current_keys]
-    unchanged_count   = len([f for f in current if _key(f) in base_keys])
+    unchanged_count = len([f for f in current if _key(f) in base_keys])
 
     regression_findings: list[dict] = []
     for f in current:
@@ -93,4 +96,5 @@ def compare_with_baseline(report: ScanReport, baseline_path: str) -> BaselineDif
 def save_baseline(report: ScanReport, output_path: str) -> None:
     """Salva o scan atual como baseline JSON para comparações futuras."""
     from analyzer.reporter import export_json
+
     export_json(report, output_path)

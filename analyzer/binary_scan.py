@@ -11,6 +11,7 @@ em claro). PDFs totalmente comprimidos exigiriam um parser de objetos +
 inflate completo, fora do escopo aqui (mas o zlib da stdlib é usado quando
 um stream FlateDecode é encontrado, então há suporte parcial real).
 """
+
 from __future__ import annotations
 
 import re
@@ -26,14 +27,14 @@ from analyzer.secrets_providers import classify_secret
 # ════════════════════════════════════════════════════════════════════════════
 
 _MIN_STRING_LEN = 6
-_ASCII_RUN_RE = re.compile(rb'[\x20-\x7e]{%d,}' % _MIN_STRING_LEN)
+_ASCII_RUN_RE = re.compile(rb"[\x20-\x7e]{%d,}" % _MIN_STRING_LEN)
 
 
 def extract_strings(data: bytes, min_len: int = _MIN_STRING_LEN) -> list[str]:
     """Extrai sequências de bytes ASCII imprimíveis (>= min_len), similar ao
     comando `strings`. Também tenta UTF-16LE (comum em binários Windows)."""
     results = []
-    pattern = re.compile(rb'[\x20-\x7e]{%d,}' % min_len)
+    pattern = re.compile(rb"[\x20-\x7e]{%d,}" % min_len)
     for m in pattern.finditer(data):
         try:
             results.append(m.group(0).decode("ascii"))
@@ -41,7 +42,7 @@ def extract_strings(data: bytes, min_len: int = _MIN_STRING_LEN) -> list[str]:
             continue
 
     # UTF-16LE: bytes intercalados com \x00
-    utf16_pattern = re.compile(rb'(?:[\x20-\x7e]\x00){%d,}' % min_len)
+    utf16_pattern = re.compile(rb"(?:[\x20-\x7e]\x00){%d,}" % min_len)
     for m in utf16_pattern.finditer(data):
         try:
             results.append(m.group(0).decode("utf-16le"))
@@ -59,18 +60,28 @@ def scan_binary_for_secrets(file_path: str, data: bytes) -> list[dict]:
     joined = "\n".join(strings)
 
     for provider, secret_type, matched, revoke_url in classify_secret(joined):
-        findings.append({
-            "file_path": file_path, "source": "binary-strings",
-            "provider": provider, "secret_type": secret_type,
-            "matched": matched[:60], "revoke_url": revoke_url,
-        })
+        findings.append(
+            {
+                "file_path": file_path,
+                "source": "binary-strings",
+                "provider": provider,
+                "secret_type": secret_type,
+                "matched": matched[:60],
+                "revoke_url": revoke_url,
+            }
+        )
 
     for entry in scan_entropy(file_path, joined, threshold=4.2):
-        findings.append({
-            "file_path": file_path, "source": "binary-strings-entropy",
-            "provider": "Desconhecido", "secret_type": "Alta entropia",
-            "matched": entry.secret_value[:60], "revoke_url": "N/A",
-        })
+        findings.append(
+            {
+                "file_path": file_path,
+                "source": "binary-strings-entropy",
+                "provider": "Desconhecido",
+                "secret_type": "Alta entropia",
+                "matched": entry.secret_value[:60],
+                "revoke_url": "N/A",
+            }
+        )
     return findings
 
 
@@ -79,9 +90,14 @@ def scan_binary_for_secrets(file_path: str, data: bytes) -> list[dict]:
 # ════════════════════════════════════════════════════════════════════════════
 
 _EXIF_TAG_NAMES = {
-    0x010E: "ImageDescription", 0x010F: "Make", 0x0110: "Model",
-    0x0131: "Software", 0x8298: "Copyright", 0x9286: "UserComment",
-    0x013B: "Artist", 0x8769: "ExifIFDPointer",
+    0x010E: "ImageDescription",
+    0x010F: "Make",
+    0x0110: "Model",
+    0x0131: "Software",
+    0x8298: "Copyright",
+    0x9286: "UserComment",
+    0x013B: "Artist",
+    0x8769: "ExifIFDPointer",
 }
 
 
@@ -112,12 +128,12 @@ def extract_exif_strings(jpeg_data: bytes) -> list[str]:
     offset = 2
     app1_data: bytes | None = None
     while offset < len(jpeg_data) - 4:
-        marker = jpeg_data[offset:offset + 2]
+        marker = jpeg_data[offset : offset + 2]
         if marker[0:1] != b"\xff":
             break
         if marker == b"\xff\xe1":  # APP1
-            seg_len = struct.unpack(">H", jpeg_data[offset + 2:offset + 4])[0]
-            segment = jpeg_data[offset + 4: offset + 2 + seg_len]
+            seg_len = struct.unpack(">H", jpeg_data[offset + 2 : offset + 4])[0]
+            segment = jpeg_data[offset + 4 : offset + 2 + seg_len]
             if segment[:6] == b"Exif\x00\x00":
                 app1_data = segment[6:]
             break
@@ -126,7 +142,7 @@ def extract_exif_strings(jpeg_data: bytes) -> list[str]:
         else:
             if len(jpeg_data) < offset + 4:
                 break
-            seg_len = struct.unpack(">H", jpeg_data[offset + 2:offset + 4])[0]
+            seg_len = struct.unpack(">H", jpeg_data[offset + 2 : offset + 4])[0]
             offset += 2 + seg_len
 
     if app1_data is None or len(app1_data) < 8:
@@ -145,7 +161,7 @@ def extract_exif_strings(jpeg_data: bytes) -> list[str]:
                 value = raw[:count].rstrip(b"\x00")
             else:
                 value_offset = struct.unpack(f"{endian}I", raw)[0]
-                value = app1_data[value_offset:value_offset + count].rstrip(b"\x00")
+                value = app1_data[value_offset : value_offset + count].rstrip(b"\x00")
             try:
                 results.append(f"{_EXIF_TAG_NAMES[tag]}={value.decode('ascii', errors='replace')}")
             except Exception:
@@ -158,11 +174,16 @@ def scan_image_exif_for_secrets(file_path: str, data: bytes) -> list[dict]:
     joined = "\n".join(strings)
     findings = []
     for provider, secret_type, matched, revoke_url in classify_secret(joined):
-        findings.append({
-            "file_path": file_path, "source": "exif",
-            "provider": provider, "secret_type": secret_type,
-            "matched": matched[:60], "revoke_url": revoke_url,
-        })
+        findings.append(
+            {
+                "file_path": file_path,
+                "source": "exif",
+                "provider": provider,
+                "secret_type": secret_type,
+                "matched": matched[:60],
+                "revoke_url": revoke_url,
+            }
+        )
     return findings
 
 
@@ -170,8 +191,8 @@ def scan_image_exif_for_secrets(file_path: str, data: bytes) -> list[dict]:
 #  PDF (extração best-effort de texto, incl. streams FlateDecode)
 # ════════════════════════════════════════════════════════════════════════════
 
-_PDF_STREAM_RE = re.compile(rb'stream\r?\n(.*?)endstream', re.DOTALL)
-_PDF_TEXT_LITERAL_RE = re.compile(rb'\((?:[^()\\]|\\.)*\)')
+_PDF_STREAM_RE = re.compile(rb"stream\r?\n(.*?)endstream", re.DOTALL)
+_PDF_TEXT_LITERAL_RE = re.compile(rb"\((?:[^()\\]|\\.)*\)")
 
 
 def extract_pdf_text(data: bytes) -> str:
@@ -205,11 +226,16 @@ def scan_pdf_for_secrets(file_path: str, data: bytes) -> list[dict]:
     text = extract_pdf_text(data)
     findings = []
     for provider, secret_type, matched, revoke_url in classify_secret(text):
-        findings.append({
-            "file_path": file_path, "source": "pdf",
-            "provider": provider, "secret_type": secret_type,
-            "matched": matched[:60], "revoke_url": revoke_url,
-        })
+        findings.append(
+            {
+                "file_path": file_path,
+                "source": "pdf",
+                "provider": provider,
+                "secret_type": secret_type,
+                "matched": matched[:60],
+                "revoke_url": revoke_url,
+            }
+        )
     return findings
 
 
@@ -217,7 +243,7 @@ def scan_pdf_for_secrets(file_path: str, data: bytes) -> list[dict]:
 #  .env (parsing dedicado KEY=VALUE)
 # ════════════════════════════════════════════════════════════════════════════
 
-_ENV_LINE_RE = re.compile(r'^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$')
+_ENV_LINE_RE = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$")
 
 
 def parse_env_file(content: str) -> list[tuple[int, str, str]]:
@@ -241,25 +267,38 @@ def scan_env_for_secrets(file_path: str, content: str) -> list[dict]:
         if not value:
             continue
         for provider, secret_type, matched, revoke_url in classify_secret(f"{key}={value}"):
-            findings.append({
-                "file_path": file_path, "source": "env", "line_number": line_number,
-                "provider": provider, "secret_type": secret_type,
-                "matched": matched[:60], "revoke_url": revoke_url,
-            })
+            findings.append(
+                {
+                    "file_path": file_path,
+                    "source": "env",
+                    "line_number": line_number,
+                    "provider": provider,
+                    "secret_type": secret_type,
+                    "matched": matched[:60],
+                    "revoke_url": revoke_url,
+                }
+            )
         if not findings or findings[-1].get("line_number") != line_number:
             # Heurística adicional: chave com nome sensível + valor não trivial
-            if re.search(r'(?i)(?:secret|password|token|key|credential)', key) and len(value) >= 8:
-                findings.append({
-                    "file_path": file_path, "source": "env", "line_number": line_number,
-                    "provider": "Genérico", "secret_type": f"Variável sensível '{key}'",
-                    "matched": value[:60], "revoke_url": "N/A",
-                })
+            if re.search(r"(?i)(?:secret|password|token|key|credential)", key) and len(value) >= 8:
+                findings.append(
+                    {
+                        "file_path": file_path,
+                        "source": "env",
+                        "line_number": line_number,
+                        "provider": "Genérico",
+                        "secret_type": f"Variável sensível '{key}'",
+                        "matched": value[:60],
+                        "revoke_url": "N/A",
+                    }
+                )
     return findings
 
 
 # ════════════════════════════════════════════════════════════════════════════
 #  Orquestração
 # ════════════════════════════════════════════════════════════════════════════
+
 
 def scan_non_text_file(file_path: str) -> list[dict]:
     """Detecta o tipo do arquivo pelos magic bytes/extensão e roda o scanner
