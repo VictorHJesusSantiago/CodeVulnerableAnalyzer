@@ -13,6 +13,7 @@ Formatos suportados:
   - Cargo.lock (TOML)
   - go.sum
 """
+
 from __future__ import annotations
 
 import json
@@ -33,7 +34,7 @@ class LockedPackage:
 @dataclass
 class DependencyTree:
     packages: dict[str, LockedPackage] = field(default_factory=dict)  # nome -> pacote
-    edges: dict[str, set[str]] = field(default_factory=dict)          # pai -> filhos
+    edges: dict[str, set[str]] = field(default_factory=dict)  # pai -> filhos
 
     def add(self, pkg: LockedPackage) -> None:
         self.packages[pkg.name] = pkg
@@ -90,6 +91,7 @@ class DependencyTree:
 #  package-lock.json (npm)
 # ════════════════════════════════════════════════════════════════════════════
 
+
 def parse_package_lock_json(content: str) -> DependencyTree:
     tree = DependencyTree()
     try:
@@ -107,18 +109,25 @@ def parse_package_lock_json(content: str) -> DependencyTree:
             name = path.split("node_modules/")[-1]
             ver = info.get("version", "")
             deps = list(info.get("dependencies", {}).keys()) + list(info.get("devDependencies", {}).keys())
-            tree.add(LockedPackage(name=name, version=ver, ecosystem="npm",
-                                    dependencies=deps, integrity=info.get("integrity")))
+            tree.add(
+                LockedPackage(
+                    name=name, version=ver, ecosystem="npm", dependencies=deps, integrity=info.get("integrity")
+                )
+            )
     else:
         # npm v1: chave "dependencies" recursiva
         def walk(deps: dict) -> None:
             for name, info in deps.items():
                 ver = info.get("version", "")
                 sub_deps = list(info.get("requires", {}).keys())
-                tree.add(LockedPackage(name=name, version=ver, ecosystem="npm",
-                                        dependencies=sub_deps, integrity=info.get("integrity")))
+                tree.add(
+                    LockedPackage(
+                        name=name, version=ver, ecosystem="npm", dependencies=sub_deps, integrity=info.get("integrity")
+                    )
+                )
                 if "dependencies" in info:
                     walk(info["dependencies"])
+
         walk(data.get("dependencies", {}))
 
     return tree
@@ -130,7 +139,7 @@ def parse_package_lock_json(content: str) -> DependencyTree:
 
 _YARN_HEADER_RE = re.compile(r'^"?([^,"]+)@')
 _YARN_VERSION_RE = re.compile(r'^\s+version\s+"([^"]+)"')
-_YARN_DEP_SECTION_RE = re.compile(r'^\s+dependencies:\s*$')
+_YARN_DEP_SECTION_RE = re.compile(r"^\s+dependencies:\s*$")
 _YARN_DEP_ITEM_RE = re.compile(r'^\s{4,}"?([^\s"@]+)"?\s+"[^"]+"\s*$')
 
 
@@ -173,6 +182,7 @@ def parse_yarn_lock(content: str) -> DependencyTree:
 # ════════════════════════════════════════════════════════════════════════════
 #  poetry.lock (TOML) — parser TOML mínimo suficiente para este formato
 # ════════════════════════════════════════════════════════════════════════════
+
 
 def _parse_toml_simple(content: str) -> list[dict]:
     """Parser TOML simplificado para arrays de tabelas [[package]] com pares
@@ -274,6 +284,7 @@ def parse_cargo_lock(content: str) -> DependencyTree:
 #  Pipfile.lock (JSON)
 # ════════════════════════════════════════════════════════════════════════════
 
+
 def parse_pipfile_lock(content: str) -> DependencyTree:
     tree = DependencyTree()
     try:
@@ -291,7 +302,7 @@ def parse_pipfile_lock(content: str) -> DependencyTree:
 #  go.sum
 # ════════════════════════════════════════════════════════════════════════════
 
-_GOSUM_LINE_RE = re.compile(r'^(\S+)\s+(v\S+?)(?:/go\.mod)?\s+(h1:\S+)$')
+_GOSUM_LINE_RE = re.compile(r"^(\S+)\s+(v\S+?)(?:/go\.mod)?\s+(h1:\S+)$")
 
 
 def parse_go_sum(content: str) -> DependencyTree:
@@ -300,8 +311,7 @@ def parse_go_sum(content: str) -> DependencyTree:
         m = _GOSUM_LINE_RE.match(line.strip())
         if m:
             module, version, hashsum = m.groups()
-            tree.add(LockedPackage(name=module, version=version.lstrip("v"),
-                                    ecosystem="go", integrity=hashsum))
+            tree.add(LockedPackage(name=module, version=version.lstrip("v"), ecosystem="go", integrity=hashsum))
     return tree
 
 

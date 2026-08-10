@@ -1,4 +1,5 @@
 """Language Server Protocol (LSP) JSON-RPC 2.0 sobre stdio."""
+
 from __future__ import annotations
 
 import json
@@ -13,9 +14,9 @@ class LSPServer:
     """Servidor LSP mínimo: initialize, didOpen, didChange, publishDiagnostics."""
 
     def __init__(self):
-        self._running    = True
+        self._running = True
         self._open_docs: dict[str, str] = {}
-        self._lock       = threading.Lock()
+        self._lock = threading.Lock()
 
     # ── Transport ────────────────────────────────────────────────────────────
 
@@ -42,7 +43,7 @@ class LSPServer:
             return None
 
     def _send(self, obj: dict) -> None:
-        body   = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         header = f"Content-Length: {len(body)}\r\n\r\n".encode("ascii")
         with self._lock:
             sys.stdout.buffer.write(header + body)
@@ -67,6 +68,7 @@ class LSPServer:
         try:
             from analyzer.engine import ScanEngine
             from analyzer.models import Severity
+
             engine = ScanEngine(min_severity=Severity.INFO)
             result = engine.scan_file(file_path)
         except Exception:
@@ -76,17 +78,19 @@ class LSPServer:
         diagnostics = []
         for v in result.vulnerabilities:
             ln = max(0, v.line_number - 1)
-            diagnostics.append({
-                "range": {
-                    "start": {"line": ln, "character": 0},
-                    "end":   {"line": ln, "character": 999},
-                },
-                "severity": _SEV_MAP.get(v.severity.name, 3),
-                "code":     v.rule_id,
-                "source":   "vulnscan",
-                "message":  f"[{v.rule_id}] {v.name}: {v.description[:150]}",
-                "tags":     [1] if v.in_comment else [],
-            })
+            diagnostics.append(
+                {
+                    "range": {
+                        "start": {"line": ln, "character": 0},
+                        "end": {"line": ln, "character": 999},
+                    },
+                    "severity": _SEV_MAP.get(v.severity.name, 3),
+                    "code": v.rule_id,
+                    "source": "vulnscan",
+                    "message": f"[{v.rule_id}] {v.name}: {v.description[:150]}",
+                    "tags": [1] if v.in_comment else [],
+                }
+            )
         self._notify("textDocument/publishDiagnostics", {"uri": uri, "diagnostics": diagnostics})
 
     # ── Handler de mensagens ──────────────────────────────────────────────────
@@ -97,20 +101,23 @@ class LSPServer:
         req_id = msg.get("id")
 
         if method == "initialize":
-            self._reply(req_id, {
-                "capabilities": {
-                    "textDocumentSync": 1,
-                    "codeActionProvider": {
-                        "codeActionKinds": ["quickfix"],
-                        "resolveProvider": False,
+            self._reply(
+                req_id,
+                {
+                    "capabilities": {
+                        "textDocumentSync": 1,
+                        "codeActionProvider": {
+                            "codeActionKinds": ["quickfix"],
+                            "resolveProvider": False,
+                        },
+                        "diagnosticProvider": {
+                            "interFileDependencies": False,
+                            "workspaceDiagnostics": False,
+                        },
                     },
-                    "diagnosticProvider": {
-                        "interFileDependencies": False,
-                        "workspaceDiagnostics": False,
-                    },
+                    "serverInfo": {"name": "vulnscan-lsp", "version": "1.0.0"},
                 },
-                "serverInfo": {"name": "vulnscan-lsp", "version": "1.0.0"},
-            })
+            )
         elif method == "initialized":
             pass
         elif method == "shutdown":
@@ -119,30 +126,24 @@ class LSPServer:
         elif method == "exit":
             self._running = False
         elif method == "textDocument/didOpen":
-            doc  = params.get("textDocument", {})
-            uri  = doc.get("uri", "")
+            doc = params.get("textDocument", {})
+            uri = doc.get("uri", "")
             text = doc.get("text", "")
             self._open_docs[uri] = text
-            threading.Thread(
-                target=self._publish_diagnostics, args=(uri, text), daemon=True
-            ).start()
+            threading.Thread(target=self._publish_diagnostics, args=(uri, text), daemon=True).start()
         elif method == "textDocument/didChange":
-            doc     = params.get("textDocument", {})
-            uri     = doc.get("uri", "")
+            doc = params.get("textDocument", {})
+            uri = doc.get("uri", "")
             changes = params.get("contentChanges", [])
             if changes:
                 text = changes[-1].get("text", "")
                 self._open_docs[uri] = text
-                threading.Thread(
-                    target=self._publish_diagnostics, args=(uri, text), daemon=True
-                ).start()
+                threading.Thread(target=self._publish_diagnostics, args=(uri, text), daemon=True).start()
         elif method == "textDocument/didSave":
-            doc  = params.get("textDocument", {})
-            uri  = doc.get("uri", "")
+            doc = params.get("textDocument", {})
+            uri = doc.get("uri", "")
             text = self._open_docs.get(uri, "")
-            threading.Thread(
-                target=self._publish_diagnostics, args=(uri, text), daemon=True
-            ).start()
+            threading.Thread(target=self._publish_diagnostics, args=(uri, text), daemon=True).start()
         elif method == "textDocument/didClose":
             uri = (params.get("textDocument") or {}).get("uri", "")
             self._open_docs.pop(uri, None)
@@ -153,12 +154,15 @@ class LSPServer:
             findings = []
             for diagnostic in (params.get("context") or {}).get("diagnostics", []):
                 start = (diagnostic.get("range") or {}).get("start", {})
-                findings.append({
-                    "rule_id": str(diagnostic.get("code", "")),
-                    "line_number": int(start.get("line", 0)) + 1,
-                })
+                findings.append(
+                    {
+                        "rule_id": str(diagnostic.get("code", "")),
+                        "line_number": int(start.get("line", 0)) + 1,
+                    }
+                )
             try:
                 from analyzer.remediation import lsp_code_actions
+
                 self._reply(req_id, lsp_code_actions(uri, source, findings))
             except Exception:
                 self._reply(req_id, [])
