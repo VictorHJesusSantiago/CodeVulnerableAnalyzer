@@ -45,6 +45,7 @@ console = Console(highlight=False)
 class _ThemeDict:
     """Dict-like que resolve cores no tema ativo a cada acesso (permite trocar
     tema em runtime via --theme sem precisar recriar constantes)."""
+
     def __init__(self, resolver):
         self._resolver = resolver
 
@@ -62,82 +63,82 @@ SEVERITY_COLORS = _ThemeDict(_theme_mod.severity_colors)
 SEVERITY_BG = _ThemeDict(_theme_mod.severity_backgrounds)
 
 LANG_SYNTAX_MAP: dict[Language, str] = {
-    Language.PYTHON:      "python",
-    Language.JAVASCRIPT:  "javascript",
-    Language.TYPESCRIPT:  "typescript",
-    Language.JAVA:        "java",
-    Language.CSHARP:      "csharp",
-    Language.PHP:         "php",
-    Language.GO:          "go",
-    Language.RUBY:        "ruby",
-    Language.C:           "c",
-    Language.CPP:         "cpp",
-    Language.SQL:         "sql",
-    Language.PLSQL:       "sql",
-    Language.TSQL:        "sql",
-    Language.COBOL:       "text",
-    Language.SHELL:       "bash",
-    Language.BASH:        "bash",
-    Language.POWERSHELL:  "powershell",
-    Language.BATCH:       "batch",
-    Language.AWK:         "awk",
-    Language.KOTLIN:      "kotlin",
-    Language.SWIFT:       "swift",
-    Language.RUST:        "rust",
-    Language.SCALA:       "scala",
-    Language.PERL:        "perl",
-    Language.DART:        "dart",
-    Language.OBJECTIVEC:  "objective-c",
-    Language.GROOVY:      "groovy",
-    Language.VBNET:       "vbnet",
-    Language.COLDFUSION:  "html",
-    Language.RUBY:        "ruby",
-    Language.HASKELL:     "haskell",
-    Language.ERLANG:      "erlang",
-    Language.ELIXIR:      "elixir",
-    Language.CLOJURE:     "clojure",
-    Language.FSHARP:      "fsharp",
-    Language.OCAML:       "ocaml",
-    Language.SCHEME:      "scheme",
-    Language.LISP:        "common-lisp",
-    Language.PROLOG:      "prolog",
-    Language.JULIA:       "julia",
-    Language.ELM:         "elm",
+    Language.PYTHON: "python",
+    Language.JAVASCRIPT: "javascript",
+    Language.TYPESCRIPT: "typescript",
+    Language.JAVA: "java",
+    Language.CSHARP: "csharp",
+    Language.PHP: "php",
+    Language.GO: "go",
+    Language.RUBY: "ruby",
+    Language.C: "c",
+    Language.CPP: "cpp",
+    Language.SQL: "sql",
+    Language.PLSQL: "sql",
+    Language.TSQL: "sql",
+    Language.COBOL: "text",
+    Language.SHELL: "bash",
+    Language.BASH: "bash",
+    Language.POWERSHELL: "powershell",
+    Language.BATCH: "batch",
+    Language.AWK: "awk",
+    Language.KOTLIN: "kotlin",
+    Language.SWIFT: "swift",
+    Language.RUST: "rust",
+    Language.SCALA: "scala",
+    Language.PERL: "perl",
+    Language.DART: "dart",
+    Language.OBJECTIVEC: "objective-c",
+    Language.GROOVY: "groovy",
+    Language.VBNET: "vbnet",
+    Language.COLDFUSION: "html",
+    Language.RUBY: "ruby",
+    Language.HASKELL: "haskell",
+    Language.ERLANG: "erlang",
+    Language.ELIXIR: "elixir",
+    Language.CLOJURE: "clojure",
+    Language.FSHARP: "fsharp",
+    Language.OCAML: "ocaml",
+    Language.SCHEME: "scheme",
+    Language.LISP: "common-lisp",
+    Language.PROLOG: "prolog",
+    Language.JULIA: "julia",
+    Language.ELM: "elm",
     Language.COFFEESCRIPT: "coffeescript",
-    Language.LUA:         "lua",
-    Language.TCL:         "tcl",
-    Language.HTML:        "html",
-    Language.CSS:         "css",
-    Language.SCSS:        "scss",
-    Language.SASS:        "sass",
-    Language.LESS:        "less",
-    Language.SVG:         "xml",
-    Language.XML:         "xml",
-    Language.JSON:        "json",
-    Language.YAML:        "yaml",
-    Language.TOML:        "toml",
-    Language.INI:         "ini",
-    Language.PROTOBUF:    "protobuf",
-    Language.MARKDOWN:    "markdown",
-    Language.GRAPHQL:     "graphql",
-    Language.TERRAFORM:   "hcl",
-    Language.DOCKERFILE:  "docker",
-    Language.SOLIDITY:    "solidity",
-    Language.MATLAB:      "matlab",
-    Language.R:           "r",
-    Language.FORTRAN:     "fortran",
-    Language.ADA:         "ada",
-    Language.PASCAL:      "pascal",
-    Language.ASSEMBLY:    "nasm",
-    Language.NIM:         "nim",
-    Language.CRYSTAL:     "crystal",
-    Language.PUG:         "pug",
-    Language.HANDLEBARS:  "html",
-    Language.EJS:         "html",
-    Language.LIQUID:      "html",
+    Language.LUA: "lua",
+    Language.TCL: "tcl",
+    Language.HTML: "html",
+    Language.CSS: "css",
+    Language.SCSS: "scss",
+    Language.SASS: "sass",
+    Language.LESS: "less",
+    Language.SVG: "xml",
+    Language.XML: "xml",
+    Language.JSON: "json",
+    Language.YAML: "yaml",
+    Language.TOML: "toml",
+    Language.INI: "ini",
+    Language.PROTOBUF: "protobuf",
+    Language.MARKDOWN: "markdown",
+    Language.GRAPHQL: "graphql",
+    Language.TERRAFORM: "hcl",
+    Language.DOCKERFILE: "docker",
+    Language.SOLIDITY: "solidity",
+    Language.MATLAB: "matlab",
+    Language.R: "r",
+    Language.FORTRAN: "fortran",
+    Language.ADA: "ada",
+    Language.PASCAL: "pascal",
+    Language.ASSEMBLY: "nasm",
+    Language.NIM: "nim",
+    Language.CRYSTAL: "crystal",
+    Language.PUG: "pug",
+    Language.HANDLEBARS: "html",
+    Language.EJS: "html",
+    Language.LIQUID: "html",
     Language.ACTIONSCRIPT: "actionscript",
-    Language.APEX:        "java",
-    Language.SMALLTALK:   "smalltalk",
+    Language.APEX: "java",
+    Language.SMALLTALK: "smalltalk",
 }
 
 
@@ -166,6 +167,7 @@ def print_banner(num_rules: int) -> None:
     subtitle.append(f"  {num_rules} Regras  ", style="bold cyan")
     subtitle.append("  100+ Linguagens  ", style="bold bright_magenta")
     from analyzer import __version__
+
     subtitle.append(f"  v{__version__}  ", style="dim white")
 
     inner = RichTable.grid(padding=(0, 0))
@@ -187,6 +189,7 @@ def print_banner(num_rules: int) -> None:
 
 # ── Progress ──────────────────────────────────────────────────────────────────
 
+
 def make_progress() -> Progress:
     return Progress(
         SpinnerColumn(style="bold cyan"),
@@ -202,6 +205,7 @@ def make_progress() -> Progress:
 
 # ── Severity helpers ──────────────────────────────────────────────────────────
 
+
 def _sev_badge(sev: Severity) -> Text:
     label = f" {sev.name:8} "
     color = SEVERITY_COLORS[sev]
@@ -214,6 +218,7 @@ def _sev_dot(sev: Severity) -> Text:
 
 
 # ── Finding panel ─────────────────────────────────────────────────────────────
+
 
 def _format_snippet(vuln: Vulnerability) -> Syntax | None:
     if not vuln.snippet:
@@ -256,8 +261,8 @@ def print_finding(vuln: Vulnerability, show_snippet: bool = True) -> None:
     except Exception:
         pass
 
-    meta.add_row("File",     f"[bold white]{rel_path}[/bold white]  :[bold yellow]{vuln.line_number}[/bold yellow]")
-    meta.add_row("Rule",     f"[bright_black]{vuln.rule_id}[/bright_black]")
+    meta.add_row("File", f"[bold white]{rel_path}[/bold white]  :[bold yellow]{vuln.line_number}[/bold yellow]")
+    meta.add_row("Rule", f"[bright_black]{vuln.rule_id}[/bright_black]")
 
     refs: list[str] = []
     if vuln.cwe:
@@ -267,9 +272,9 @@ def print_finding(vuln: Vulnerability, show_snippet: bool = True) -> None:
     if refs:
         meta.add_row("Refs", "  ".join(refs))
 
-    meta.add_row("Category",  f"[bright_blue]{vuln.category.value}[/bright_blue]")
+    meta.add_row("Category", f"[bright_blue]{vuln.category.value}[/bright_blue]")
     meta.add_row("Confidence", vuln.confidence.label())
-    meta.add_row("Language",   f"[{vuln.language.color()}]{vuln.language.value}[/]")
+    meta.add_row("Language", f"[{vuln.language.color()}]{vuln.language.value}[/]")
 
     desc_text = Text(vuln.description, style="white")
     remed_text = Text(vuln.remediation, style="bright_green")
@@ -304,6 +309,7 @@ def print_finding(vuln: Vulnerability, show_snippet: bool = True) -> None:
 
 # ── File section header ───────────────────────────────────────────────────────
 
+
 def print_file_header(result: ScanResult) -> None:
     n = len(result.vulnerabilities)
     lang_color = result.language.color()
@@ -320,6 +326,7 @@ def print_file_header(result: ScanResult) -> None:
 
 # ── Summary ───────────────────────────────────────────────────────────────────
 
+
 def _make_bar(count: int, max_count: int, width: int = 28, color: str = "cyan") -> Text:
     if max_count == 0:
         return Text("")
@@ -333,6 +340,7 @@ def _make_bar(count: int, max_count: int, width: int = 28, color: str = "cyan") 
 def print_summary(report: ScanReport) -> None:
     console.print()
     from analyzer.i18n import t as _t
+
     console.print(RichRule(f"[bold bright_white] {_t('scan_complete')} [/bold bright_white]", style="#444466"))
     console.print()
 
@@ -342,28 +350,43 @@ def print_summary(report: ScanReport) -> None:
     meta.add_column(style="bold white")
 
     from analyzer.i18n import t as _t
-    meta.add_row(_t("target"),          f"[bright_cyan]{report.target}[/bright_cyan]")
-    meta.add_row(_t("files_scanned"),   str(report.files_scanned))
-    meta.add_row(_t("files_with_issues"), f"[bold {'red' if report.files_with_issues else 'green'}]{report.files_with_issues}[/]")
-    meta.add_row(_t("total_issues"),    f"[bold {'red' if report.total_vulnerabilities else 'green'}]{report.total_vulnerabilities}[/]")
-    meta.add_row(_t("scan_time"),       f"{report.total_time:.2f}s")
+
+    meta.add_row(_t("target"), f"[bright_cyan]{report.target}[/bright_cyan]")
+    meta.add_row(_t("files_scanned"), str(report.files_scanned))
+    meta.add_row(
+        _t("files_with_issues"), f"[bold {'red' if report.files_with_issues else 'green'}]{report.files_with_issues}[/]"
+    )
+    meta.add_row(
+        _t("total_issues"),
+        f"[bold {'red' if report.total_vulnerabilities else 'green'}]{report.total_vulnerabilities}[/]",
+    )
+    meta.add_row(_t("scan_time"), f"{report.total_time:.2f}s")
     if report.languages_found:
         langs = "  ".join(f"[{Language(lang).color()}]{lang}[/]" for lang in report.languages_found)
-        meta.add_row(_t("languages"),   langs)
+        meta.add_row(_t("languages"), langs)
 
     from analyzer.risk_grade import compute_risk_grade
+
     risk = compute_risk_grade(report)
     grade_color = {"A": "bright_green", "B": "green", "C": "yellow", "D": "orange3", "F": "bright_red"}[risk.grade]
-    grade_label_key = {"A": "grade_excellent", "B": "grade_good", "C": "grade_fair", "D": "grade_bad", "F": "grade_critical"}[risk.grade]
-    meta.add_row(_t("risk_grade"), f"[bold {grade_color}]{risk.grade}[/]  [dim]({_t(grade_label_key)} · score {risk.score})[/]")
+    grade_label_key = {
+        "A": "grade_excellent",
+        "B": "grade_good",
+        "C": "grade_fair",
+        "D": "grade_bad",
+        "F": "grade_critical",
+    }[risk.grade]
+    meta.add_row(
+        _t("risk_grade"), f"[bold {grade_color}]{risk.grade}[/]  [dim]({_t(grade_label_key)} · score {risk.score})[/]"
+    )
 
     # ── Severity breakdown ────────────────────────────────────────────────────
     counts = {
         Severity.CRITICAL: report.critical_count,
-        Severity.HIGH:     report.high_count,
-        Severity.MEDIUM:   report.medium_count,
-        Severity.LOW:      report.low_count,
-        Severity.INFO:     report.info_count,
+        Severity.HIGH: report.high_count,
+        Severity.MEDIUM: report.medium_count,
+        Severity.LOW: report.low_count,
+        Severity.INFO: report.info_count,
     }
     max_count = max(counts.values()) if counts.values() else 1
 
@@ -397,21 +420,37 @@ def print_summary(report: ScanReport) -> None:
     # ── Layout (stacked for terminal compatibility) ───────────────────────────
     summary_content = Table.grid(padding=(0, 0))
     summary_content.add_column()
-    summary_content.add_row(Panel(meta, title=f"[bold bright_white] {_t('scan_info')} [/]", border_style="#335588", padding=(0, 2)))
-    summary_content.add_row(Panel(sev_table, title=f"[bold bright_white] {_t('severity_distribution')} [/]", border_style="#553388", padding=(0, 2)))
+    summary_content.add_row(
+        Panel(meta, title=f"[bold bright_white] {_t('scan_info')} [/]", border_style="#335588", padding=(0, 2))
+    )
+    summary_content.add_row(
+        Panel(
+            sev_table,
+            title=f"[bold bright_white] {_t('severity_distribution')} [/]",
+            border_style="#553388",
+            padding=(0, 2),
+        )
+    )
 
     if top_cats:
         summary_content.add_row(
-            Panel(cat_table, title=f"[bold bright_white] {_t('top_categories')} [/]", border_style="#225533", padding=(0, 2))
+            Panel(
+                cat_table,
+                title=f"[bold bright_white] {_t('top_categories')} [/]",
+                border_style="#225533",
+                padding=(0, 2),
+            )
         )
 
-    console.print(Panel(
-        summary_content,
-        box=box.DOUBLE_EDGE,
-        border_style="#222244",
-        title=f"[bold bright_white on #222244]  {_t('report_title')}  [/]",
-        padding=(1, 1),
-    ))
+    console.print(
+        Panel(
+            summary_content,
+            box=box.DOUBLE_EDGE,
+            border_style="#222244",
+            title=f"[bold bright_white on #222244]  {_t('report_title')}  [/]",
+            padding=(1, 1),
+        )
+    )
     console.print()
 
     if report.total_vulnerabilities == 0:
@@ -437,6 +476,7 @@ def print_summary(report: ScanReport) -> None:
 
 
 # ── Report renderers ──────────────────────────────────────────────────────────
+
 
 def print_report(report: ScanReport, show_snippets: bool = True, group_by_file: bool = True) -> None:
     files_with_vulns = [r for r in report.results if r.vulnerabilities]
@@ -470,21 +510,22 @@ def print_report(report: ScanReport, show_snippets: bool = True, group_by_file: 
 
 # ── JSON export ───────────────────────────────────────────────────────────────
 
+
 def export_json(report: ScanReport, output_path: str) -> None:
     data: dict = {
         "scan_info": {
-            "target":             report.target,
-            "files_scanned":      report.files_scanned,
-            "files_with_issues":  report.files_with_issues,
+            "target": report.target,
+            "files_scanned": report.files_scanned,
+            "files_with_issues": report.files_with_issues,
             "total_vulnerabilities": report.total_vulnerabilities,
-            "scan_time_seconds":  round(report.total_time, 3),
-            "languages_found":    report.languages_found,
+            "scan_time_seconds": round(report.total_time, 3),
+            "languages_found": report.languages_found,
             "severity_summary": {
                 "CRITICAL": report.critical_count,
-                "HIGH":     report.high_count,
-                "MEDIUM":   report.medium_count,
-                "LOW":      report.low_count,
-                "INFO":     report.info_count,
+                "HIGH": report.high_count,
+                "MEDIUM": report.medium_count,
+                "LOW": report.low_count,
+                "INFO": report.info_count,
             },
         },
         "findings": [],
@@ -492,22 +533,24 @@ def export_json(report: ScanReport, output_path: str) -> None:
 
     for result in report.results:
         for v in result.vulnerabilities:
-            data["findings"].append({
-                "rule_id":     v.rule_id,
-                "name":        v.name,
-                "severity":    v.severity.name,
-                "category":    v.category.value,
-                "language":    v.language.value,
-                "file":        v.file_path,
-                "line":        v.line_number,
-                "code":        v.line_content,
-                "description": v.description,
-                "remediation": v.remediation,
-                "cwe":         v.cwe,
-                "owasp":       v.owasp,
-                "confidence":  v.confidence.name,
-                "in_comment":  v.in_comment,
-            })
+            data["findings"].append(
+                {
+                    "rule_id": v.rule_id,
+                    "name": v.name,
+                    "severity": v.severity.name,
+                    "category": v.category.value,
+                    "language": v.language.value,
+                    "file": v.file_path,
+                    "line": v.line_number,
+                    "code": v.line_content,
+                    "description": v.description,
+                    "remediation": v.remediation,
+                    "cwe": v.cwe,
+                    "owasp": v.owasp,
+                    "confidence": v.confidence.name,
+                    "in_comment": v.in_comment,
+                }
+            )
 
     Path(output_path).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
     console.print(f"[bold bright_green]✔[/] JSON report saved → [cyan]{output_path}[/cyan]")
@@ -517,11 +560,12 @@ def export_json(report: ScanReport, output_path: str) -> None:
 
 _SEV_HTML_COLORS = {
     "CRITICAL": "#ff2244",
-    "HIGH":     "#ff6600",
-    "MEDIUM":   "#ffcc00",
-    "LOW":      "#33aaff",
-    "INFO":     "#888888",
+    "HIGH": "#ff6600",
+    "MEDIUM": "#ffcc00",
+    "LOW": "#33aaff",
+    "INFO": "#888888",
 }
+
 
 def export_html(report: ScanReport, output_path: str) -> None:
     from html import escape
@@ -539,7 +583,7 @@ def export_html(report: ScanReport, output_path: str) -> None:
                 <td style="font-size:0.85em">{escape(v.file_path)}</td>
                 <td style="text-align:center">{v.line_number}</td>
                 <td>{escape(v.category.value)}</td>
-                <td style="font-size:0.85em">{escape(v.cwe or '')}</td>
+                <td style="font-size:0.85em">{escape(v.cwe or "")}</td>
                 <td style="font-size:0.8em">{escape(v.description[:100])}…</td>
             </tr>""")
 
@@ -592,6 +636,7 @@ def export_html(report: ScanReport, output_path: str) -> None:
 
 # ── SARIF 2.1 export ─────────────────────────────────────────────────────────
 
+
 def export_sarif(report: ScanReport, output_path: str) -> None:
     """Exporta resultados no formato SARIF 2.1.0 (GitHub Security, SonarQube, VS Code)."""
     import datetime
@@ -606,7 +651,7 @@ def export_sarif(report: ScanReport, output_path: str) -> None:
                     "id": v.rule_id,
                     "name": re.sub(r"[^A-Za-z0-9]", "", v.name),
                     "shortDescription": {"text": v.name},
-                    "fullDescription":  {"text": v.description},
+                    "fullDescription": {"text": v.description},
                     "help": {"text": v.remediation, "markdown": f"**Remediação:** {v.remediation}"},
                     "properties": {
                         "tags": [v.category.value],
@@ -616,10 +661,10 @@ def export_sarif(report: ScanReport, output_path: str) -> None:
                     "defaultConfiguration": {
                         "level": {
                             "CRITICAL": "error",
-                            "HIGH":     "error",
-                            "MEDIUM":   "warning",
-                            "LOW":      "note",
-                            "INFO":     "none",
+                            "HIGH": "error",
+                            "MEDIUM": "warning",
+                            "LOW": "note",
+                            "INFO": "none",
                         }.get(v.severity.name, "warning")
                     },
                 }
@@ -629,57 +674,68 @@ def export_sarif(report: ScanReport, output_path: str) -> None:
                     ]
 
             level_map = {
-                "CRITICAL": "error", "HIGH": "error",
-                "MEDIUM": "warning", "LOW": "note", "INFO": "none",
+                "CRITICAL": "error",
+                "HIGH": "error",
+                "MEDIUM": "warning",
+                "LOW": "note",
+                "INFO": "none",
             }
-            results.append({
-                "ruleId": v.rule_id,
-                "level": level_map.get(v.severity.name, "warning"),
-                "message": {"text": v.name},
-                "locations": [{
-                    "physicalLocation": {
-                        "artifactLocation": {"uri": v.file_path.replace("\\", "/"), "uriBaseId": "%SRCROOT%"},
-                        "region": {
-                            "startLine": v.line_number,
-                            "snippet": {"text": v.line_content},
-                        },
+            results.append(
+                {
+                    "ruleId": v.rule_id,
+                    "level": level_map.get(v.severity.name, "warning"),
+                    "message": {"text": v.name},
+                    "locations": [
+                        {
+                            "physicalLocation": {
+                                "artifactLocation": {"uri": v.file_path.replace("\\", "/"), "uriBaseId": "%SRCROOT%"},
+                                "region": {
+                                    "startLine": v.line_number,
+                                    "snippet": {"text": v.line_content},
+                                },
+                            },
+                        }
+                    ],
+                    "fingerprints": {
+                        "vulnscan/v1": f"{v.rule_id}:{v.file_path}:{v.line_number}",
                     },
-                }],
-                "fingerprints": {
-                    "vulnscan/v1": f"{v.rule_id}:{v.file_path}:{v.line_number}",
-                },
-                "properties": {
-                    "severity":   v.severity.name,
-                    "confidence": v.confidence.name,
-                    "category":   v.category.value,
-                    "in_comment": v.in_comment,
-                },
-            })
+                    "properties": {
+                        "severity": v.severity.name,
+                        "confidence": v.confidence.name,
+                        "category": v.category.value,
+                        "in_comment": v.in_comment,
+                    },
+                }
+            )
 
     sarif = {
         "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
         "version": "2.1.0",
-        "runs": [{
-            "tool": {
-                "driver": {
-                    "name":            "vulnscan",
-                    "version":         "1.0.0",
-                    "informationUri":  "https://github.com/your-org/CodeVulnerableAnalyzer",
-                    "organization":    "CodeVulnerableAnalyzer",
-                    "rules":           list(rules_seen.values()),
-                }
-            },
-            "results":    results,
-            "invocations": [{
-                "executionSuccessful": True,
-                "startTimeUtc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            }],
-            "properties": {
-                "target":        report.target,
-                "filesScanned":  report.files_scanned,
-                "totalIssues":   report.total_vulnerabilities,
-            },
-        }],
+        "runs": [
+            {
+                "tool": {
+                    "driver": {
+                        "name": "vulnscan",
+                        "version": "1.0.0",
+                        "informationUri": "https://github.com/your-org/CodeVulnerableAnalyzer",
+                        "organization": "CodeVulnerableAnalyzer",
+                        "rules": list(rules_seen.values()),
+                    }
+                },
+                "results": results,
+                "invocations": [
+                    {
+                        "executionSuccessful": True,
+                        "startTimeUtc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    }
+                ],
+                "properties": {
+                    "target": report.target,
+                    "filesScanned": report.files_scanned,
+                    "totalIssues": report.total_vulnerabilities,
+                },
+            }
+        ],
     }
 
     Path(output_path).write_text(json.dumps(sarif, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -688,6 +744,7 @@ def export_sarif(report: ScanReport, output_path: str) -> None:
 
 # ── CSV export ────────────────────────────────────────────────────────────────
 
+
 def export_csv(report: ScanReport, output_path: str) -> None:
     """Exporta resultados em CSV (compatível com Excel/Google Sheets)."""
     import csv
@@ -695,19 +752,40 @@ def export_csv(report: ScanReport, output_path: str) -> None:
 
     buf = io.StringIO()
     writer = csv.writer(buf, quoting=csv.QUOTE_ALL)
-    writer.writerow([
-        "severity", "rule_id", "name", "language", "file", "line",
-        "category", "cwe", "owasp", "confidence", "in_comment", "description",
-    ])
+    writer.writerow(
+        [
+            "severity",
+            "rule_id",
+            "name",
+            "language",
+            "file",
+            "line",
+            "category",
+            "cwe",
+            "owasp",
+            "confidence",
+            "in_comment",
+            "description",
+        ]
+    )
     for r in report.results:
         for v in r.vulnerabilities:
-            writer.writerow([
-                v.severity.name, v.rule_id, v.name, v.language.value,
-                v.file_path, v.line_number, v.category.value,
-                v.cwe or "", v.owasp or "", v.confidence.name,
-                "yes" if v.in_comment else "no",
-                v.description.replace("\n", " "),
-            ])
+            writer.writerow(
+                [
+                    v.severity.name,
+                    v.rule_id,
+                    v.name,
+                    v.language.value,
+                    v.file_path,
+                    v.line_number,
+                    v.category.value,
+                    v.cwe or "",
+                    v.owasp or "",
+                    v.confidence.name,
+                    "yes" if v.in_comment else "no",
+                    v.description.replace("\n", " "),
+                ]
+            )
 
     Path(output_path).write_text(buf.getvalue(), encoding="utf-8-sig")
     console.print(f"[bold bright_green]✔[/] CSV salvo → [cyan]{output_path}[/cyan]")
@@ -715,20 +793,21 @@ def export_csv(report: ScanReport, output_path: str) -> None:
 
 # ── JUnit XML export ──────────────────────────────────────────────────────────
 
+
 def export_junit(report: ScanReport, output_path: str) -> None:
     """Exporta resultados em JUnit XML (Jenkins, GitLab CI, Azure DevOps)."""
     import datetime
     from html import escape
 
-    total     = report.total_vulnerabilities
-    failures  = report.critical_count + report.high_count
-    errors    = 0
+    total = report.total_vulnerabilities
+    failures = report.critical_count + report.high_count
+    errors = 0
     timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat()
 
     cases: list[str] = []
     for r in report.results:
         for v in r.vulnerabilities:
-            cls  = escape(f"vulnscan.{v.language.value}.{v.category.value}".replace(" ", "_"))
+            cls = escape(f"vulnscan.{v.language.value}.{v.category.value}".replace(" ", "_"))
             name = escape(f"{v.rule_id}: {v.name}")
             body = escape(
                 f"File: {v.file_path}:{v.line_number}\n"
@@ -737,12 +816,12 @@ def export_junit(report: ScanReport, output_path: str) -> None:
                 f"Remediation: {v.remediation}"
             )
             is_fail = v.severity.name in ("CRITICAL", "HIGH")
-            tag     = "failure" if is_fail else "warning"
+            tag = "failure" if is_fail else "warning"
             cases.append(
                 f'  <testcase classname="{cls}" name="{name}">\n'
                 f'    <{tag} type="{escape(v.severity.name)}" message="{escape(v.name)}">'
-                f'{body}</{tag}>\n'
-                f'  </testcase>'
+                f"{body}</{tag}>\n"
+                f"  </testcase>"
             )
 
     xml = (
@@ -758,6 +837,7 @@ def export_junit(report: ScanReport, output_path: str) -> None:
 
 
 # ── Markdown export ───────────────────────────────────────────────────────────
+
 
 def export_markdown(report: ScanReport, output_path: str) -> None:
     """Exporta relatório em Markdown (PRs, wikis, GitHub Issues)."""
@@ -797,10 +877,7 @@ def export_markdown(report: ScanReport, output_path: str) -> None:
         for i, v in enumerate(sorted(all_vulns, key=lambda x: -x.severity.value), 1):
             icon = sev_icons.get(v.severity.name, "⚪")
             fname = Path(v.file_path).name
-            lines.append(
-                f"| {i} | {icon} {v.severity.name} | `{v.rule_id}` | "
-                f"`{fname}` | {v.line_number} | {v.name} |"
-            )
+            lines.append(f"| {i} | {icon} {v.severity.name} | `{v.rule_id}` | `{fname}` | {v.line_number} | {v.name} |")
 
         lines += [
             "",
@@ -847,6 +924,7 @@ def export_markdown(report: ScanReport, output_path: str) -> None:
 
 # ── Diff de baseline ──────────────────────────────────────────────────────────
 
+
 def print_baseline_diff(diff) -> None:
     """Imprime comparação com baseline de forma legível."""
     console.print()
@@ -856,10 +934,10 @@ def print_baseline_diff(diff) -> None:
     t = Table(box=box.SIMPLE_HEAVY, show_header=False, padding=(0, 2))
     t.add_column(style="dim", min_width=20)
     t.add_column(style="bold white")
-    t.add_row("Novos achados",     f"[bold {'red' if diff.new_count else 'green'}]{diff.new_count}[/]")
-    t.add_row("Resolvidos",        f"[bold bright_green]{diff.resolved_count}[/]")
-    t.add_row("Regressões",        f"[bold {'red' if diff.regression_count else 'green'}]{diff.regression_count}[/]")
-    t.add_row("Sem alteração",     str(diff.unchanged_count))
+    t.add_row("Novos achados", f"[bold {'red' if diff.new_count else 'green'}]{diff.new_count}[/]")
+    t.add_row("Resolvidos", f"[bold bright_green]{diff.resolved_count}[/]")
+    t.add_row("Regressões", f"[bold {'red' if diff.regression_count else 'green'}]{diff.regression_count}[/]")
+    t.add_row("Sem alteração", str(diff.unchanged_count))
     console.print(t)
 
     if diff.new_findings:
@@ -872,19 +950,21 @@ def print_baseline_diff(diff) -> None:
     if diff.resolved_findings:
         console.print(f"\n[bold bright_green] Resolvidos ({diff.resolved_count}) [/]")
         for f in diff.resolved_findings[:5]:
-            console.print(f"  [bright_green]-[/] [{f['severity']}] {f['rule_id']} — {f.get('file','')}:{f.get('line','')}")
+            console.print(
+                f"  [bright_green]-[/] [{f['severity']}] {f['rule_id']} — {f.get('file', '')}:{f.get('line', '')}"
+            )
 
     if diff.regression_findings:
         console.print(f"\n[bold yellow] Regressões ({diff.regression_count}) [/]")
         for f in diff.regression_findings[:5]:
             console.print(
-                f"  [yellow]↑[/] [{f.get('old_severity','')}→{f['severity']}] "
-                f"{f['rule_id']} — {f['file']}:{f['line']}"
+                f"  [yellow]↑[/] [{f.get('old_severity', '')}→{f['severity']}] {f['rule_id']} — {f['file']}:{f['line']}"
             )
     console.print()
 
 
 # ── Badge SVG ─────────────────────────────────────────────────────────────────
+
 
 def export_badge(report: ScanReport, output_path: str) -> None:
     """Gera badge SVG estilo shields.io com a contagem de achados."""
@@ -901,8 +981,11 @@ def export_badge(report: ScanReport, output_path: str) -> None:
         color, label = "blue", f"{total} issues"
 
     colors = {
-        "brightgreen": "#44cc11", "critical": "#e05d44",
-        "red": "#e05d44", "yellow": "#dfb317", "blue": "#4c97ff",
+        "brightgreen": "#44cc11",
+        "critical": "#e05d44",
+        "red": "#e05d44",
+        "yellow": "#dfb317",
+        "blue": "#4c97ff",
     }
     bg = colors.get(color, "#999")
     left_w, right_w = 88, 68
@@ -920,10 +1003,10 @@ def export_badge(report: ScanReport, output_path: str) -> None:
     <rect width="{total_w}" height="20" fill="url(#s)"/>
   </g>
   <g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="110">
-    <text x="{left_w//2 * 10}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="780" lengthAdjust="spacing">vulnscan</text>
-    <text x="{left_w//2 * 10}" y="140" transform="scale(.1)" textLength="780" lengthAdjust="spacing">vulnscan</text>
-    <text x="{(left_w + right_w//2) * 10}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="580" lengthAdjust="spacing">{label}</text>
-    <text x="{(left_w + right_w//2) * 10}" y="140" transform="scale(.1)" textLength="580" lengthAdjust="spacing">{label}</text>
+    <text x="{left_w // 2 * 10}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="780" lengthAdjust="spacing">vulnscan</text>
+    <text x="{left_w // 2 * 10}" y="140" transform="scale(.1)" textLength="780" lengthAdjust="spacing">vulnscan</text>
+    <text x="{(left_w + right_w // 2) * 10}" y="150" fill="#010101" fill-opacity=".3" transform="scale(.1)" textLength="580" lengthAdjust="spacing">{label}</text>
+    <text x="{(left_w + right_w // 2) * 10}" y="140" transform="scale(.1)" textLength="580" lengthAdjust="spacing">{label}</text>
   </g>
 </svg>"""
 
@@ -932,6 +1015,7 @@ def export_badge(report: ScanReport, output_path: str) -> None:
 
 
 # ── Error helper ──────────────────────────────────────────────────────────────
+
 
 def print_error(message: str) -> None:
     console.print(Panel(Text(message, style="bold red"), border_style="red", title="[red]Error[/red]"))
