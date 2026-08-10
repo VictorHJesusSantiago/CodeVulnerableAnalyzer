@@ -1,13 +1,14 @@
 """Detecção de código duplicado (copy-paste) — regras DUP-001..005."""
+
 from __future__ import annotations
 
 import hashlib
 import re
 from dataclasses import dataclass
 
-BLOCK_MIN_LINES  = 5
-LINE_MIN_TOKENS  = 3
-MAX_SCAN_LINES   = 3000
+BLOCK_MIN_LINES = 5
+LINE_MIN_TOKENS = 3
+MAX_SCAN_LINES = 3000
 
 
 @dataclass
@@ -49,9 +50,9 @@ def scan_duplication(file_path: str, content: str) -> list[DuplicationFinding]:
     if len(lines) > MAX_SCAN_LINES:
         lines = lines[:MAX_SCAN_LINES]
 
-    norms  = [_normalize(ln) for ln in lines]
+    norms = [_normalize(ln) for ln in lines]
     hashes = [_hash8(n) for n in norms]
-    valid  = [_meaningful(ln) for ln in lines]
+    valid = [_meaningful(ln) for ln in lines]
 
     findings: list[DuplicationFinding] = []
     seen_pairs: set[tuple[int, int]] = set()
@@ -75,18 +76,19 @@ def scan_duplication(file_path: str, content: str) -> list[DuplicationFinding]:
 
             # Estender o bloco
             ext = BLOCK_MIN_LINES
-            while (i + ext < n and j + ext < n
-                   and hashes[i + ext] == hashes[j + ext]):
+            while i + ext < n and j + ext < n and hashes[i + ext] == hashes[j + ext]:
                 ext += 1
 
-            findings.append(DuplicationFinding(
-                file_path=file_path,
-                line_start=i + 1,
-                line_end=i + ext,
-                duplicate_start=j + 1,
-                duplicate_end=j + ext,
-                lines_duplicated=ext,
-                similarity=1.0,
-            ))
+            findings.append(
+                DuplicationFinding(
+                    file_path=file_path,
+                    line_start=i + 1,
+                    line_end=i + ext,
+                    duplicate_start=j + 1,
+                    duplicate_end=j + ext,
+                    lines_duplicated=ext,
+                    similarity=1.0,
+                )
+            )
 
     return findings

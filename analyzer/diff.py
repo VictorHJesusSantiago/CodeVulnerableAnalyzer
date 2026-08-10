@@ -1,4 +1,5 @@
 """Parser de git diff — escaneia apenas linhas modificadas."""
+
 from __future__ import annotations
 
 import re
@@ -54,8 +55,10 @@ def get_git_diff(base_ref: str = "HEAD", cwd: str | None = None) -> str:
     try:
         result = subprocess.run(
             ["git", "diff", base_ref],
-            capture_output=True, text=True,
-            cwd=cwd or ".", timeout=30,
+            capture_output=True,
+            text=True,
+            cwd=cwd or ".",
+            timeout=30,
         )
         return result.stdout
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
@@ -67,8 +70,10 @@ def get_staged_diff(cwd: str | None = None) -> str:
     try:
         result = subprocess.run(
             ["git", "diff", "--staged"],
-            capture_output=True, text=True,
-            cwd=cwd or ".", timeout=30,
+            capture_output=True,
+            text=True,
+            cwd=cwd or ".",
+            timeout=30,
         )
         return result.stdout
     except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
