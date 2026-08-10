@@ -31,10 +31,14 @@ jobs:
       - name: Ruff (lint)
         run: ruff check analyzer main.py
 
+      # Formatação consistente (evita drift após o reflow inicial).
+      - name: Ruff (format check)
+        run: ruff format --check analyzer main.py tests
+
       # Tipagem não-bloqueante durante a fase de tipagem gradual.
       - name: Mypy (gradual — informativo)
         run: mypy analyzer || true
 
-      # Testes + cobertura bloqueantes (piso ratchet: fail_under = 70 em pyproject).
+      # Testes + cobertura bloqueantes (piso ratchet: fail_under = 75 em pyproject).
       - name: Pytest (+ coverage)
-        run: pytest --cov=analyzer --cov-report=term-missing --cov-fail-under=70
+        run: pytest --cov=analyzer --cov-report=term-missing --cov-fail-under=75

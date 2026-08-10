@@ -52,13 +52,11 @@ target-version = "py310"
 #   I  (isort)     — ordenação de imports
 #   UP (pyupgrade) — sintaxe moderna (list/dict, X | None, etc.)
 #   E/W            — estilo pycodestyle
-select = ["F", "I", "UP", "E", "W"]
-# Estilos compactos deliberados deste codebase (guard clauses `if x: continue`,
-# múltiplas atribuições por linha em tabelas, alinhamento de colunas em regras).
-# Um `ruff format` dedicado pode revê-los no futuro; não são bugs.
-ignore = ["E501", "E701", "E702"]
-
-# B (bugbear) fica fora do gate por ora: 18 achados a triar num PR próprio.
+#   B  (bugbear)   — armadilhas comuns (zip sem strict=, raise sem from, etc.)
+select = ["F", "I", "UP", "E", "W", "B"]
+# Código já normalizado por `ruff format` (E701/E702 eliminados). Só E501
+# (linha longa) fica fora: as tabelas de regras alinham colunas de propósito.
+ignore = ["E501"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tabelas de regras alinham colunas propositalmente (linhas longas).
@@ -83,7 +81,7 @@ omit = ["*/tests/*", "*/build/*"]
 
 [tool.coverage.report]
 show_missing = true
-# Piso de cobertura (ratchet): fixado logo abaixo da cobertura atual (~70%)
+# Piso de cobertura (ratchet): fixado logo abaixo da cobertura atual (~75%)
 # para impedir REGRESSÃO. Suba este número conforme a cobertura cresce —
 # nunca o abaixe.
-fail_under = 70
+fail_under = 75
