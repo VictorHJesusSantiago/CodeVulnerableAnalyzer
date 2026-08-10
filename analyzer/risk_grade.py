@@ -7,6 +7,7 @@ pelo número de arquivos escaneados (arquivos maiores/mais numerosos
 naturalmente acumulam mais achados, então dividimos por arquivo para
 não punir só por tamanho de projeto).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -41,7 +42,7 @@ _GRADE_THRESHOLDS = (
 @dataclass
 class RiskGrade:
     grade: str
-    score: float          # penalidade ponderada por arquivo (quanto menor, melhor)
+    score: float  # penalidade ponderada por arquivo (quanto menor, melhor)
     penalty_total: float
     files_scanned: int
 
@@ -50,13 +51,16 @@ class RiskGrade:
         # Delega ao sistema de i18n (SSOT) em vez de duplicar os rótulos aqui,
         # para respeitar o locale ativo (--locale) e não divergir de reporter.py.
         from analyzer.i18n import t
-        return t({
-            "A": "grade_excellent",
-            "B": "grade_good",
-            "C": "grade_fair",
-            "D": "grade_bad",
-            "F": "grade_critical",
-        }[self.grade])
+
+        return t(
+            {
+                "A": "grade_excellent",
+                "B": "grade_good",
+                "C": "grade_fair",
+                "D": "grade_bad",
+                "F": "grade_critical",
+            }[self.grade]
+        )
 
 
 def compute_risk_grade(report: ScanReport) -> RiskGrade:
