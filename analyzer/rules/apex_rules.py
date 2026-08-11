@@ -1,4 +1,5 @@
 """Regras de segurança para Apex (Salesforce) — 10 regras (APEX-001..010)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -38,7 +39,7 @@ APEX_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.APEX,
-        pattern=r'\bwithout\s+sharing\b',
+        pattern=r"\bwithout\s+sharing\b",
         remediation="Use 'with sharing' em todas as classes que processam dados de usuários. Reserve 'without sharing' apenas para processos de sistema que genuinamente precisam acesso elevado e documente claramente o motivo. Considere 'inherited sharing' para classes de utilidade.",
         cwe="CWE-284",
         owasp="A01:2021",
@@ -51,7 +52,7 @@ APEX_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.APEX,
-        pattern=r'(?:insert|update|upsert|delete)\s+(?:new\s+\w+|[a-zA-Z_]\w*)\s*;',
+        pattern=r"(?:insert|update|upsert|delete)\s+(?:new\s+\w+|[a-zA-Z_]\w*)\s*;",
         remediation="Verifique permissões antes de DML: if (!Schema.sObjectType.Account.isCreateable()) { throw new AuraHandledException('Sem permissão'); }. Use o Security.stripInaccessible() do Apex Security Library para remover campos inacessíveis automaticamente antes de DML.",
         cwe="CWE-284",
         owasp="A01:2021",
@@ -98,12 +99,12 @@ APEX_RULES: list[Rule] = [
     Rule(
         id="APEX-008",
         name="XSS via outputText sem Escape em Visualforce",
-        description="<apex:outputText value=\"{!userInput}\" escape=\"false\"/> em páginas Visualforce renderiza HTML/JavaScript do usuário sem sanitização. Permite injeção de scripts que executam no contexto do Salesforce, podendo roubar sessões, modificar dados ou escalar privilégios.",
+        description='<apex:outputText value="{!userInput}" escape="false"/> em páginas Visualforce renderiza HTML/JavaScript do usuário sem sanitização. Permite injeção de scripts que executam no contexto do Salesforce, podendo roubar sessões, modificar dados ou escalar privilégios.',
         severity=Severity.HIGH,
         category=VulnCategory.XSS,
         language=Language.APEX,
         pattern=r'escape\s*=\s*["\']false["\']',
-        remediation="Remova escape=\"false\" ou altere para escape=\"true\" (padrão). Para renderizar HTML intencional, use HTMLENCODE() em vez de escape=false: <apex:outputText value=\"{!HTMLENCODE(safeHtml)}\"/>. Sanitize HTML com uma allowlist de tags antes de marcar como safe.",
+        remediation='Remova escape="false" ou altere para escape="true" (padrão). Para renderizar HTML intencional, use HTMLENCODE() em vez de escape=false: <apex:outputText value="{!HTMLENCODE(safeHtml)}"/>. Sanitize HTML com uma allowlist de tags antes de marcar como safe.',
         cwe="CWE-79",
         owasp="A03:2021",
         confidence=Confidence.HIGH,
@@ -115,7 +116,7 @@ APEX_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.PERFORMANCE,
         language=Language.APEX,
-        pattern=r'for\s*\([^)]+\)\s*\{[^}]*(?:insert|update|upsert|delete)\s',
+        pattern=r"for\s*\([^)]+\)\s*\{[^}]*(?:insert|update|upsert|delete)\s",
         remediation="Colete registros em uma lista fora do loop e execute DML em bulk após o loop: List<Contact> toUpdate = new List<Contact>(); for (Contact c : contacts) { c.Status__c = 'Active'; toUpdate.add(c); } update toUpdate; Isso usa apenas 1 operação DML.",
         cwe="CWE-400",
         confidence=Confidence.HIGH,
