@@ -1,4 +1,5 @@
 """Regras de segurança para Pulumi (IaC Python/TypeScript) — 8 regras (PULUMI-001..008)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -38,7 +39,7 @@ PULUMI_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.PYTHON,
-        pattern=r'publicly_accessible\s*=\s*True|ipv4_enabled\s*=\s*True',
+        pattern=r"publicly_accessible\s*=\s*True|ipv4_enabled\s*=\s*True",
         remediation="Configure publicly_accessible=False. Use Private Endpoints ou VPC Peering para acesso de aplicações. Para acesso de desenvolvimento, use Pulumi ESC ou AWS SSM Session Manager com port forwarding. Coloque instâncias RDS em subnets privadas sem route para Internet Gateway.",
         cwe="CWE-284",
         owasp="A05:2021",
@@ -78,8 +79,8 @@ PULUMI_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.CRYPTO,
         language=Language.PYTHON,
-        pattern=r'aws\.kms\.Key\s*\(',
-        negative_pattern=r'enable_key_rotation\s*=\s*True',
+        pattern=r"aws\.kms\.Key\s*\(",
+        negative_pattern=r"enable_key_rotation\s*=\s*True",
         remediation="Adicione enable_key_rotation=True: aws.kms.Key('my-key', description='App encryption key', enable_key_rotation=True). Configure key policies com least privilege. Use Pulumi CrossGuard para rejeitar KMS keys sem rotação: policy que verifica enable_key_rotation.",
         cwe="CWE-320",
         owasp="A02:2021",
@@ -92,8 +93,8 @@ PULUMI_RULES: list[Rule] = [
         severity=Severity.LOW,
         category=VulnCategory.CRYPTO,
         language=Language.PYTHON,
-        pattern=r'pulumi\.Config\(\)',
-        negative_pattern=r'secrets_provider|PULUMI_CONFIG_PASSPHRASE',
+        pattern=r"pulumi\.Config\(\)",
+        negative_pattern=r"secrets_provider|PULUMI_CONFIG_PASSPHRASE",
         remediation="Configure secrets provider: pulumi stack init --secrets-provider='awskms://arn:aws:kms:us-east-1:123:key/abc'. Para self-managed: pulumi stack init --secrets-provider='passphrase'. Defina PULUMI_CONFIG_PASSPHRASE como variável de ambiente em CI/CD. Use AWS KMS ou HashiCorp Vault como provider.",
         cwe="CWE-311",
         owasp="A02:2021",
@@ -106,8 +107,8 @@ PULUMI_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.CRYPTO,
         language=Language.PYTHON,
-        pattern=r'aws\.ebs\.Volume\s*\(',
-        negative_pattern=r'encrypted\s*=\s*True|kms_key_id',
+        pattern=r"aws\.ebs\.Volume\s*\(",
+        negative_pattern=r"encrypted\s*=\s*True|kms_key_id",
         remediation="Habilite criptografia: aws.ebs.Volume('vol', size=20, encrypted=True, kms_key_id=kms_key.arn). Para S3, configure server_side_encryption_configuration com aws:kms. Use Pulumi CrossGuard para rejeitar resources sem criptografia: 'All EBS volumes must be encrypted'.",
         cwe="CWE-311",
         owasp="A02:2021",
