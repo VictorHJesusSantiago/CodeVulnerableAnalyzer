@@ -1,4 +1,5 @@
 """Regras de segurança para Lua — 9 regras (LUA-001..009)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -12,7 +13,7 @@ LUA_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.CODE_INJECTION,
         language=Language.LUA,
-        pattern=r'\b(?:load|loadstring)\s*\(',
+        pattern=r"\b(?:load|loadstring)\s*\(",
         remediation="Elimine load/loadstring com dados externos. Para configurações dinâmicas, use tabelas Lua com pares chave-valor. Para DSLs, implemente um parser restrito. Se necessário, use um ambiente sandbox: setfenv(func, {}) para isolar o código carregado.",
         cwe="CWE-94",
         owasp="A03:2021",
@@ -25,7 +26,7 @@ LUA_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.LUA,
-        pattern=r'\bos\.execute\s*\(',
+        pattern=r"\bos\.execute\s*\(",
         remediation="Evite os.execute com dados externos. Use listas de argumentos quando disponível (LuaJIT com FFI ou bindings). Valide input contra uma whitelist de caracteres seguros: assert(input:match('^[a-zA-Z0-9_-]+$'), 'invalid input'). Escape com shellQuote quando necessário.",
         cwe="CWE-78",
         owasp="A03:2021",
@@ -38,7 +39,7 @@ LUA_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.LUA,
-        pattern=r'\bio\.popen\s*\(',
+        pattern=r"\bio\.popen\s*\(",
         remediation="Construa o comando somente com partes hardcoded e argumentos validados. Implemente escape manual: local safe = input:gsub('[^%w%-_./]', ''). Para operações de arquivo, use a API io diretamente em vez de comandos shell.",
         cwe="CWE-78",
         owasp="A03:2021",
@@ -64,7 +65,7 @@ LUA_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.CODE_INJECTION,
         language=Language.LUA,
-        pattern=r'\brequire\s*\(\s*(?:[a-zA-Z_]\w*\s*\.\.|[a-zA-Z_]\w*\s*\.\.)',
+        pattern=r"\brequire\s*\(\s*(?:[a-zA-Z_]\w*\s*\.\.|[a-zA-Z_]\w*\s*\.\.)",
         remediation="Use require() somente com strings literais fixas. Implemente uma whitelist de módulos permitidos: local allowed = {utils=true, json=true}. assert(allowed[moduleName], 'module not allowed'). require(moduleName).",
         cwe="CWE-94",
         confidence=Confidence.LOW,
@@ -76,7 +77,7 @@ LUA_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.INFO_DISCLOSURE,
         language=Language.LUA,
-        pattern=r'\bdebug\.(?:getinfo|getupvalue|setupvalue|getlocal|setlocal|traceback|sethook)\s*\(',
+        pattern=r"\bdebug\.(?:getinfo|getupvalue|setupvalue|getlocal|setlocal|traceback|sethook)\s*\(",
         remediation="Remova o uso de funções debug em código de produção. Desabilite a biblioteca debug completamente se não for necessária: package.loaded['debug'] = nil. Para diagnóstico em produção, use logging estruturado com contexto controlado.",
         cwe="CWE-200",
         owasp="A05:2021",
@@ -89,7 +90,7 @@ LUA_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.LUA,
-        pattern=r'\b(?:rawget|rawset|rawequal)\s*\(',
+        pattern=r"\b(?:rawget|rawset|rawequal)\s*\(",
         remediation="Documente claramente por que rawget/rawset é necessário. Se metamétodos implementam controle de acesso, garanta que rawget/rawset nunca seja exposto em contextos onde o usuário tem controle do objeto ou da chave.",
         cwe="CWE-284",
         confidence=Confidence.LOW,
