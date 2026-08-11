@@ -12,6 +12,7 @@ dependências vulneráveis os achados marcados como not_affected/fixed,
 reduzindo ruído sem esconder a informação (ela fica registrada no VEX,
 com a justificativa).
 """
+
 from __future__ import annotations
 
 import json
@@ -31,9 +32,9 @@ _JUSTIFICATIONS = {
 
 @dataclass
 class VexStatement:
-    vulnerability: str          # ex.: "CVE-2023-1234"
-    product: str                # nome do pacote/componente afetado
-    status: str                 # not_affected | affected | fixed | under_investigation
+    vulnerability: str  # ex.: "CVE-2023-1234"
+    product: str  # nome do pacote/componente afetado
+    status: str  # not_affected | affected | fixed | under_investigation
     justification: str | None = None
     impact_statement: str | None = None
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -98,12 +99,16 @@ class VexDocument:
             products = stmt.get("products", [])
             product = products[0].get("@id", "") if products else ""
             try:
-                doc.add_statement(VexStatement(
-                    vulnerability=vuln, product=product, status=stmt.get("status", "affected"),
-                    justification=stmt.get("justification"),
-                    impact_statement=stmt.get("impact_statement"),
-                    timestamp=stmt.get("timestamp", ""),
-                ))
+                doc.add_statement(
+                    VexStatement(
+                        vulnerability=vuln,
+                        product=product,
+                        status=stmt.get("status", "affected"),
+                        justification=stmt.get("justification"),
+                        impact_statement=stmt.get("impact_statement"),
+                        timestamp=stmt.get("timestamp", ""),
+                    )
+                )
             except ValueError:
                 continue
         return doc
