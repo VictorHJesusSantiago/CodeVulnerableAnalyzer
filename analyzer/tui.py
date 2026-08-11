@@ -3,6 +3,7 @@ TUI Interativo — navegação por teclado, busca, ordenação, agrupamento,
 dashboard de métricas, histórico de scans e configuração inline.
 Zero dependências extras: usa apenas stdlib (msvcrt/termios) + rich.
 """
+
 from __future__ import annotations
 
 import os
@@ -31,11 +32,24 @@ if sys.platform == "win32":
         if ch in (b"\x00", b"\xe0"):
             ext = msvcrt.getch()
             return {
-                b"H": "UP",   b"P": "DOWN",  b"K": "LEFT",  b"M": "RIGHT",
-                b"I": "PGUP", b"Q": "PGDN",  b"G": "HOME",  b"O": "END",
+                b"H": "UP",
+                b"P": "DOWN",
+                b"K": "LEFT",
+                b"M": "RIGHT",
+                b"I": "PGUP",
+                b"Q": "PGDN",
+                b"G": "HOME",
+                b"O": "END",
             }.get(ext, "")
-        MAP = {b"\r": "ENTER", b"\n": "ENTER", b"\x1b": "ESC",
-               b" ": "SPACE", b"\t": "TAB",    b"\x08": "BS", b"\x7f": "BS"}
+        MAP = {
+            b"\r": "ENTER",
+            b"\n": "ENTER",
+            b"\x1b": "ESC",
+            b" ": "SPACE",
+            b"\t": "TAB",
+            b"\x08": "BS",
+            b"\x7f": "BS",
+        }
         if ch in MAP:
             return MAP[ch]
         try:
@@ -47,7 +61,7 @@ else:
     import tty
 
     def _key() -> str:
-        fd  = sys.stdin.fileno()
+        fd = sys.stdin.fileno()
         old = termios.tcgetattr(fd)
         try:
             tty.setraw(fd)
@@ -55,11 +69,16 @@ else:
             if ch == b"\x1b":
                 nxt = sys.stdin.buffer.read(2)
                 return {
-                    b"[A": "UP",   b"[B": "DOWN",  b"[D": "LEFT",  b"[C": "RIGHT",
-                    b"[5": "PGUP", b"[6": "PGDN",  b"[H": "HOME",  b"[F": "END",
+                    b"[A": "UP",
+                    b"[B": "DOWN",
+                    b"[D": "LEFT",
+                    b"[C": "RIGHT",
+                    b"[5": "PGUP",
+                    b"[6": "PGDN",
+                    b"[H": "HOME",
+                    b"[F": "END",
                 }.get(nxt, "ESC")
-            MAP = {b"\r": "ENTER", b"\n": "ENTER", b" ": "SPACE",
-                   b"\t": "TAB",   b"\x08": "BS",  b"\x7f": "BS"}
+            MAP = {b"\r": "ENTER", b"\n": "ENTER", b" ": "SPACE", b"\t": "TAB", b"\x08": "BS", b"\x7f": "BS"}
             if ch in MAP:
                 return MAP[ch]
             try:
@@ -85,8 +104,8 @@ class _ThemeDict:
 _SC = _ThemeDict(_theme_mod.severity_colors)
 _SB = _ThemeDict(_theme_mod.severity_backgrounds)
 
-_ICONS     = {True: "📁", False: "📄"}
-_SORT_MODES  = ["severity", "file", "rule", "line"]
+_ICONS = {True: "📁", False: "📄"}
+_SORT_MODES = ["severity", "file", "rule", "line"]
 _GROUP_MODES = ["flat", "file", "category", "language"]
 
 
@@ -101,34 +120,34 @@ class TUIApp:
         self.screen = "browser"
 
         # ── Browser ───────────────────────────────────────────────────────
-        self.cwd:      Path       = (start_path or Path.cwd()).resolve()
-        self.entries:  list[Path] = []
-        self.cursor:   int        = 0
-        self.scroll:   int        = 0
-        self.selected: set[Path]  = set()
+        self.cwd: Path = (start_path or Path.cwd()).resolve()
+        self.entries: list[Path] = []
+        self.cursor: int = 0
+        self.scroll: int = 0
+        self.selected: set[Path] = set()
 
         # ── Resultados ────────────────────────────────────────────────────
-        self.report:     ScanReport | None = None
-        self.res_cursor: int                  = 0
-        self.res_scroll: int                  = 0
-        self.sev_filter: Severity | None   = None
-        self.min_sev:    Severity             = Severity.INFO
+        self.report: ScanReport | None = None
+        self.res_cursor: int = 0
+        self.res_scroll: int = 0
+        self.sev_filter: Severity | None = None
+        self.min_sev: Severity = Severity.INFO
 
         # ── Busca em tempo real ───────────────────────────────────────────
-        self.search_mode:  bool = False
-        self.search_query: str  = ""
+        self.search_mode: bool = False
+        self.search_query: str = ""
 
         # ── Ordenação e agrupamento ────────────────────────────────────────
-        self.sort_idx:  int = 0   # índice em _SORT_MODES
-        self.group_idx: int = 0   # índice em _GROUP_MODES
+        self.sort_idx: int = 0  # índice em _SORT_MODES
+        self.group_idx: int = 0  # índice em _GROUP_MODES
 
         # ── Detalhe ───────────────────────────────────────────────────────
         self.det_idx: int = 0
 
         # ── Revisão de achados (persistida em .vulnscan_reviewed.json) ──────
-        self.reviewed:      set[tuple] = set()
-        self.hide_reviewed: bool       = False
-        self._reviewed_path: Path      = self.cwd / ".vulnscan_reviewed.json"
+        self.reviewed: set[tuple] = set()
+        self.hide_reviewed: bool = False
+        self._reviewed_path: Path = self.cwd / ".vulnscan_reviewed.json"
         self._load_reviewed()
 
         # ── Histórico ─────────────────────────────────────────────────────
@@ -143,18 +162,15 @@ class TUIApp:
     def _load(self) -> None:
         items: list[Path] = []
         try:
-            for p in sorted(self.cwd.iterdir(),
-                            key=lambda x: (not x.is_dir(), x.name.lower())):
-                skip = p.name in SKIP_DIRS or (
-                    p.name.startswith(".") and p.name not in (".env",)
-                )
+            for p in sorted(self.cwd.iterdir(), key=lambda x: (not x.is_dir(), x.name.lower())):
+                skip = p.name in SKIP_DIRS or (p.name.startswith(".") and p.name not in (".env",))
                 if not skip:
                     items.append(p)
         except PermissionError:
             pass
         self.entries = items
-        self.cursor  = 0
-        self.scroll  = 0
+        self.cursor = 0
+        self.scroll = 0
 
     def _lh(self) -> int:
         return max(3, self.con.size.height - 11)
@@ -168,25 +184,25 @@ class TUIApp:
 
     def _vis(self) -> list[tuple]:
         lh = self._lh()
-        return list(enumerate(self.entries[self.scroll:self.scroll + lh], start=self.scroll))
+        return list(enumerate(self.entries[self.scroll : self.scroll + lh], start=self.scroll))
 
     # ── Renderização ─────────────────────────────────────────────────────────
     def _draw(self) -> None:
         self.con.clear()
         {
-            "browser":  self._draw_browser,
+            "browser": self._draw_browser,
             "scanning": self._draw_scanning,
-            "results":  self._draw_results,
-            "detail":   self._draw_detail,
-            "metrics":  self._draw_metrics,
-            "history":  self._draw_history,
-            "config":   self._draw_config,
+            "results": self._draw_results,
+            "detail": self._draw_detail,
+            "metrics": self._draw_metrics,
+            "history": self._draw_history,
+            "config": self._draw_config,
         }[self.screen]()
 
     def _topbar(self, left: str, right: str = "") -> None:
         w = self.con.size.width
         max_right = max(0, w - len(left) - 10)
-        right_t = right if len(right) <= max_right else right[:max_right - 1] + "…"
+        right_t = right if len(right) <= max_right else right[: max_right - 1] + "…"
         g = Table.grid(padding=(0, 2), expand=True)
         g.add_column(ratio=1)
         g.add_column(justify="right", no_wrap=True)
@@ -199,13 +215,10 @@ class TUIApp:
 
     # ─────────────────────────────────────────────────────────── BROWSER ──
     def _draw_browser(self) -> None:
-        w     = self.con.size.width
+        w = self.con.size.width
         sel_n = len(self.selected)
 
-        self._topbar(
-            "⚡ Vulnerability Analyzer — Selecionar Arquivos",
-            f"v1.0.0  •  {self._rule_count()} regras"
-        )
+        self._topbar("⚡ Vulnerability Analyzer — Selecionar Arquivos", f"v1.0.0  •  {self._rule_count()} regras")
 
         pt = Text()
         pt.append("  📂 ", style="bright_yellow")
@@ -220,18 +233,14 @@ class TUIApp:
             lft.add_row(Text("  (diretório vazio)", style="dim"))
         else:
             for idx, entry in self._vis():
-                active   = idx == self.cursor
-                is_dir   = entry.is_dir()
+                active = idx == self.cursor
+                is_dir = entry.is_dir()
                 scanable = not is_dir and is_scannable(str(entry))
-                sel      = entry in self.selected
+                sel = entry in self.selected
                 row = Text()
-                row.append("▶ " if active else "  ",
-                            style="bold bright_yellow" if active else "dim")
+                row.append("▶ " if active else "  ", style="bold bright_yellow" if active else "dim")
                 row.append(_ICONS[is_dir] + " ")
-                row.append(entry.name, style=(
-                    "bold bright_cyan" if is_dir else
-                    "white" if scanable else "dim"
-                ))
+                row.append(entry.name, style=("bold bright_cyan" if is_dir else "white" if scanable else "dim"))
                 if is_dir:
                     try:
                         nc = sum(1 for _ in entry.iterdir())
@@ -250,6 +259,7 @@ class TUIApp:
                 lang_color = "white"
                 try:
                     from analyzer.detector import detect_language
+
                     lc = detect_language(str(p))
                     lang_color = lc.color()
                 except Exception:
@@ -276,21 +286,16 @@ class TUIApp:
         outer.add_column(min_width=34, max_width=36)
         outer.add_row(
             Panel(lft, border_style="#333355", box=rbox.SIMPLE, padding=(0, 0)),
-            Panel(rgt_body, title="[bold bright_white] Selecionados [/]",
-                  border_style="#335588", box=rbox.ROUNDED),
+            Panel(rgt_body, title="[bold bright_white] Selecionados [/]", border_style="#335588", box=rbox.ROUNDED),
         )
         self.con.print(outer)
 
-        n  = len(self.entries)
+        n = len(self.entries)
         st = Text()
         st.append(f"  {self.cursor + 1 if n else 0}/{n}", style="dim")
         if sel_n:
             st.append(f"   ✓ {sel_n} prontos", style="bold bright_green")
-        st.append(
-            "   [↑↓] mover  [Space] selecionar  [S] scan"
-            "  [D] dash  [H] hist  [C] config  [Q] sair",
-            style="dim"
-        )
+        st.append("   [↑↓] mover  [Space] selecionar  [S] scan  [D] dash  [H] hist  [C] config  [Q] sair", style="dim")
         self._statusbar(st)
 
     # ────────────────────────────────────────────────────────── SCANNING ──
@@ -298,36 +303,40 @@ class TUIApp:
         self._topbar("⚡ Analisando código...", "aguarde")
         self.con.print()
         n = len(self.selected)
-        self.con.print(Align(
-            Panel(
-                Align(
-                    Text(
-                        f"🔍  Escaneando {n} arquivo(s)…\n\nAguarde, aplicando 777+ regras.",
-                        style="bold bright_cyan", justify="center",
+        self.con.print(
+            Align(
+                Panel(
+                    Align(
+                        Text(
+                            f"🔍  Escaneando {n} arquivo(s)…\n\nAguarde, aplicando 777+ regras.",
+                            style="bold bright_cyan",
+                            justify="center",
+                        ),
+                        align="center",
                     ),
-                    align="center",
+                    border_style="#33aaff",
+                    box=rbox.DOUBLE_EDGE,
+                    padding=(2, 8),
                 ),
-                border_style="#33aaff", box=rbox.DOUBLE_EDGE, padding=(2, 8),
-            ),
-            align="center",
-        ))
+                align="center",
+            )
+        )
 
     # ─────────────────────────────────────────────────────────── RESULTS ──
     def _draw_results(self) -> None:
         vulns = self._fvulns()
-        lh    = self._lh()
+        lh = self._lh()
 
-        sort_lbl  = _SORT_MODES[self.sort_idx].upper()
+        sort_lbl = _SORT_MODES[self.sort_idx].upper()
         group_lbl = _GROUP_MODES[self.group_idx].upper()
-        filt_tag  = f"  [Filtro:{self.sev_filter.name}]" if self.sev_filter else ""
-        q_tag     = f"  [Busca:'{self.search_query}']" if self.search_query else ""
+        filt_tag = f"  [Filtro:{self.sev_filter.name}]" if self.sev_filter else ""
+        q_tag = f"  [Busca:'{self.search_query}']" if self.search_query else ""
 
         rev_tag = f"  [{len(self.reviewed)} revisados]" if self.reviewed else ""
         hide_tag = "  [ocultando revisados]" if self.hide_reviewed else ""
         self._topbar(
             f"⚡ Resultados{filt_tag}{q_tag}{rev_tag}{hide_tag}",
-            f"[/]busca  [O]sort:{sort_lbl}  [G]grup:{group_lbl}"
-            "  [F]filtro  [R]revisar  [D]dash  [H]hist  [Q]sair"
+            f"[/]busca  [O]sort:{sort_lbl}  [G]grup:{group_lbl}  [F]filtro  [R]revisar  [D]dash  [H]hist  [Q]sair",
         )
 
         # ── Barra de busca inline ──────────────────────────────────────────
@@ -341,13 +350,16 @@ class TUIApp:
 
         if not vulns:
             self.con.print()
-            self.con.print(Align(
-                Panel(
-                    Text("✅  Nenhum problema encontrado!", style="bold bright_green", justify="center"),
-                    border_style="bright_green", padding=(2, 8),
-                ),
-                align="center",
-            ))
+            self.con.print(
+                Align(
+                    Panel(
+                        Text("✅  Nenhum problema encontrado!", style="bold bright_green", justify="center"),
+                        border_style="bright_green",
+                        padding=(2, 8),
+                    ),
+                    align="center",
+                )
+            )
             st = Text()
             st.append("  [D] métricas   [H] histórico   [B] voltar   [Q] sair", style="dim")
             self._statusbar(st)
@@ -358,53 +370,59 @@ class TUIApp:
         elif self.res_cursor >= self.res_scroll + lh:
             self.res_scroll = self.res_cursor - lh + 1
 
-        w      = self.con.size.width
+        w = self.con.size.width
         nome_w = max(14, w - 62)
-        t = Table(box=rbox.SIMPLE, show_header=True,
-                  header_style="bold bright_white", padding=(0, 1))
-        t.add_column("#",       min_width=4,      justify="right",  style="dim")
-        t.add_column("Sev",     min_width=10,     no_wrap=True)
+        t = Table(box=rbox.SIMPLE, show_header=True, header_style="bold bright_white", padding=(0, 1))
+        t.add_column("#", min_width=4, justify="right", style="dim")
+        t.add_column("Sev", min_width=10, no_wrap=True)
         t.add_column("Arquivo", min_width=18, max_width=24, no_wrap=True)
-        t.add_column("L",       min_width=4,      justify="right",  style="dim")
-        t.add_column("Regra",   min_width=8,      style="bright_black", no_wrap=True)
-        t.add_column("Função",  min_width=12,     style="dim", no_wrap=True)
-        t.add_column("Nome",    min_width=nome_w, no_wrap=True)
+        t.add_column("L", min_width=4, justify="right", style="dim")
+        t.add_column("Regra", min_width=8, style="bright_black", no_wrap=True)
+        t.add_column("Função", min_width=12, style="dim", no_wrap=True)
+        t.add_column("Nome", min_width=nome_w, no_wrap=True)
 
-        grouped   = _GROUP_MODES[self.group_idx] != "flat"
+        grouped = _GROUP_MODES[self.group_idx] != "flat"
         group_cnt = {}
         if grouped:
             for v in vulns:
                 k = self._group_key(v)
                 group_cnt[k] = group_cnt.get(k, 0) + 1
 
-        vis       = vulns[self.res_scroll:self.res_scroll + lh]
-        prev_grp  = self._group_key(vulns[self.res_scroll - 1]) if (grouped and self.res_scroll > 0) else None
+        vis = vulns[self.res_scroll : self.res_scroll + lh]
+        prev_grp = self._group_key(vulns[self.res_scroll - 1]) if (grouped and self.res_scroll > 0) else None
         for rel, vuln in enumerate(vis, start=self.res_scroll):
             # Cabeçalho de seção quando o grupo muda
             if grouped:
                 gk = self._group_key(vuln)
                 if gk != prev_grp:
                     t.add_row(
-                        "", Text("▸", style="bold bright_yellow"),
-                        Text(gk[:24], style="bold bright_yellow"), "", "",
-                        "", Text(f"({group_cnt.get(gk, 0)} achados)", style="dim"),
+                        "",
+                        Text("▸", style="bold bright_yellow"),
+                        Text(gk[:24], style="bold bright_yellow"),
+                        "",
+                        "",
+                        "",
+                        Text(f"({group_cnt.get(gk, 0)} achados)", style="dim"),
                     )
                     prev_grp = gk
 
-            active = (rel == self.res_cursor)
-            sc     = _SC[vuln.severity]
-            sv     = Text(f" {vuln.severity.name:8}", style=f"bold {sc}")
-            nm     = Path(vuln.file_path).name
-            pre    = "▶ " if active else "  "
+            active = rel == self.res_cursor
+            sc = _SC[vuln.severity]
+            sv = Text(f" {vuln.severity.name:8}", style=f"bold {sc}")
+            nm = Path(vuln.file_path).name
+            pre = "▶ " if active else "  "
             reviewed = self._is_reviewed(vuln)
-            dname  = vuln.name if len(vuln.name) <= nome_w else vuln.name[:nome_w - 1] + "…"
+            dname = vuln.name if len(vuln.name) <= nome_w else vuln.name[: nome_w - 1] + "…"
             if reviewed:
                 dname = f"✓ {dname}"
             fn_ctx = (vuln.function_context or "—")[:12]
             t.add_row(
-                str(rel + 1), sv,
+                str(rel + 1),
+                sv,
                 pre + (nm[:20] if len(nm) > 20 else nm),
-                str(vuln.line_number), vuln.rule_id, fn_ctx,
+                str(vuln.line_number),
+                vuln.rule_id,
+                fn_ctx,
                 Text(dname, style="dim strike" if reviewed else ""),
                 style="on #111128" if active else ("on #0a1a0a" if reviewed else ""),
             )
@@ -428,14 +446,14 @@ class TUIApp:
             self.screen = "results"
             return
 
-        idx  = max(0, min(self.det_idx, len(vulns) - 1))
+        idx = max(0, min(self.det_idx, len(vulns) - 1))
         vuln = vulns[idx]
-        sc   = _SC[vuln.severity]
+        sc = _SC[vuln.severity]
 
         reviewed = self._is_reviewed(vuln)
         self._topbar(
             f"⚡ Detalhe  {idx + 1}/{len(vulns)}",
-            "[←→] navegar  [O] abrir editor  [X] suprimir  [R] revisar  [B] lista  [Q] sair"
+            "[←→] navegar  [O] abrir editor  [X] suprimir  [R] revisar  [B] lista  [Q] sair",
         )
 
         badge = Text()
@@ -448,7 +466,7 @@ class TUIApp:
         meta.add_column(style="dim", min_width=12)
         meta.add_column()
         meta.add_row("Arquivo", f"[bold white]{Path(vuln.file_path).name}[/]  [dim]:{vuln.line_number}[/dim]")
-        meta.add_row("Regra",   f"[bright_black]{vuln.rule_id}[/]")
+        meta.add_row("Regra", f"[bright_black]{vuln.rule_id}[/]")
         if vuln.function_context:
             meta.add_row("Função", f"[bright_yellow]{vuln.function_context}()[/]")
         if vuln.cwe or vuln.owasp:
@@ -478,13 +496,18 @@ class TUIApp:
 
         if vuln.snippet:
             from analyzer.reporter import LANG_SYNTAX_MAP
-            lex  = LANG_SYNTAX_MAP.get(vuln.language, "text")
+
+            lex = LANG_SYNTAX_MAP.get(vuln.language, "text")
             code = "\n".join(vuln.snippet)
             try:
                 syn = Syntax(
-                    code, lex, theme="monokai", line_numbers=True,
+                    code,
+                    lex,
+                    theme="monokai",
+                    line_numbers=True,
                     start_line=vuln.snippet_start_line,
-                    highlight_lines={vuln.line_number}, word_wrap=True,
+                    highlight_lines={vuln.line_number},
+                    word_wrap=True,
                 )
                 body.add_row(Text(""))
                 body.add_row(Text("Código", style="bold bright_yellow"))
@@ -500,8 +523,7 @@ class TUIApp:
             diff_t.append("- ", style="bold red")
             diff_t.append(vuln.line_content.strip(), style="red")
             diff_t.append("\n+ ", style="bold bright_green")
-            diff_t.append(vuln.remediation[:100] if vuln.remediation else "(ver descrição acima)",
-                          style="bright_green")
+            diff_t.append(vuln.remediation[:100] if vuln.remediation else "(ver descrição acima)", style="bright_green")
             body.add_row(diff_t)
 
         self.con.print(Panel(body, border_style=sc, padding=(0, 1)))
@@ -511,12 +533,16 @@ class TUIApp:
         self._topbar("⚡ Dashboard de Métricas", "[B] voltar  [Q] sair")
 
         if not self.report:
-            self.con.print(Align(
-                Panel(Text("Nenhum scan realizado ainda.\nExecute um scan primeiro.",
-                           style="dim", justify="center"),
-                      border_style="#444466", padding=(2, 8)),
-                align="center",
-            ))
+            self.con.print(
+                Align(
+                    Panel(
+                        Text("Nenhum scan realizado ainda.\nExecute um scan primeiro.", style="dim", justify="center"),
+                        border_style="#444466",
+                        padding=(2, 8),
+                    ),
+                    align="center",
+                )
+            )
             st = Text()
             st.append("  [B] voltar   [Q] sair", style="dim")
             self._statusbar(st)
@@ -524,58 +550,76 @@ class TUIApp:
 
         all_v = self._fvulns()
         if not all_v:
-            self.con.print(Align(
-                Panel(Text("✅ Nenhum achado!", style="bold bright_green", justify="center"),
-                      border_style="bright_green", padding=(2, 8)),
-                align="center",
-            ))
+            self.con.print(
+                Align(
+                    Panel(
+                        Text("✅ Nenhum achado!", style="bold bright_green", justify="center"),
+                        border_style="bright_green",
+                        padding=(2, 8),
+                    ),
+                    align="center",
+                )
+            )
             return
 
         from collections import Counter
+
         lang_counts = Counter(v.language.value for v in all_v)
-        cat_counts  = Counter(v.category.value for v in all_v)
-        bar_w       = 28
+        cat_counts = Counter(v.category.value for v in all_v)
+        bar_w = 28
 
         def _bar(cnt: int, max_c: int, color: str = "bright_cyan") -> Text:
             n = int(bar_w * cnt / max_c) if max_c else 0
             t = Text()
-            t.append("█" * n,        style=f"bold {color}")
+            t.append("█" * n, style=f"bold {color}")
             t.append("░" * (bar_w - n), style="bright_black")
             return t
 
         max_lang = max(lang_counts.values(), default=1)
-        max_cat  = max(cat_counts.values(),  default=1)
+        max_cat = max(cat_counts.values(), default=1)
 
-        lang_t = Table(box=rbox.SIMPLE, show_header=True,
-                       header_style="bold bright_white", padding=(0, 1),
-                       title="[bold bright_cyan]Por Linguagem[/]")
+        lang_t = Table(
+            box=rbox.SIMPLE,
+            show_header=True,
+            header_style="bold bright_white",
+            padding=(0, 1),
+            title="[bold bright_cyan]Por Linguagem[/]",
+        )
         lang_t.add_column("Linguagem", min_width=14)
-        lang_t.add_column("Barra",     min_width=bar_w)
-        lang_t.add_column("Qtd",       min_width=5, justify="right")
+        lang_t.add_column("Barra", min_width=bar_w)
+        lang_t.add_column("Qtd", min_width=5, justify="right")
         for lang, cnt in lang_counts.most_common(10):
             lang_t.add_row(lang, _bar(cnt, max_lang), str(cnt))
 
-        cat_t = Table(box=rbox.SIMPLE, show_header=True,
-                      header_style="bold bright_white", padding=(0, 1),
-                      title="[bold bright_magenta]Por Categoria[/]")
-        cat_t.add_column("Categoria",  min_width=26)
-        cat_t.add_column("Barra",      min_width=bar_w)
-        cat_t.add_column("Qtd",        min_width=5, justify="right")
+        cat_t = Table(
+            box=rbox.SIMPLE,
+            show_header=True,
+            header_style="bold bright_white",
+            padding=(0, 1),
+            title="[bold bright_magenta]Por Categoria[/]",
+        )
+        cat_t.add_column("Categoria", min_width=26)
+        cat_t.add_column("Barra", min_width=bar_w)
+        cat_t.add_column("Qtd", min_width=5, justify="right")
         for cat, cnt in cat_counts.most_common(10):
             cat_t.add_row(cat, _bar(cnt, max_cat, "bright_magenta"), str(cnt))
 
-        sev_t = Table(box=rbox.SIMPLE, show_header=True,
-                      header_style="bold bright_white", padding=(0, 1),
-                      title="[bold bright_red]Por Severidade[/]")
+        sev_t = Table(
+            box=rbox.SIMPLE,
+            show_header=True,
+            header_style="bold bright_white",
+            padding=(0, 1),
+            title="[bold bright_red]Por Severidade[/]",
+        )
         sev_t.add_column("Severidade", min_width=10)
-        sev_t.add_column("Barra",      min_width=bar_w)
-        sev_t.add_column("Qtd",        min_width=5, justify="right")
+        sev_t.add_column("Barra", min_width=bar_w)
+        sev_t.add_column("Qtd", min_width=5, justify="right")
         sev_pairs = [
             (Severity.CRITICAL, self.report.critical_count),
-            (Severity.HIGH,     self.report.high_count),
-            (Severity.MEDIUM,   self.report.medium_count),
-            (Severity.LOW,      self.report.low_count),
-            (Severity.INFO,     self.report.info_count),
+            (Severity.HIGH, self.report.high_count),
+            (Severity.MEDIUM, self.report.medium_count),
+            (Severity.LOW, self.report.low_count),
+            (Severity.INFO, self.report.info_count),
         ]
         max_sev = max(c for _, c in sev_pairs) or 1
         for sev, cnt in sev_pairs:
@@ -587,7 +631,8 @@ class TUIApp:
 
         try:
             from analyzer.trend import TrendDB, ascii_trend
-            hist      = TrendDB().history(10)
+
+            hist = TrendDB().history(10)
             trend_str = ascii_trend(hist, width=48, height=7)
         except Exception:
             trend_str = "(histórico não disponível)"
@@ -596,7 +641,7 @@ class TUIApp:
         grid.add_column(ratio=1)
         grid.add_column(ratio=1)
         grid.add_row(
-            Panel(sev_t,  border_style="#553388", padding=(0, 1)),
+            Panel(sev_t, border_style="#553388", padding=(0, 1)),
             Panel(lang_t, border_style="#335588", padding=(0, 1)),
         )
         grid.add_row(
@@ -604,7 +649,8 @@ class TUIApp:
             Panel(
                 Text(trend_str, style="bright_cyan"),
                 title="[bold bright_white] Tendência de Vulns [/]",
-                border_style="#444466", padding=(0, 1)
+                border_style="#444466",
+                padding=(0, 1),
             ),
         )
         self.con.print(grid)
@@ -619,50 +665,69 @@ class TUIApp:
 
         try:
             from analyzer.trend import TrendDB, ascii_trend
+
             history = TrendDB().history(20)
         except Exception:
-            self.con.print(Align(
-                Panel(Text("Banco de dados de histórico não disponível.", style="dim"),
-                      border_style="#444466", padding=(1, 4)),
-                align="center",
-            ))
+            self.con.print(
+                Align(
+                    Panel(
+                        Text("Banco de dados de histórico não disponível.", style="dim"),
+                        border_style="#444466",
+                        padding=(1, 4),
+                    ),
+                    align="center",
+                )
+            )
             st = Text()
             st.append("  [B] voltar   [Q] sair", style="dim")
             self._statusbar(st)
             return
 
         if not history:
-            self.con.print(Align(
-                Panel(Text("Nenhum scan registrado ainda.\nExecute um scan para criar o histórico.",
-                           style="dim", justify="center"),
-                      border_style="#444466", padding=(2, 8)),
-                align="center",
-            ))
+            self.con.print(
+                Align(
+                    Panel(
+                        Text(
+                            "Nenhum scan registrado ainda.\nExecute um scan para criar o histórico.",
+                            style="dim",
+                            justify="center",
+                        ),
+                        border_style="#444466",
+                        padding=(2, 8),
+                    ),
+                    align="center",
+                )
+            )
             st = Text()
             st.append("  [B] voltar   [Q] sair", style="dim")
             self._statusbar(st)
             return
 
-        t = Table(box=rbox.SIMPLE_HEAVY, border_style="#444466",
-                  header_style="bold bright_cyan", padding=(0, 1),
-                  title="[bold bright_white]Últimos 20 Scans[/]")
-        t.add_column("ID",       min_width=4,  justify="right", style="dim")
-        t.add_column("Data",     min_width=12)
-        t.add_column("Target",   min_width=22)
-        t.add_column("Arquivos", min_width=8,  justify="right")
-        t.add_column("Total",    min_width=5,  justify="right", style="bold white")
-        t.add_column("Crit",     min_width=4,  justify="right", style="#ff2244")
-        t.add_column("High",     min_width=4,  justify="right", style="#ff6600")
-        t.add_column("Tempo",    min_width=8,  justify="right", style="dim")
+        t = Table(
+            box=rbox.SIMPLE_HEAVY,
+            border_style="#444466",
+            header_style="bold bright_cyan",
+            padding=(0, 1),
+            title="[bold bright_white]Últimos 20 Scans[/]",
+        )
+        t.add_column("ID", min_width=4, justify="right", style="dim")
+        t.add_column("Data", min_width=12)
+        t.add_column("Target", min_width=22)
+        t.add_column("Arquivos", min_width=8, justify="right")
+        t.add_column("Total", min_width=5, justify="right", style="bold white")
+        t.add_column("Crit", min_width=4, justify="right", style="#ff2244")
+        t.add_column("High", min_width=4, justify="right", style="#ff6600")
+        t.add_column("Tempo", min_width=8, justify="right", style="dim")
         for i, e in enumerate(history):
-            active = (i == self.hist_cursor)
+            active = i == self.hist_cursor
             t.add_row(
-                str(e.id), e.dt,
+                str(e.id),
+                e.dt,
                 e.target[:22],
                 str(e.files_scanned),
                 str(e.total_vulns),
                 str(e.critical) if e.critical else "—",
-                str(e.high)     if e.high     else "—",
+                str(e.high) if e.high else "—",
                 f"{e.scan_time:.2f}s",
                 style="on #111128" if active else "",
             )
@@ -680,21 +745,28 @@ class TUIApp:
         self._topbar("⚡ Configurações", "[↑↓] navegar  [Enter] alterar  [B] salvar/voltar  [Q] sair")
 
         opts = [
-            ("Severidade mínima",  self.min_sev.name,              "Ocultar achados abaixo desta severidade"),
-            ("Ordenação padrão",   _SORT_MODES[self.sort_idx],     "Como os resultados são ordenados"),
-            ("Agrupamento",        _GROUP_MODES[self.group_idx],   "Como os resultados são agrupados"),
-            ("Filtro de sev.",     self.sev_filter.name if self.sev_filter else "Nenhum",
-             "Mostrar apenas achados desta severidade"),
+            ("Severidade mínima", self.min_sev.name, "Ocultar achados abaixo desta severidade"),
+            ("Ordenação padrão", _SORT_MODES[self.sort_idx], "Como os resultados são ordenados"),
+            ("Agrupamento", _GROUP_MODES[self.group_idx], "Como os resultados são agrupados"),
+            (
+                "Filtro de sev.",
+                self.sev_filter.name if self.sev_filter else "Nenhum",
+                "Mostrar apenas achados desta severidade",
+            ),
         ]
 
-        t = Table(box=rbox.ROUNDED, border_style="#444466",
-                  header_style="bold bright_cyan", padding=(0, 2),
-                  title="[bold bright_white]Configurações da Sessão[/]")
-        t.add_column("Opção",      min_width=22)
-        t.add_column("Valor",      min_width=14)
-        t.add_column("Descrição",  min_width=40)
+        t = Table(
+            box=rbox.ROUNDED,
+            border_style="#444466",
+            header_style="bold bright_cyan",
+            padding=(0, 2),
+            title="[bold bright_white]Configurações da Sessão[/]",
+        )
+        t.add_column("Opção", min_width=22)
+        t.add_column("Valor", min_width=14)
+        t.add_column("Descrição", min_width=40)
         for i, (name, val, desc) in enumerate(opts):
-            active = (i == self.cfg_cursor)
+            active = i == self.cfg_cursor
             t.add_row(
                 ("▶ " if active else "  ") + name,
                 Text(val, style="bold bright_yellow"),
@@ -727,7 +799,8 @@ class TUIApp:
         if self.search_query:
             q = self.search_query.lower()
             all_v = [
-                v for v in all_v
+                v
+                for v in all_v
                 if q in v.name.lower()
                 or q in v.rule_id.lower()
                 or q in v.file_path.lower()
@@ -773,6 +846,7 @@ class TUIApp:
         try:
             if self._reviewed_path.exists():
                 import json
+
                 data = json.loads(self._reviewed_path.read_text(encoding="utf-8"))
                 self.reviewed = {tuple(item) for item in data.get("reviewed", [])}
         except Exception:
@@ -781,6 +855,7 @@ class TUIApp:
     def _save_reviewed(self) -> None:
         try:
             import json
+
             if self.reviewed:
                 data = {"reviewed": [list(k) for k in sorted(self.reviewed)]}
                 self._reviewed_path.write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -801,8 +876,7 @@ class TUIApp:
         return self._vuln_key(vuln) in self.reviewed
 
     def _cycle_sev(self) -> None:
-        order = [None, Severity.CRITICAL, Severity.HIGH,
-                 Severity.MEDIUM, Severity.LOW, Severity.INFO]
+        order = [None, Severity.CRITICAL, Severity.HIGH, Severity.MEDIUM, Severity.LOW, Severity.INFO]
         try:
             i = order.index(self.sev_filter)
             self.sev_filter = order[(i + 1) % len(order)]
@@ -815,6 +889,7 @@ class TUIApp:
     def _rule_count() -> int:
         try:
             from analyzer.rules import rule_count
+
             return rule_count()
         except Exception:
             return 0
@@ -822,11 +897,12 @@ class TUIApp:
     def _notify(self, msg: str, color: str = "bright_green") -> None:
         self.con.clear()
         self.con.print()
-        self.con.print(Align(
-            Panel(Text(msg, style=f"bold {color}", justify="center"),
-                  border_style=color, padding=(1, 6)),
-            align="center",
-        ))
+        self.con.print(
+            Align(
+                Panel(Text(msg, style=f"bold {color}", justify="center"), border_style=color, padding=(1, 6)),
+                align="center",
+            )
+        )
         _key()
 
     def _open_in_editor(self, vuln: Vulnerability) -> None:
@@ -847,17 +923,16 @@ class TUIApp:
 
     def _inline_suppress(self, vuln: Vulnerability) -> None:
         try:
-            p     = Path(vuln.file_path)
+            p = Path(vuln.file_path)
             lines = p.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
-            li    = vuln.line_number - 1
+            li = vuln.line_number - 1
             if 0 <= li < len(lines):
                 old = lines[li].rstrip("\n").rstrip("\r\n")
                 if "vulnscan: ignore" not in old:
                     lines[li] = old + f"  # vulnscan: ignore {vuln.rule_id}\n"
                     p.write_text("".join(lines), encoding="utf-8")
                     self._notify(
-                        f"✅ Supressão adicionada em\n{p.name}:{vuln.line_number}\n"
-                        f"Regra: {vuln.rule_id}",
+                        f"✅ Supressão adicionada em\n{p.name}:{vuln.line_number}\nRegra: {vuln.rule_id}",
                         "bright_green",
                     )
                 else:
@@ -875,11 +950,13 @@ class TUIApp:
         self._draw()
 
         from analyzer.engine import ScanEngine
-        engine     = ScanEngine(min_severity=self.min_sev)
+
+        engine = ScanEngine(min_severity=self.min_sev)
         self.report = engine.scan_files([str(p) for p in sorted(self.selected)])
 
         try:
             from analyzer.trend import TrendDB
+
             TrendDB().record(self.report)
         except Exception:
             pass
@@ -887,7 +964,7 @@ class TUIApp:
         self.res_cursor = 0
         self.res_scroll = 0
         self.sev_filter = None
-        self.screen     = "results"
+        self.screen = "results"
 
     # ── Handlers de teclado ───────────────────────────────────────────────────
     def _on_browser(self, k: str) -> bool:
@@ -965,14 +1042,14 @@ class TUIApp:
         # ── Modo busca ativa ──────────────────────────────────────────────
         if self.search_mode:
             if k == "ESC":
-                self.search_mode  = False
+                self.search_mode = False
                 self.search_query = ""
-                self.res_cursor   = 0
-                self.res_scroll   = 0
+                self.res_cursor = 0
+                self.res_scroll = 0
             elif k == "ENTER":
                 self.search_mode = False
-                self.res_cursor  = 0
-                self.res_scroll  = 0
+                self.res_cursor = 0
+                self.res_scroll = 0
             elif k == "BS":
                 self.search_query = self.search_query[:-1]
             elif len(k) == 1 and k.isprintable():
@@ -982,8 +1059,8 @@ class TUIApp:
             return True
 
         vulns = self._fvulns()
-        n     = len(vulns)
-        lh    = self._lh()
+        n = len(vulns)
+        lh = self._lh()
 
         if k == "UP":
             if self.res_cursor > 0:
@@ -1002,18 +1079,18 @@ class TUIApp:
         elif k == "ENTER":
             if vulns:
                 self.det_idx = self.res_cursor
-                self.screen  = "detail"
+                self.screen = "detail"
         elif k == "/":
-            self.search_mode  = True
+            self.search_mode = True
             self.search_query = ""
         elif k == "o":
             # Ciclar ordenação
-            self.sort_idx   = (self.sort_idx + 1) % len(_SORT_MODES)
+            self.sort_idx = (self.sort_idx + 1) % len(_SORT_MODES)
             self.res_cursor = 0
             self.res_scroll = 0
         elif k == "g":
             # Ciclar agrupamento: flat → file → category → language
-            self.group_idx  = (self.group_idx + 1) % len(_GROUP_MODES)
+            self.group_idx = (self.group_idx + 1) % len(_GROUP_MODES)
             self.res_cursor = 0
             self.res_scroll = 0
         elif k == "f":
@@ -1022,7 +1099,7 @@ class TUIApp:
             if vulns and self.res_cursor < len(vulns):
                 self._toggle_reviewed(vulns[self.res_cursor])
         elif k == "R":
-            self.hide_reviewed  = not self.hide_reviewed
+            self.hide_reviewed = not self.hide_reviewed
             self.res_cursor = 0
             self.res_scroll = 0
         elif k == "d":
@@ -1035,6 +1112,7 @@ class TUIApp:
             if self.report:
                 try:
                     from analyzer.reporter import export_html
+
                     path = "relatorio_vulnerabilidades.html"
                     export_html(self.report, path)
                     self._notify(f"✅  HTML salvo: {path}")
@@ -1044,6 +1122,7 @@ class TUIApp:
             if self.report:
                 try:
                     from analyzer.reporter import export_json
+
                     path = "relatorio_vulnerabilidades.json"
                     export_json(self.report, path)
                     self._notify(f"✅  JSON salvo: {path}")
@@ -1057,13 +1136,13 @@ class TUIApp:
 
     def _on_detail(self, k: str) -> bool:
         vulns = self._fvulns()
-        n     = len(vulns)
+        n = len(vulns)
 
         if k in ("RIGHT", "DOWN", "n"):
-            self.det_idx    = min(n - 1, self.det_idx + 1)
+            self.det_idx = min(n - 1, self.det_idx + 1)
             self.res_cursor = self.det_idx
         elif k in ("LEFT", "UP", "p"):
-            self.det_idx    = max(0, self.det_idx - 1)
+            self.det_idx = max(0, self.det_idx - 1)
             self.res_cursor = self.det_idx
         elif k == "o" and vulns:
             self._open_in_editor(vulns[self.det_idx])
@@ -1104,8 +1183,8 @@ class TUIApp:
             self.cfg_cursor = min(cfg_max, self.cfg_cursor + 1)
         elif k == "ENTER":
             if self.cfg_cursor == 0:
-                sevs         = list(Severity)
-                idx          = sevs.index(self.min_sev)
+                sevs = list(Severity)
+                idx = sevs.index(self.min_sev)
                 self.min_sev = sevs[(idx + 1) % len(sevs)]
             elif self.cfg_cursor == 1:
                 self.sort_idx = (self.sort_idx + 1) % len(_SORT_MODES)
@@ -1124,15 +1203,15 @@ class TUIApp:
         handlers = {
             "browser": self._on_browser,
             "results": self._on_results,
-            "detail":  self._on_detail,
+            "detail": self._on_detail,
             "metrics": self._on_metrics,
             "history": self._on_history,
-            "config":  self._on_config,
+            "config": self._on_config,
         }
         try:
             while True:
                 self._draw()
-                k  = _key()
+                k = _key()
                 fn = handlers.get(self.screen)
                 if fn:
                     if not fn(k):

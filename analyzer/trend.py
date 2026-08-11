@@ -1,4 +1,5 @@
 """Histórico de scans via SQLite + gráfico ASCII de tendência."""
+
 from __future__ import annotations
 
 import sqlite3
@@ -11,9 +12,9 @@ DEFAULT_DB = Path.home() / ".vulnscan" / "trend.db"
 
 _SEV_COLORS = {
     "critical": "#ff2244",
-    "high":     "#ff6600",
-    "medium":   "#ffcc00",
-    "low":      "#33aaff",
+    "high": "#ff6600",
+    "medium": "#ffcc00",
+    "low": "#33aaff",
 }
 
 
@@ -70,10 +71,18 @@ class TrendDB:
             cur = conn.execute(
                 "INSERT INTO scans (timestamp,target,files_scanned,total_vulns,"
                 "critical,high,medium,low,info,scan_time) VALUES (?,?,?,?,?,?,?,?,?,?)",
-                (time.time(), report.target, report.files_scanned,
-                 report.total_vulnerabilities, report.critical_count,
-                 report.high_count, report.medium_count, report.low_count,
-                 report.info_count, report.total_time),
+                (
+                    time.time(),
+                    report.target,
+                    report.files_scanned,
+                    report.total_vulnerabilities,
+                    report.critical_count,
+                    report.high_count,
+                    report.medium_count,
+                    report.low_count,
+                    report.info_count,
+                    report.total_time,
+                ),
             )
             conn.commit()
             return cur.lastrowid
@@ -104,12 +113,12 @@ def ascii_trend(entries: list[TrendEntry], width: int = 40, height: int = 8) -> 
     if not entries:
         return "  (sem histórico de scans)"
 
-    ordered  = list(reversed(entries))
-    values   = [e.total_vulns for e in ordered]
-    max_val  = max(values) if values else 1
-    cols     = min(len(values), width)
-    vals     = values[-cols:]
-    dates    = [e.dt for e in ordered[-cols:]]
+    ordered = list(reversed(entries))
+    values = [e.total_vulns for e in ordered]
+    max_val = max(values) if values else 1
+    cols = min(len(values), width)
+    vals = values[-cols:]
+    dates = [e.dt for e in ordered[-cols:]]
 
     chart_lines: list[str] = []
     for row in range(height, 0, -1):
@@ -133,6 +142,6 @@ def ascii_trend(entries: list[TrendEntry], width: int = 40, height: int = 8) -> 
         end_pad = cols - len(label_line) + 6
         if end_pad > 0 and dates[-1] != dates[0]:
             label_line += " " * max(1, end_pad - len(dates[-1])) + dates[-1]
-    chart_lines.append(label_line[:cols + 10])
+    chart_lines.append(label_line[: cols + 10])
 
     return "\n".join(chart_lines)
