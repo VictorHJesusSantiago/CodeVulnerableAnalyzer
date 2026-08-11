@@ -1,4 +1,5 @@
 """Regras de segurança para Dart / Flutter."""
+
 from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
@@ -35,7 +36,7 @@ DART_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.INFO_DISCLOSURE,
         language=Language.DART,
-        pattern=r'\bdebugPrint\s*\(',
+        pattern=r"\bdebugPrint\s*\(",
         remediation="Remova debugPrint de código de produção. Use if (kDebugMode) { print(...) } ou um framework de logging como logger com controle de nível.",
         cwe="CWE-532",
         confidence=Confidence.MEDIUM,
@@ -60,7 +61,7 @@ DART_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.BROKEN_AUTH,
         language=Language.DART,
-        pattern=r'badCertificateCallback\s*[=:]\s*\([^)]*\)\s*(?:=>|{)\s*true',
+        pattern=r"badCertificateCallback\s*[=:]\s*\([^)]*\)\s*(?:=>|{)\s*true",
         remediation="Remova completamente badCertificateCallback em produção. Para desenvolvimento local com certificados self-signed, use apenas em builds DEBUG explicitamente.",
         cwe="CWE-295",
         owasp="A07:2021",
@@ -73,7 +74,7 @@ DART_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.DART,
-        pattern=r'Process\.(?:run|start|runSync)\s*\(',
+        pattern=r"Process\.(?:run|start|runSync)\s*\(",
         remediation="Valide e sanitize todos os argumentos. Use uma allowlist de comandos permitidos. Evite interpolar input do usuário em chamadas de processo.",
         cwe="CWE-78",
         owasp="A03:2021",
@@ -86,7 +87,7 @@ DART_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.XSS,
         language=Language.DART,
-        pattern=r'WebView\b|WebViewController\b|InAppWebView\b',
+        pattern=r"WebView\b|WebViewController\b|InAppWebView\b",
         remediation="Valide URLs antes de carregar no WebView. Desabilite JavaScript se não necessário. Implemente NavigationDelegate ou ShouldOverrideUrlLoading.",
         cwe="CWE-79",
         owasp="A03:2021",
