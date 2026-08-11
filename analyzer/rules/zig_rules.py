@@ -1,6 +1,8 @@
 """Regras de segurança para Zig — 8 regras (ZIG-001..008)."""
+
 import re
-from analyzer.models import Severity, Confidence, Language, VulnCategory
+
+from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 ZIG_RULES: list[Rule] = [
@@ -11,7 +13,7 @@ ZIG_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.MEMORY_SAFETY,
         language=Language.ZIG,
-        pattern=r'@ptrCast\s*\(',
+        pattern=r"@ptrCast\s*\(",
         remediation="Use @alignCast em conjunto com @ptrCast quando necessário: const ptr = @ptrCast(*T, @alignCast(@alignOf(T), raw_ptr)). Prefira std.mem.bytesAsValue(T, &bytes) que verifica alinhamento. Para FFI, use tipos C explícitos de std.os.linux.",
         cwe="CWE-704",
         confidence=Confidence.MEDIUM,
@@ -23,7 +25,7 @@ ZIG_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.MEMORY_SAFETY,
         language=Language.ZIG,
-        pattern=r'@intToPtr\s*\(',
+        pattern=r"@intToPtr\s*\(",
         remediation="Evite @intToPtr com valores externos. Para hardware registers (embarcado), documente o endereço base e use comptime const verificados: const BASE: usize = 0x4000_0000; // verified address. Nunca use @intToPtr com valores calculados de input do usuário.",
         cwe="CWE-119",
         confidence=Confidence.MEDIUM,
@@ -35,7 +37,7 @@ ZIG_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.MEMORY_SAFETY,
         language=Language.ZIG,
-        pattern=r'=\s*undefined\b',
+        pattern=r"=\s*undefined\b",
         remediation="Inicialize variáveis explicitamente: var buf: [256]u8 = std.mem.zeroes([256]u8). Para buffers, use @memset: @memset(&buf, 0). Se undefined é necessário por performance, certifique-se de escrever antes de ler e use comentário documentando o invariante.",
         cwe="CWE-457",
         confidence=Confidence.LOW,
@@ -47,7 +49,7 @@ ZIG_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.ZIG,
-        pattern=r'std\.ChildProcess\.(?:exec|spawn|run)|std\.process\.exec\s*\(',
+        pattern=r"std\.ChildProcess\.(?:exec|spawn|run)|std\.process\.exec\s*\(",
         remediation="Valide cada elemento do argv contra uma whitelist antes de executar: for (argv) |arg| { if (!isAllowed(arg)) return error.ForbiddenArg; }. Use caminhos absolutos para executáveis e verifique que o arquivo existe e é executável antes de spawnar.",
         cwe="CWE-78",
         owasp="A03:2021",
@@ -60,7 +62,7 @@ ZIG_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.IMPROPER_VALIDATION,
         language=Language.ZIG,
-        pattern=r'@truncate\s*\(',
+        pattern=r"@truncate\s*\(",
         remediation="Verifique que o valor cabe no tipo alvo antes de truncar: if (value > std.math.maxInt(u16)) return error.Overflow; const small = @intCast(u16, value). Use @intCast que causa panic se o valor não cabe, fornecendo proteção automática.",
         cwe="CWE-190",
         confidence=Confidence.LOW,
@@ -72,7 +74,7 @@ ZIG_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.MEMORY_SAFETY,
         language=Language.ZIG,
-        pattern=r'@alignCast\s*\(',
+        pattern=r"@alignCast\s*\(",
         remediation="Verifique o alinhamento antes do cast: std.debug.assert(std.mem.isAligned(@ptrToInt(ptr), @alignOf(T))). Para dados de rede/arquivo que podem não estar alinhados, use std.mem.readIntSliceLittle(T, slice) para leitura segura.",
         cwe="CWE-704",
         confidence=Confidence.LOW,
@@ -84,8 +86,8 @@ ZIG_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.ERROR_HANDLING,
         language=Language.ZIG,
-        pattern=r'\bunreachable\b',
-        remediation="Use @panic(\"mensagem\") para condições que nunca devem ocorrer mas onde você quer um crash controlado em todos os modos de build. Ou use um error return: return error.UnexpectedState. Evite unreachable em caminhos de código que processam input externo.",
+        pattern=r"\bunreachable\b",
+        remediation='Use @panic("mensagem") para condições que nunca devem ocorrer mas onde você quer um crash controlado em todos os modos de build. Ou use um error return: return error.UnexpectedState. Evite unreachable em caminhos de código que processam input externo.',
         cwe="CWE-617",
         confidence=Confidence.LOW,
     ),
@@ -97,7 +99,7 @@ ZIG_RULES: list[Rule] = [
         category=VulnCategory.HARDCODED_SECRETS,
         language=Language.ZIG,
         pattern=r'(?:const|var)\s+\w*(?:password|secret|api_key|token|auth)\w*\s*=\s*["\\\w]+',
-        remediation="Leia credenciais em runtime de variáveis de ambiente: const api_key = std.os.getenv(\"API_KEY\") orelse @panic(\"API_KEY not set\"). Para aplicações embarcadas sem SO, use um bootloader seguro que injeta credenciais em memória protegida.",
+        remediation='Leia credenciais em runtime de variáveis de ambiente: const api_key = std.os.getenv("API_KEY") orelse @panic("API_KEY not set"). Para aplicações embarcadas sem SO, use um bootloader seguro que injeta credenciais em memória protegida.',
         cwe="CWE-798",
         owasp="A02:2021",
         confidence=Confidence.MEDIUM,
