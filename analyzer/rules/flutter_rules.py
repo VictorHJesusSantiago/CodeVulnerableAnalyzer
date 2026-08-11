@@ -1,4 +1,5 @@
 """Regras de segurança para Flutter/Dart — 8 regras (FLUTTER-001..008)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -39,7 +40,7 @@ FLUTTER_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.CRYPTO,
         language=Language.DART,
-        pattern=r'badCertificateCallback\s*(?:=|:)\s*\([^)]*\)\s*(?:=>|{)\s*true',
+        pattern=r"badCertificateCallback\s*(?:=|:)\s*\([^)]*\)\s*(?:=>|{)\s*true",
         remediation="Nunca retorne true em badCertificateCallback. Para desenvolvimento com certificados self-signed, configure o certificado da CA raiz: SecurityContext context = SecurityContext.defaultContext; context.setTrustedCertificatesBytes(certBytes). Para certificate pinning: use http_certificate_pinning ou flutter_ssl_pinning.",
         cwe="CWE-295",
         owasp="A02:2021",
@@ -52,7 +53,7 @@ FLUTTER_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.INFO_DISCLOSURE,
         language=Language.DART,
-        pattern=r'\bprint\s*\([^)]*(?:password|token|secret|key|auth|email|cpf|credit)[^)]*\)',
+        pattern=r"\bprint\s*\([^)]*(?:password|token|secret|key|auth|email|cpf|credit)[^)]*\)",
         remediation="Substitua print() por debugPrint() para logs de desenvolvimento (desabilitado em release). Para logging de produção, use o package logger com levels: final logger = Logger(); logger.d('Debug msg'); logger.e('Error', error: e). Configure para não logar dados sensíveis em produção.",
         cwe="CWE-532",
         owasp="A09:2021",
@@ -66,7 +67,7 @@ FLUTTER_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.INFO_DISCLOSURE,
         language=Language.DART,
-        pattern=r'Platform\.environment',
+        pattern=r"Platform\.environment",
         remediation="Nunca use Platform.environment em código de widget. Para configurações de ambiente, use package:flutter_dotenv ou variáveis de build compiladas (--dart-define): String apiUrl = const String.fromEnvironment('API_URL'). Valores de --dart-define são compilados no binário, não acessíveis via Platform.environment.",
         cwe="CWE-200",
         owasp="A05:2021",
@@ -79,7 +80,7 @@ FLUTTER_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.ERROR_HANDLING,
         language=Language.DART,
-        pattern=r'FlutterError\.onError\s*=\s*(?:null|\([^)]*\)\s*(?:=>|{)\s*(?:\{\}|;|\}))',
+        pattern=r"FlutterError\.onError\s*=\s*(?:null|\([^)]*\)\s*(?:=>|{)\s*(?:\{\}|;|\}))",
         remediation="Não substitua o handler de erros. Para integrações de crash reporting, encadeie handlers: FlutterError.onError = (details) { FirebaseCrashlytics.instance.recordFlutterFatalError(details); FlutterError.presentError(details); }. Use runZonedGuarded para capturar erros assíncronos também.",
         cwe="CWE-390",
         owasp="A05:2021",
@@ -93,7 +94,7 @@ FLUTTER_RULES: list[Rule] = [
         category=VulnCategory.SENSITIVE_DATA,
         language=Language.DART,
         pattern=r"openDatabase\s*\(\s*[^)]*\.db['\"]",
-        negative_pattern=r'sqflite_sqlcipher|encrypt|password',
+        negative_pattern=r"sqflite_sqlcipher|encrypt|password",
         remediation="Use sqflite_sqlcipher ou drift com SQLCipher para criptografar o banco: openEncryptedDatabase(path, password: encryptionKey). Gere a chave de criptografia com flutter_secure_storage vinculada ao biometric do dispositivo. Considere SQLite apenas para dados não sensíveis; use flutter_secure_storage para dados críticos.",
         cwe="CWE-311",
         owasp="A02:2021",
@@ -106,7 +107,7 @@ FLUTTER_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.XSS,
         language=Language.DART,
-        pattern=r'javaScriptMode\s*:\s*JavascriptMode\.unrestricted',
+        pattern=r"javaScriptMode\s*:\s*JavascriptMode\.unrestricted",
         remediation="Use javaScriptMode: JavascriptMode.disabled para conteúdo estático. Para conteúdo dinâmico, valide e sanitize antes de injetar na WebView. Configure allowsInlineMediaPlayback e mediaAutoPlay adequadamente. Use WebViewWidget com flutter_inappwebview e configure ContentBlocker para filtrar scripts indesejados.",
         cwe="CWE-79",
         owasp="A03:2021",
