@@ -9,6 +9,7 @@ o diretório é um repositório). Se o git não estiver instalado ou o
 diretório não for um repositório, falha graciosamente (lista vazia +
 mensagem de erro), sem lançar exceção para o chamador.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -43,23 +44,22 @@ def _is_git_repo(directory: str) -> bool:
     try:
         r = subprocess.run(
             ["git", "-C", directory, "rev-parse", "--is-inside-work-tree"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True,
+            text=True,
+            timeout=10,
         )
         return r.returncode == 0 and r.stdout.strip() == "true"
     except (OSError, subprocess.SubprocessError):
         return False
 
 
-def _run_git_log(directory: str, max_commits: int | None = None,
-                  since: str | None = None) -> str:
-    cmd = ["git", "-C", directory, "log", "-p", "--no-color",
-           "--pretty=format:commit %H%nAuthor: %an <%ae>%nDate: %aI"]
+def _run_git_log(directory: str, max_commits: int | None = None, since: str | None = None) -> str:
+    cmd = ["git", "-C", directory, "log", "-p", "--no-color", "--pretty=format:commit %H%nAuthor: %an <%ae>%nDate: %aI"]
     if max_commits:
         cmd += ["-n", str(max_commits)]
     if since:
         cmd += [f"--since={since}"]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120,
-                             encoding="utf-8", errors="replace")
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"git log falhou: {result.stderr.strip()[:200]}")
     return result.stdout
@@ -80,16 +80,16 @@ def parse_git_log_output(log_text: str) -> list[GitSecretFinding]:
             author = date = "unknown"
             continue
         if raw.startswith("Author: "):
-            author = raw[len("Author: "):]
+            author = raw[len("Author: ") :]
             continue
         if raw.startswith("Date: "):
-            date = raw[len("Date: "):]
+            date = raw[len("Date: ") :]
             continue
         if raw.startswith("+++ b/"):
-            current_file = raw[len("+++ b/"):]
+            current_file = raw[len("+++ b/") :]
             continue
         if raw.startswith("@@"):
-            m = re.search(r'\+(\d+)', raw)
+            m = re.search(r"\+(\d+)", raw)
             line_no = int(m.group(1)) if m else 0
             continue
         if raw.startswith("+") and not raw.startswith("+++"):
@@ -101,12 +101,20 @@ def parse_git_log_output(log_text: str) -> list[GitSecretFinding]:
                     line_no += 1
                     continue
                 seen.add(key)
-                findings.append(GitSecretFinding(
-                    commit=commit[:12], author=author, date=date,
-                    file=current_file, line=line_no, provider=provider,
-                    secret_type=secret_type, matched_preview=matched[:40],
-                    fingerprint=fp, revoke_url=revoke_url,
-                ))
+                findings.append(
+                    GitSecretFinding(
+                        commit=commit[:12],
+                        author=author,
+                        date=date,
+                        file=current_file,
+                        line=line_no,
+                        provider=provider,
+                        secret_type=secret_type,
+                        matched_preview=matched[:40],
+                        fingerprint=fp,
+                        revoke_url=revoke_url,
+                    )
+                )
             line_no += 1
         elif not raw.startswith("-"):
             line_no += 1
@@ -114,15 +122,19 @@ def parse_git_log_output(log_text: str) -> list[GitSecretFinding]:
     return findings
 
 
-def scan_git_history(directory: str, max_commits: int | None = None,
-                      since: str | None = None) -> dict[str, Any]:
+def scan_git_history(directory: str, max_commits: int | None = None, since: str | None = None) -> dict[str, Any]:
     """Varre o histórico git de `directory` procurando segredos introduzidos
     em qualquer commit (não apenas no working tree atual).
 
     Retorna {"ok": bool, "error": str|None, "findings": [...], "commits_scanned": int}.
     """
     if not _git_available():
-        return {"ok": False, "error": "git não está instalado ou não está no PATH", "findings": [], "commits_scanned": 0}
+        return {
+            "ok": False,
+            "error": "git não está instalado ou não está no PATH",
+            "findings": [],
+            "commits_scanned": 0,
+        }
     if not _is_git_repo(directory):
         return {"ok": False, "error": f"'{directory}' não é um repositório git", "findings": [], "commits_scanned": 0}
 
@@ -139,6 +151,7 @@ def scan_git_history(directory: str, max_commits: int | None = None,
 
 # ── Compatibilidade retroativa: análise de um patch já fornecido ─────────────
 
+
 def scan_patch_history(patch_text: str) -> list[dict[str, Any]]:
     """Mantido por compatibilidade: analisa um texto de patch/diff já obtido
     (não invoca git). Útil quando o chamador já tem o patch em mãos (ex.:
@@ -146,9 +159,13 @@ def scan_patch_history(patch_text: str) -> list[dict[str, Any]]:
     findings = parse_git_log_output(patch_text)
     return [
         {
-            "commit": f.commit, "file": f.file, "line": f.line,
-            "provider": f.provider, "secret_type": f.secret_type,
-            "fingerprint": f.fingerprint, "revoke_url": f.revoke_url,
+            "commit": f.commit,
+            "file": f.file,
+            "line": f.line,
+            "provider": f.provider,
+            "secret_type": f.secret_type,
+            "fingerprint": f.fingerprint,
+            "revoke_url": f.revoke_url,
         }
         for f in findings
     ]

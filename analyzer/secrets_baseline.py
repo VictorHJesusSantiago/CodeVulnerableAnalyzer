@@ -10,6 +10,7 @@ Fingerprint = SHA-256 de (arquivo relativo, linha, provedor, valor mascarado)
 — não armazena o segredo em texto plano no baseline, apenas o hash e uma
 versão mascarada para auditoria humana.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -68,15 +69,17 @@ def save_secrets_baseline(path: str, findings: list[dict]) -> None:
     entries = []
     for f in findings:
         fp = fingerprint(f["file_path"], f.get("line_number", 0), f["provider"], f["matched"])
-        entries.append({
-            "fingerprint": fp,
-            "file_path": f["file_path"],
-            "line_number": f.get("line_number", 0),
-            "provider": f["provider"],
-            "secret_type": f["secret_type"],
-            "masked_value": _mask(f["matched"]),
-            "status": "accepted",
-        })
+        entries.append(
+            {
+                "fingerprint": fp,
+                "file_path": f["file_path"],
+                "line_number": f.get("line_number", 0),
+                "provider": f["provider"],
+                "secret_type": f["secret_type"],
+                "masked_value": _mask(f["matched"]),
+                "status": "accepted",
+            }
+        )
     doc = {"version": 1, "secrets": entries}
     Path(path).write_text(json.dumps(doc, indent=2, ensure_ascii=False), encoding="utf-8")
 
