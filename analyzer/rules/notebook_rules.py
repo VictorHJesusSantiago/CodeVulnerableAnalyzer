@@ -1,4 +1,5 @@
 """Regras de segurança para Jupyter Notebooks — 8 regras (NB-001..008)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -12,7 +13,7 @@ NOTEBOOK_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.PYTHON,
-        pattern=r'^\s*!(?:pip install|curl|wget|bash|sh|rm|chmod|chown|sudo|apt|yum)',
+        pattern=r"^\s*!(?:pip install|curl|wget|bash|sh|rm|chmod|chown|sudo|apt|yum)",
         remediation="Substitua '!pip install' por subprocess.check_call([sys.executable, '-m', 'pip', 'install', 'package==version']). Use requirements.txt versionado em vez de instalação dinâmica. Nunca commite notebooks com células shell que baixam ou executam código externo. Configure JupyterHub sem permissões de shell.",
         cwe="CWE-78",
         owasp="A03:2021",
@@ -25,7 +26,7 @@ NOTEBOOK_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.HARDCODED_SECRETS,
         language=Language.PYTHON,
-        pattern=r'(?:print|display)\s*\([^)]*(?:token|password|secret|api_key|connection_string|bearer)[^)]*\)',
+        pattern=r"(?:print|display)\s*\([^)]*(?:token|password|secret|api_key|connection_string|bearer)[^)]*\)",
         remediation="Nunca imprima credenciais em notebooks. Use python-dotenv para carregar de .env (não commitado): from dotenv import load_dotenv; load_dotenv(); api_key = os.getenv('API_KEY'). Configure .gitignore para *.ipynb ou use nbstripout para remover outputs antes de commit: git config filter.nbstripout.clean nbstripout.",
         cwe="CWE-312",
         owasp="A02:2021",
@@ -104,7 +105,7 @@ NOTEBOOK_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.CODE_INJECTION,
         language=Language.PYTHON,
-        pattern=r'\bexec\s*\(\s*(?:input\s*\(|user_|cell_|code_|template\s*\%)',
+        pattern=r"\bexec\s*\(\s*(?:input\s*\(|user_|cell_|code_|template\s*\%)",
         remediation="Nunca use exec() com input externo em notebooks. Para code generation dinâmico, use abordagens seguras: templates com placeholders fixos, AST manipulation com ast.parse() e whitelist de operações permitidas, ou um DSL específico do domínio. Em JupyterHub multi-usuário, exec() é especialmente perigoso.",
         cwe="CWE-94",
         owasp="A03:2021",
