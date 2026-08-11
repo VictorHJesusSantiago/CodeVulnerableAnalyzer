@@ -1,4 +1,5 @@
 """Gerador de SBOM — formato CycloneDX 1.4 JSON ou SPDX 2.3 tag-value."""
+
 from __future__ import annotations
 
 import json
@@ -40,11 +41,14 @@ def _from_requirements(content: str) -> list[Component]:
         m = _REQ_RE.match(line)
         if m:
             name, ver = m.group(1), m.group(2)
-            components.append(Component(
-                name=name, version=ver,
-                purl=_make_purl("pypi", name.lower().replace("-", "_"), ver),
-                package_type="pypi",
-            ))
+            components.append(
+                Component(
+                    name=name,
+                    version=ver,
+                    purl=_make_purl("pypi", name.lower().replace("-", "_"), ver),
+                    package_type="pypi",
+                )
+            )
     return components
 
 
@@ -57,11 +61,14 @@ def _from_package_json(content: str) -> list[Component]:
     for section in ("dependencies", "devDependencies"):
         for name, ver_spec in data.get(section, {}).items():
             ver = re.sub(r"[^0-9.]", "", str(ver_spec)).strip(".") or "0.0.0"
-            components.append(Component(
-                name=name, version=ver,
-                purl=_make_purl("npm", name, ver),
-                package_type="npm",
-            ))
+            components.append(
+                Component(
+                    name=name,
+                    version=ver,
+                    purl=_make_purl("npm", name, ver),
+                    package_type="npm",
+                )
+            )
     return components
 
 
@@ -73,14 +80,17 @@ def _from_pom_xml(content: str) -> list[Component]:
         re.DOTALL,
     )
     for m in dep_re.finditer(content):
-        group   = m.group(1).strip()
+        group = m.group(1).strip()
         artifact = m.group(2).strip()
-        ver     = m.group(3).strip()
-        components.append(Component(
-            name=f"{group}:{artifact}", version=ver,
-            purl=_make_purl("maven", f"{group}/{artifact}", ver),
-            package_type="maven",
-        ))
+        ver = m.group(3).strip()
+        components.append(
+            Component(
+                name=f"{group}:{artifact}",
+                version=ver,
+                purl=_make_purl("maven", f"{group}/{artifact}", ver),
+                package_type="maven",
+            )
+        )
     return components
 
 
@@ -100,11 +110,14 @@ def _from_cargo_toml(content: str) -> list[Component]:
         m = re.match(r'^(\w[\w\-]+)\s*=\s*["\'][\^~>=<\s]*([0-9][0-9.]*)', stripped)
         if m:
             name, ver = m.group(1), m.group(2)
-            components.append(Component(
-                name=name, version=ver,
-                purl=_make_purl("cargo", name, ver),
-                package_type="cargo",
-            ))
+            components.append(
+                Component(
+                    name=name,
+                    version=ver,
+                    purl=_make_purl("cargo", name, ver),
+                    package_type="cargo",
+                )
+            )
     return components
 
 
@@ -114,11 +127,14 @@ def _from_go_mod(content: str) -> list[Component]:
         m = re.match(r"\s*(?:require\s+)?(\S+)\s+v([\d\.]+)", line)
         if m and not line.strip().startswith("//"):
             module, ver = m.group(1), m.group(2)
-            components.append(Component(
-                name=module, version=ver,
-                purl=_make_purl("golang", module, ver),
-                package_type="go",
-            ))
+            components.append(
+                Component(
+                    name=module,
+                    version=ver,
+                    purl=_make_purl("golang", module, ver),
+                    package_type="go",
+                )
+            )
     return components
 
 
@@ -128,27 +144,31 @@ def _from_csproj(content: str) -> list[Component]:
     for m in re.finditer(
         r'<PackageReference\b[^>]*?\bInclude\s*=\s*"([^"]+)"[^>]*?'
         r'(?:\bVersion\s*=\s*"([^"]+)"|/?>(?:\s*<Version>\s*([^<]+)\s*</Version>)?)',
-        content, re.IGNORECASE | re.DOTALL,
+        content,
+        re.IGNORECASE | re.DOTALL,
     ):
         name = m.group(1).strip()
-        ver  = re.sub(r"[^\d.].*$", "", (m.group(2) or m.group(3) or "").strip())
+        ver = re.sub(r"[^\d.].*$", "", (m.group(2) or m.group(3) or "").strip())
         if name and ver:
-            components.append(Component(
-                name=name, version=ver,
-                purl=_make_purl("nuget", name, ver),
-                package_type="nuget",
-            ))
+            components.append(
+                Component(
+                    name=name,
+                    version=ver,
+                    purl=_make_purl("nuget", name, ver),
+                    package_type="nuget",
+                )
+            )
     return components
 
 
 _MANIFEST_MAP = {
-    "requirements.txt":      _from_requirements,
-    "requirements-dev.txt":  _from_requirements,
+    "requirements.txt": _from_requirements,
+    "requirements-dev.txt": _from_requirements,
     "requirements-prod.txt": _from_requirements,
-    "package.json":          _from_package_json,
-    "pom.xml":               _from_pom_xml,
-    "Cargo.toml":            _from_cargo_toml,
-    "go.mod":                _from_go_mod,
+    "package.json": _from_package_json,
+    "pom.xml": _from_pom_xml,
+    "Cargo.toml": _from_cargo_toml,
+    "go.mod": _from_go_mod,
 }
 
 
@@ -179,13 +199,14 @@ def collect_components(directory: str) -> list[Component]:
 
 # ── CycloneDX 1.4 JSON ────────────────────────────────────────────────────────
 
+
 def export_cyclonedx(components: list[Component], output_path: str, project_name: str = "project") -> None:
     now = datetime.now(timezone.utc).isoformat()
     bom = {
-        "bomFormat":    "CycloneDX",
-        "specVersion":  "1.4",
+        "bomFormat": "CycloneDX",
+        "specVersion": "1.4",
         "serialNumber": f"urn:uuid:{uuid.uuid4()}",
-        "version":      1,
+        "version": 1,
         "metadata": {
             "timestamp": now,
             "tools": [{"vendor": "CodeVulnerableAnalyzer", "name": "vulnscan", "version": "1.0.0"}],
@@ -193,11 +214,11 @@ def export_cyclonedx(components: list[Component], output_path: str, project_name
         },
         "components": [
             {
-                "type":    "library",
+                "type": "library",
                 "bom-ref": str(uuid.uuid4()),
-                "name":    c.name,
+                "name": c.name,
                 "version": c.version,
-                "purl":    c.purl,
+                "purl": c.purl,
             }
             for c in components
         ],
@@ -207,8 +228,9 @@ def export_cyclonedx(components: list[Component], output_path: str, project_name
 
 # ── SPDX 2.3 tag-value ────────────────────────────────────────────────────────
 
+
 def export_spdx(components: list[Component], output_path: str, project_name: str = "project") -> None:
-    now   = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     doc_ns = f"https://spdx.org/spdxdocs/{project_name}-{uuid.uuid4()}"
 
     lines: list[str] = [

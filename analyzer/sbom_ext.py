@@ -14,6 +14,7 @@ projeto), que prova apenas que "quem tem esta chave local produziu este
 documento" — útil para uma cadeia de custódia interna, não para verificação
 pública de terceiros.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -36,9 +37,13 @@ _CDX_NS = "http://cyclonedx.org/schema/bom/1.4"
 
 def export_cyclonedx_xml(components: list[Component], output_path: str, project_name: str = "project") -> None:
     ET.register_namespace("", _CDX_NS)
-    bom = ET.Element(f"{{{_CDX_NS}}}bom", attrib={
-        "version": "1", "serialNumber": f"urn:uuid:{secrets.token_hex(16)}",
-    })
+    bom = ET.Element(
+        f"{{{_CDX_NS}}}bom",
+        attrib={
+            "version": "1",
+            "serialNumber": f"urn:uuid:{secrets.token_hex(16)}",
+        },
+    )
     metadata = ET.SubElement(bom, f"{{{_CDX_NS}}}metadata")
     timestamp = ET.SubElement(metadata, f"{{{_CDX_NS}}}timestamp")
     timestamp.text = datetime.now(timezone.utc).isoformat()
@@ -52,8 +57,9 @@ def export_cyclonedx_xml(components: list[Component], output_path: str, project_
 
     components_el = ET.SubElement(bom, f"{{{_CDX_NS}}}components")
     for c in components:
-        comp_el = ET.SubElement(components_el, f"{{{_CDX_NS}}}component",
-                                 attrib={"type": "library", "bom-ref": secrets.token_hex(8)})
+        comp_el = ET.SubElement(
+            components_el, f"{{{_CDX_NS}}}component", attrib={"type": "library", "bom-ref": secrets.token_hex(8)}
+        )
         ET.SubElement(comp_el, f"{{{_CDX_NS}}}name").text = c.name
         ET.SubElement(comp_el, f"{{{_CDX_NS}}}version").text = c.version
         ET.SubElement(comp_el, f"{{{_CDX_NS}}}purl").text = c.purl
@@ -66,6 +72,7 @@ def export_cyclonedx_xml(components: list[Component], output_path: str, project_
 # ════════════════════════════════════════════════════════════════════════════
 #  SPDX 2.3 JSON
 # ════════════════════════════════════════════════════════════════════════════
+
 
 def export_spdx_json(components: list[Component], output_path: str, project_name: str = "project") -> None:
     now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -89,11 +96,13 @@ def export_spdx_json(components: list[Component], output_path: str, project_name
                 "licenseConcluded": c.license_id,
                 "licenseDeclared": c.license_id,
                 "copyrightText": "NOASSERTION",
-                "externalRefs": [{
-                    "referenceCategory": "PACKAGE-MANAGER",
-                    "referenceType": "purl",
-                    "referenceLocator": c.purl,
-                }],
+                "externalRefs": [
+                    {
+                        "referenceCategory": "PACKAGE-MANAGER",
+                        "referenceType": "purl",
+                        "referenceLocator": c.purl,
+                    }
+                ],
             }
             for i, c in enumerate(components)
         ],
@@ -128,10 +137,12 @@ def create_local_attestation(sbom_path: str, signing_key: bytes, predicate_extra
 
     statement = {
         "_type": "https://in-toto.io/Statement/v1",
-        "subject": [{
-            "name": Path(sbom_path).name,
-            "digest": {"sha256": digest},
-        }],
+        "subject": [
+            {
+                "name": Path(sbom_path).name,
+                "digest": {"sha256": digest},
+            }
+        ],
         "predicateType": _PREDICATE_TYPE,
         "predicate": {
             "builder": {"id": "CodeVulnerableAnalyzer/vulnscan@1.0.0"},
