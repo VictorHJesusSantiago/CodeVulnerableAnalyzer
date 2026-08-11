@@ -4,6 +4,7 @@ Interface de linha de comando e API REST para o cofre de segredos (vault.py).
 Senha mestre: lida da variável de ambiente VULNVAULT_PASSWORD; se ausente,
 solicitada interativamente via getpass (não ecoa no terminal).
 """
+
 from __future__ import annotations
 
 import getpass
@@ -16,22 +17,23 @@ from analyzer.vault import SecretVault, VaultError
 try:
     from analyzer.reporter import console
 except Exception:  # fallback mínimo
+
     class _C:
         def print(self, *a, **k):
             print(*[str(x) for x in a])
+
     console = _C()
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────
+
 
 def _master_password(confirm: bool = False, prompt: str = "Senha mestre: ") -> str:
     env = os.environ.get("VULNVAULT_PASSWORD")
     if env:
         return env
     if not sys.stdin.isatty():
-        raise VaultError(
-            "Senha mestre necessária: defina VULNVAULT_PASSWORD ou execute em terminal interativo."
-        )
+        raise VaultError("Senha mestre necessária: defina VULNVAULT_PASSWORD ou execute em terminal interativo.")
     pwd = getpass.getpass(prompt)
     if confirm:
         if pwd != getpass.getpass("Confirme a senha: "):
@@ -40,6 +42,7 @@ def _master_password(confirm: bool = False, prompt: str = "Senha mestre: ") -> s
 
 
 # ── CLI ──────────────────────────────────────────────────────────────────────
+
 
 def run_vault_cli(args) -> int:
     """Despacha as ações de vault da CLI. Retorna o código de saída."""
@@ -52,7 +55,7 @@ def run_vault_cli(args) -> int:
             return 0
 
         if args.vault_set:
-            pwd   = _master_password()
+            pwd = _master_password()
             vault = SecretVault.open(path, pwd)
             value = args.vault_value
             if value is None:
@@ -66,14 +69,14 @@ def run_vault_cli(args) -> int:
             return 0
 
         if args.vault_get:
-            pwd   = _master_password()
+            pwd = _master_password()
             vault = SecretVault.open(path, pwd)
             # Valor puro no stdout (para uso em scripts/pipes)
             sys.stdout.write(vault.get_secret(args.vault_get) + "\n")
             return 0
 
         if args.vault_list:
-            pwd   = _master_password()
+            pwd = _master_password()
             vault = SecretVault.open(path, pwd)
             names = vault.list_secrets()
             if not names:
@@ -85,7 +88,7 @@ def run_vault_cli(args) -> int:
             return 0
 
         if args.vault_delete:
-            pwd   = _master_password()
+            pwd = _master_password()
             vault = SecretVault.open(path, pwd)
             vault.delete_secret(args.vault_delete)
             vault.save()
@@ -93,11 +96,13 @@ def run_vault_cli(args) -> int:
             return 0
 
         if args.vault_passwd:
-            pwd   = _master_password(prompt="Senha mestre atual: ")
+            pwd = _master_password(prompt="Senha mestre atual: ")
             vault = SecretVault.open(path, pwd)
-            new   = _master_password(confirm=True, prompt="Nova senha mestre: ") \
-                    if not os.environ.get("VULNVAULT_NEW_PASSWORD") \
-                    else os.environ["VULNVAULT_NEW_PASSWORD"]
+            new = (
+                _master_password(confirm=True, prompt="Nova senha mestre: ")
+                if not os.environ.get("VULNVAULT_NEW_PASSWORD")
+                else os.environ["VULNVAULT_NEW_PASSWORD"]
+            )
             vault.change_password(new)
             vault.save()
             console.print("[bold bright_green]✔[/] Senha mestre alterada.")
@@ -119,6 +124,7 @@ def run_vault_cli(args) -> int:
 
 
 # ── API REST ───────────────────────────────────────────────────────────────
+
 
 def run_vault_server(path: str, port: int) -> int:
     """
@@ -164,6 +170,7 @@ def run_vault_server(path: str, port: int) -> int:
 
         def _authed(self) -> bool:
             import hmac as _hmac
+
             token = self.headers.get("X-Vault-Token", "")
             return _hmac.compare_digest(token, master)
 
@@ -171,6 +178,7 @@ def run_vault_server(path: str, port: int) -> int:
             parts = self.path.strip("/").split("/")
             if len(parts) == 2 and parts[0] == "secrets":
                 from urllib.parse import unquote
+
                 return unquote(parts[1])
             return None
 
@@ -206,7 +214,7 @@ def run_vault_server(path: str, port: int) -> int:
                 body = json.loads(self.rfile.read(length) or b"{}")
                 value = body["value"]
             except Exception:
-                self._send(400, {"error": "Corpo JSON inválido; esperado {\"value\": ...}"})
+                self._send(400, {"error": 'Corpo JSON inválido; esperado {"value": ...}'})
                 return
             vault.set_secret(name, str(value))
             vault.save()
