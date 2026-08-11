@@ -1,4 +1,5 @@
 """Regras de segurança para Perl — 10 regras (PERL-001..010)."""
+
 from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
@@ -49,7 +50,7 @@ PERL_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.PERL,
-        pattern=r'`[^`]*\$\{?[a-zA-Z_]|\bqx\s*(?:\{|\[|\(|\|)\s*[^)}\]|]*\$',
+        pattern=r"`[^`]*\$\{?[a-zA-Z_]|\bqx\s*(?:\{|\[|\(|\|)\s*[^)}\]|]*\$",
         remediation="Substitua backticks por IPC::Open3 ou IPC::Run com listas de argumentos: use IPC::Run qw(run capture); my $out = capture(['git', 'log', '--oneline', $branch]). Nunca interpole variáveis externas em backticks.",
         cwe="CWE-78",
         owasp="A03:2021",
@@ -58,7 +59,7 @@ PERL_RULES: list[Rule] = [
     Rule(
         id="PERL-005",
         name="Injeção de Shell via open() com Pipe",
-        description="open(FH, \"| $cmd\") ou open(FH, \"$cmd |\") passa o argumento ao shell. Se $cmd contém input do usuário, permite injeção de comandos. O modo pipe de open() é uma armadilha clássica em CGI Perl que passou despercebida por anos.",
+        description='open(FH, "| $cmd") ou open(FH, "$cmd |") passa o argumento ao shell. Se $cmd contém input do usuário, permite injeção de comandos. O modo pipe de open() é uma armadilha clássica em CGI Perl que passou despercebida por anos.',
         severity=Severity.CRITICAL,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.PERL,
@@ -75,7 +76,7 @@ PERL_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.CODE_QUALITY,
         language=Language.PERL,
-        pattern=r'\bno\s+(?:strict|warnings)\b',
+        pattern=r"\bno\s+(?:strict|warnings)\b",
         remediation="Mantenha 'use strict; use warnings;' em todos os scripts Perl. Se uma operação específica requer desabilitar brevemente, use um escopo: { no strict 'refs'; $ref->() }. Use perlcritic para enforçar políticas de qualidade.",
         cwe="CWE-1109",
         confidence=Confidence.MEDIUM,
@@ -83,7 +84,7 @@ PERL_RULES: list[Rule] = [
     Rule(
         id="PERL-007",
         name="Injeção SQL via DBI com Concatenação de String",
-        description="$dbh->do(\"SELECT * FROM users WHERE name = '\" . $input . \"'\") ou $dbh->prepare() com interpolação de variáveis é SQL injection clássico. O módulo DBI do Perl tem suporte nativo a prepared statements, mas é frequentemente usado de forma insegura.",
+        description='$dbh->do("SELECT * FROM users WHERE name = \'" . $input . "\'") ou $dbh->prepare() com interpolação de variáveis é SQL injection clássico. O módulo DBI do Perl tem suporte nativo a prepared statements, mas é frequentemente usado de forma insegura.',
         severity=Severity.CRITICAL,
         category=VulnCategory.SQL_INJECTION,
         language=Language.PERL,
@@ -100,7 +101,7 @@ PERL_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.INSECURE_DESER,
         language=Language.PERL,
-        pattern=r'\bStorable\s*::\s*thaw\s*\(|\bthaw\s*\(\s*\$',
+        pattern=r"\bStorable\s*::\s*thaw\s*\(|\bthaw\s*\(\s*\$",
         remediation="Nunca desserialize dados Storable vindos de fontes externas. Use JSON (JSON::XS), YAML::XS ou MessagePack para dados que cruzam fronteiras de confiança. Para cache local, assine os dados com HMAC antes de armazenar: $sig = hmac_sha256_hex($data, $secret_key).",
         cwe="CWE-502",
         owasp="A08:2021",
@@ -113,7 +114,7 @@ PERL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.CRYPTO,
         language=Language.PERL,
-        pattern=r'Digest::MD5|Digest::SHA\s*->new\s*\(\s*1\s*\)',
+        pattern=r"Digest::MD5|Digest::SHA\s*->new\s*\(\s*1\s*\)",
         remediation="Para senhas: use Crypt::Bcrypt ou Crypt::Argon2: Crypt::Bcrypt::bcrypt_check($password, $hash). Para checksums: use Digest::SHA->new(256)->hexdigest($data) no mínimo. Migre hashes MD5 legados com re-hash no próximo login do usuário.",
         cwe="CWE-327",
         owasp="A02:2021",
@@ -126,7 +127,7 @@ PERL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.XSS,
         language=Language.PERL,
-        pattern=r'\$q(?:uery)?\s*->\s*param\s*\([^)]+\)[^;]*(?:print|say)',
+        pattern=r"\$q(?:uery)?\s*->\s*param\s*\([^)]+\)[^;]*(?:print|say)",
         remediation="Escape HTML antes de imprimir: use HTML::Escape qw(escape_html); print escape_html($query->param('name')). Para templates, use Template::Toolkit com sua diretiva FILTER html. Adote um framework moderno como Catalyst ou Mojolicious com auto-escape.",
         cwe="CWE-79",
         owasp="A03:2021",
