@@ -1,4 +1,5 @@
 """Regras de segurança para GitLab CI/CD — 9 regras (GLCI-001..009)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -12,7 +13,7 @@ GITLAB_CI_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.YAML,
-        pattern=r'allow_failure\s*:\s*true',
+        pattern=r"allow_failure\s*:\s*true",
         remediation="Remova 'allow_failure: true' de jobs de segurança. Se você precisa introduzir scanning gradualmente, use 'rules:' com conditions baseadas em branch: allow_failure: $CI_COMMIT_BRANCH == 'feature'. Configure severity thresholds nos scanners para não bloquear em low severity.",
         cwe="CWE-390",
         owasp="A05:2021",
@@ -52,7 +53,7 @@ GITLAB_CI_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.YAML,
-        pattern=r'privileged\s*:\s*true',
+        pattern=r"privileged\s*:\s*true",
         remediation="Use alternativas ao modo privilegiado: Docker-in-Docker com socket binding (mais arriscado) ou Kaniko para build de imagens sem privilégios. Para runners de build, use runners com executor 'shell' ou 'kubernetes' em vez de 'docker' privilegiado. Configure runners específicos para jobs que precisam de privilégios.",
         cwe="CWE-250",
         owasp="A05:2021",
@@ -92,7 +93,7 @@ GITLAB_CI_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.YAML,
-        pattern=r'cache\s*:\s*\n(?!\s+key\s*:)',
+        pattern=r"cache\s*:\s*\n(?!\s+key\s*:)",
         remediation="Sempre use key explícita: cache: { key: '$CI_COMMIT_REF_SLUG-node-modules', paths: [node_modules/] }. Para isolamento máximo, use '$CI_COMMIT_SHA' como parte da key. Configure 'policy: pull' em jobs que não devem atualizar o cache. Use GitLab Secure Files para artefatos sensíveis.",
         cwe="CWE-284",
         owasp="A01:2021",
@@ -105,7 +106,7 @@ GITLAB_CI_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.YAML,
-        pattern=r'when\s*:\s*always',
+        pattern=r"when\s*:\s*always",
         remediation="Use 'when: on_success' (padrão) para jobs de deploy. Se você precisa limpar recursos após falha, use 'when: always' apenas para cleanup jobs com 'environment: action: stop'. Configure 'needs:' explícito para garantir que jobs de segurança são pré-requisito dos jobs de deploy.",
         cwe="CWE-390",
         owasp="A05:2021",
@@ -118,7 +119,7 @@ GITLAB_CI_RULES: list[Rule] = [
         severity=Severity.LOW,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.YAML,
-        pattern=r'retry\s*:\s*(?:[2-9]|\d{2,})',
+        pattern=r"retry\s*:\s*(?:[2-9]|\d{2,})",
         remediation="Não use retry em jobs de security scanning. Se um scanner falha intermitentemente, investigue e corrija a causa raiz. Use 'retry: { max: 1, when: runner_system_failure }' apenas para lidar com falhas de infraestrutura, não de lógica do scanner.",
         cwe="CWE-390",
         confidence=Confidence.LOW,
