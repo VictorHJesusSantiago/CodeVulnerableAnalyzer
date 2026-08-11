@@ -1,4 +1,5 @@
 """Regras de segurança para T-SQL Stored Procedures — 9 regras (TSQLP-001..009)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -12,7 +13,7 @@ TSQL_PROC_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.SQL_INJECTION,
         language=Language.TSQL,
-        pattern=r'EXEC(?:UTE)?\s*\(\s*@\w+',
+        pattern=r"EXEC(?:UTE)?\s*\(\s*@\w+",
         remediation="Use sp_executesql com parâmetros: EXEC sp_executesql @sql, N'@id INT', @id = @InputId. Defina a query como template: SET @sql = N'SELECT * FROM Orders WHERE Id = @id'. Nunca concatene input do usuário na string SQL. Use QUOTENAME() para nomes de objetos dinâmicos.",
         cwe="CWE-89",
         owasp="A03:2021",
@@ -25,7 +26,7 @@ TSQL_PROC_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.TSQL,
-        pattern=r'\bxp_cmdshell\b',
+        pattern=r"\bxp_cmdshell\b",
         remediation="Desabilite xp_cmdshell: EXEC sp_configure 'xp_cmdshell', 0; RECONFIGURE; Para operações que precisam do OS (mover arquivos, executar scripts), use SQL Server Agent jobs com contas de serviço dedicadas e auditadas. Considere SQLCLR apenas se xp_cmdshell for absolutamente necessário.",
         cwe="CWE-78",
         owasp="A03:2021",
@@ -38,7 +39,7 @@ TSQL_PROC_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.TSQL,
-        pattern=r'\bsp_OA(?:Create|Method|GetProperty|SetProperty|Stop|Destroy)\b',
+        pattern=r"\bsp_OA(?:Create|Method|GetProperty|SetProperty|Stop|Destroy)\b",
         remediation="Desabilite OLE Automation: EXEC sp_configure 'Ole Automation Procedures', 0; RECONFIGURE; Para operações que precisavam de sp_OA (ex: HTTP calls), use SQLCLR com código .NET controlado, SQL Server Integration Services (SSIS), ou serviços externos. Monitore com triggers de DDL.",
         cwe="CWE-78",
         owasp="A03:2021",
@@ -52,7 +53,7 @@ TSQL_PROC_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.TSQL,
-        pattern=r'\bOPEN(?:ROWSET|DATASOURCE)\s*\(',
+        pattern=r"\bOPEN(?:ROWSET|DATASOURCE)\s*\(",
         remediation="Desabilite OPENROWSET: EXEC sp_configure 'Ad Hoc Distributed Queries', 0; RECONFIGURE; Para acesso a fontes externas legítimas, use Linked Servers configurados pelo DBA com credenciais mínimas e monitore via SQL Server Audit. Revogue permissão de ad hoc queries para usuários de aplicação.",
         cwe="CWE-918",
         owasp="A10:2021",
@@ -94,7 +95,7 @@ TSQL_PROC_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.ERROR_HANDLING,
         language=Language.TSQL,
-        pattern=r'BEGIN\s+CATCH\s*\n\s*(?:--[^\n]*\n\s*)*END\s+CATCH',
+        pattern=r"BEGIN\s+CATCH\s*\n\s*(?:--[^\n]*\n\s*)*END\s+CATCH",
         remediation="Sempre re-lance ou logue erros no CATCH: BEGIN CATCH; DECLARE @msg NVARCHAR(MAX) = ERROR_MESSAGE(); INSERT INTO ErrorLog(Message, ProcedureName, LineNumber) VALUES(@msg, ERROR_PROCEDURE(), ERROR_LINE()); THROW; END CATCH. Use THROW sem parâmetros para re-lançar o erro original com contexto.",
         cwe="CWE-390",
         owasp="A05:2021",
@@ -122,8 +123,8 @@ TSQL_PROC_RULES: list[Rule] = [
         severity=Severity.LOW,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.TSQL,
-        pattern=r'DECLARE\s+\w+\s+CURSOR\s+FOR',
-        negative_pattern=r'FAST_FORWARD|READ_ONLY|STATIC',
+        pattern=r"DECLARE\s+\w+\s+CURSOR\s+FOR",
+        negative_pattern=r"FAST_FORWARD|READ_ONLY|STATIC",
         remediation="Use cursores somente-leitura quando não for necessário atualizar: DECLARE cur CURSOR FAST_FORWARD FOR SELECT ... Para performance e segurança, prefira operações set-based (SELECT, UPDATE com WHERE) em vez de cursores. Se atualização for necessária, use CURSOR FORWARD_ONLY UPDATE OF col1.",
         cwe="CWE-269",
         confidence=Confidence.LOW,
