@@ -1,4 +1,5 @@
 """Regras de segurança para a linguagem R."""
+
 from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
@@ -10,7 +11,7 @@ R_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.CODE_INJECTION,
         language=Language.R,
-        pattern=r'\beval\s*\(\s*parse\s*\(',
+        pattern=r"\beval\s*\(\s*parse\s*\(",
         remediation="Evite eval/parse completamente. Use match.arg() para parâmetros de opções limitadas. Use funções específicas em vez de código dinâmico.",
         cwe="CWE-94",
         owasp="A03:2021",
@@ -23,7 +24,7 @@ R_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.R,
-        pattern=r'\bsystem(?:2)?\s*\(',
+        pattern=r"\bsystem(?:2)?\s*\(",
         remediation="Evite system() com dados externos. Valide e sanitize rigorosamente qualquer input. Use funções R nativas em vez de comandos shell quando possível.",
         cwe="CWE-78",
         owasp="A03:2021",
@@ -37,7 +38,7 @@ R_RULES: list[Rule] = [
         category=VulnCategory.HARDCODED_SECRETS,
         language=Language.R,
         pattern=r'(?:password|passwd|secret|api_key|token|apikey)\s*(?:<-|=)\s*["\'][^"\']{6,}["\']',
-        remediation="Use Sys.getenv(\"DB_PASSWORD\") para credenciais via variável de ambiente. Use o pacote keyring para armazenamento seguro local. Nunca commite credenciais.",
+        remediation='Use Sys.getenv("DB_PASSWORD") para credenciais via variável de ambiente. Use o pacote keyring para armazenamento seguro local. Nunca commite credenciais.',
         cwe="CWE-798",
         owasp="A02:2021",
         confidence=Confidence.HIGH,
@@ -49,7 +50,7 @@ R_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_AUTH,
         language=Language.R,
-        pattern=r'ssl_verifypeer\s*=\s*FALSE|ssl\.verifypeer\s*=\s*FALSE|verify\s*=\s*FALSE',
+        pattern=r"ssl_verifypeer\s*=\s*FALSE|ssl\.verifypeer\s*=\s*FALSE|verify\s*=\s*FALSE",
         remediation="Remova essas opções em produção. Configure certificados CA corretamente. Para servidores com certificados auto-assinados, instale o certificado raiz adequado.",
         cwe="CWE-295",
         confidence=Confidence.HIGH,
@@ -61,7 +62,7 @@ R_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.ERROR_HANDLING,
         language=Language.R,
-        pattern=r'options\s*\(\s*warn\s*=\s*-1\s*\)',
+        pattern=r"options\s*\(\s*warn\s*=\s*-1\s*\)",
         remediation="Trate warnings específicos com tryCatch ou withCallingHandlers. Nunca suprima warnings globalmente em produção.",
         cwe="CWE-390",
         confidence=Confidence.HIGH,
@@ -73,7 +74,7 @@ R_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.INSECURE_DESER,
         language=Language.R,
-        pattern=r'\b(?:readRDS|load)\s*\(\s*(?:file\s*=\s*)?(?:input|upload|request|params)',
+        pattern=r"\b(?:readRDS|load)\s*\(\s*(?:file\s*=\s*)?(?:input|upload|request|params)",
         remediation="Nunca desserialize objetos RDS de fontes não confiáveis. Para dados externos, use formatos estruturados (CSV, JSON) com validação de schema.",
         cwe="CWE-502",
         confidence=Confidence.HIGH,
@@ -85,7 +86,7 @@ R_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.INFO_DISCLOSURE,
         language=Language.R,
-        pattern=r'(?:print|cat)\s*\([^)]*(?:password|token|secret|key|credential)',
+        pattern=r"(?:print|cat)\s*\([^)]*(?:password|token|secret|key|credential)",
         remediation="Remova outputs com dados sensíveis. Use logging framework com níveis (logger::log_debug em vez de print). Configure níveis de log por ambiente.",
         cwe="CWE-532",
         confidence=Confidence.HIGH,
