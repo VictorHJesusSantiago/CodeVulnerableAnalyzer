@@ -1,4 +1,5 @@
 """Regras de segurança para PostgreSQL DDL — 9 regras (PGDDL-001..009)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -12,7 +13,7 @@ PG_DDL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.SQL,
-        pattern=r'GRANT\s+ALL\s+(?:PRIVILEGES\s+)?ON\s+',
+        pattern=r"GRANT\s+ALL\s+(?:PRIVILEGES\s+)?ON\s+",
         remediation="Substitua GRANT ALL por permissões específicas: GRANT SELECT, INSERT, UPDATE ON TABLE users TO app_role; GRANT SELECT ON TABLE audit_log TO readonly_role. Crie roles separados por função: app_user (DML), app_reader (SELECT), migration_user (DDL). Use REVOKE para remover permissões não necessárias.",
         cwe="CWE-269",
         owasp="A01:2021",
@@ -25,8 +26,8 @@ PG_DDL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.SQL,
-        pattern=r'CREATE\s+TABLE\s+\w*(?:user|customer|person|client|employee|patient)\w*\s*\(',
-        negative_pattern=r'ENABLE ROW LEVEL SECURITY|ROW LEVEL SECURITY',
+        pattern=r"CREATE\s+TABLE\s+\w*(?:user|customer|person|client|employee|patient)\w*\s*\(",
+        negative_pattern=r"ENABLE ROW LEVEL SECURITY|ROW LEVEL SECURITY",
         remediation="Habilite RLS: ALTER TABLE users ENABLE ROW LEVEL SECURITY; ALTER TABLE users FORCE ROW LEVEL SECURITY; CREATE POLICY tenant_isolation ON users USING (tenant_id = current_setting('app.tenant_id')::UUID). Configure SET app.tenant_id no início de cada transação de aplicação.",
         cwe="CWE-284",
         owasp="A01:2021",
@@ -53,7 +54,7 @@ PG_DDL_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.SQL,
-        pattern=r'CREATE\s+(?:USER|ROLE)\s+\w+.*SUPERUSER|ALTER\s+(?:USER|ROLE)\s+\w+.*SUPERUSER',
+        pattern=r"CREATE\s+(?:USER|ROLE)\s+\w+.*SUPERUSER|ALTER\s+(?:USER|ROLE)\s+\w+.*SUPERUSER",
         remediation="Evite SUPERUSER em roles de aplicação. Para tarefas específicas, use: CREATEROLE para gerenciar roles, CREATEDB para criar bancos, pg_monitor para monitoramento. Para migrações, use role com permissões DDL específicas. Reserve SUPERUSER para DBA humanos com MFA.",
         cwe="CWE-269",
         owasp="A01:2021",
@@ -81,7 +82,7 @@ PG_DDL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.SQL,
-        pattern=r'GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+[^;]+\s+TO\s+PUBLIC',
+        pattern=r"GRANT\s+EXECUTE\s+ON\s+FUNCTION\s+[^;]+\s+TO\s+PUBLIC",
         remediation="Revogue execute de PUBLIC e conceda a roles específicos: REVOKE EXECUTE ON FUNCTION sensitive_func() FROM PUBLIC; GRANT EXECUTE ON FUNCTION sensitive_func() TO app_role. Para funções utilitárias genuinamente públicas, adicione validação de input e limite de rate via pg_rate_limit.",
         cwe="CWE-269",
         owasp="A01:2021",
@@ -95,7 +96,7 @@ PG_DDL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.SQL,
-        pattern=r'CREATE\s+EXTENSION\s+(?:IF\s+NOT\s+EXISTS\s+)?dblink',
+        pattern=r"CREATE\s+EXTENSION\s+(?:IF\s+NOT\s+EXISTS\s+)?dblink",
         remediation="Evite dblink. Use Foreign Data Wrappers (FDW) com controle de acesso por role e auditoria: CREATE FOREIGN TABLE com SERVER configurado com credenciais mínimas. Se dblink for necessário, conceda apenas para roles específicos e monitore via log_statement = 'all'.",
         cwe="CWE-284",
         owasp="A01:2021",
@@ -109,7 +110,7 @@ PG_DDL_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.SENSITIVE_DATA,
         language=Language.SQL,
-        pattern=r'CREATE\s+(?:UNIQUE\s+)?INDEX\s+\w+\s+ON\s+\w+\s*\([^)]*(?:password|passwd|secret|token|hash|ssn|credit_card)[^)]*\)',
+        pattern=r"CREATE\s+(?:UNIQUE\s+)?INDEX\s+\w+\s+ON\s+\w+\s*\([^)]*(?:password|passwd|secret|token|hash|ssn|credit_card)[^)]*\)",
         remediation="Não crie índices em colunas de senha ou hash de senha — queries de lookup de usuário devem usar o campo de username (com índice) para localizar o registro e então comparar o hash em memória. Para tokens de sessão, indexe um hash do token (SHA-256) para lookup mas nunca o token em si.",
         cwe="CWE-312",
         owasp="A02:2021",
