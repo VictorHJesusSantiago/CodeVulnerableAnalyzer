@@ -3,7 +3,9 @@ Testes da construção real de SSA (dominadores, fronteira de dominância,
 φ-nodes) e da análise de definite assignment em analyzer/ssa.py, além da
 integração no pyast_engine (regra AST-SSA-001).
 """
+
 from __future__ import annotations
+
 import ast
 import sys
 from pathlib import Path
@@ -11,7 +13,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from analyzer.pyast_engine import CFG
-from analyzer.ssa import compute_dominators, compute_dominance_frontier, place_phi_nodes, build_ssa, definite_assignment
+from analyzer.ssa import build_ssa, compute_dominators, definite_assignment
 
 
 def _cfg_from(code: str) -> CFG:
@@ -67,8 +69,10 @@ def test_definite_assignment_params_are_certain_from_entry():
 
 # ── Integração com pyast_engine (regra AST-SSA-001) ─────────────────────────
 
+
 def test_ast_ssa_rule_flags_real_bug():
     from analyzer.pyast_engine import analyze_python_ast
+
     code = "def f(cond):\n    if cond:\n        x = 1\n    return x\n"
     vulns = analyze_python_ast("t.py", code)
     assert any(v.rule_id == "AST-SSA-001" for v in vulns)
@@ -76,6 +80,7 @@ def test_ast_ssa_rule_flags_real_bug():
 
 def test_ast_ssa_rule_no_false_positive_with_else():
     from analyzer.pyast_engine import analyze_python_ast
+
     code = "def f(cond):\n    if cond:\n        x = 1\n    else:\n        x = 2\n    return x\n"
     vulns = analyze_python_ast("t.py", code)
     assert not any(v.rule_id == "AST-SSA-001" for v in vulns)
@@ -83,6 +88,7 @@ def test_ast_ssa_rule_no_false_positive_with_else():
 
 def test_ast_ssa_rule_no_false_positive_on_import():
     from analyzer.pyast_engine import analyze_python_ast
+
     code = "import os\ndef f():\n    return os.getcwd()\n"
     vulns = analyze_python_ast("t.py", code)
     assert not any(v.rule_id == "AST-SSA-001" for v in vulns)
