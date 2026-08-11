@@ -1,4 +1,5 @@
 """Regras de segurança para PL/SQL (Oracle) — 9 regras (PLSQLP-001..009)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -26,7 +27,7 @@ PLSQL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.PLSQL,
-        pattern=r'\bUTL_FILE\s*\.\s*(?:FOPEN|GET_LINE|PUT|PUT_LINE|NEW_LINE|FCLOSE)',
+        pattern=r"\bUTL_FILE\s*\.\s*(?:FOPEN|GET_LINE|PUT|PUT_LINE|NEW_LINE|FCLOSE)",
         remediation="Restrinja UTL_FILE a Oracle Directory Objects com caminhos fixos e pre-aprovados: GRANT READ ON DIRECTORY safe_export_dir TO limited_user. Audite uso: SELECT * FROM DBA_AUDIT_OBJECT WHERE OBJECT_NAME='UTL_FILE'. Prefira External Tables para importação de dados com controle de acesso por objeto.",
         cwe="CWE-73",
         owasp="A01:2021",
@@ -39,7 +40,7 @@ PLSQL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.PLSQL,
-        pattern=r'\bUTL_HTTP\s*\.\s*(?:REQUEST|BEGIN_REQUEST|GET_RESPONSE|READ_TEXT)',
+        pattern=r"\bUTL_HTTP\s*\.\s*(?:REQUEST|BEGIN_REQUEST|GET_RESPONSE|READ_TEXT)",
         remediation="Controle acesso a UTL_HTTP via Oracle Network ACLs: DBMS_NETWORK_ACL_ADMIN.CREATE_ACL('allow_api.xml', 'Allow API', 'app_user', TRUE, 'connect', null, 'host'). Configure ACLs para permitir apenas URLs específicas. Prefira chamar APIs externas da camada de aplicação, não do banco de dados.",
         cwe="CWE-918",
         owasp="A10:2021",
@@ -53,7 +54,7 @@ PLSQL_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.PLSQL,
-        pattern=r'AUTHID\s+CURRENT_USER',
+        pattern=r"AUTHID\s+CURRENT_USER",
         remediation="Adicione verificação de privilege: IF NOT DBMS_SESSION.IS_ROLE_ENABLED('APP_ADMIN_ROLE') THEN RAISE_APPLICATION_ERROR(-20001, 'Access denied'); END IF. Para procedures que precisam de AUTHID CURRENT_USER (ex: para RLS baseada em usuário), documente explicitamente e audite regularmente.",
         cwe="CWE-284",
         owasp="A01:2021",
@@ -81,7 +82,7 @@ PLSQL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.CODE_INJECTION,
         language=Language.PLSQL,
-        pattern=r'DBMS_SCHEDULER\s*\.\s*CREATE_JOB[^;]+job_action\s*=>\s*[^,)]+\|\|',
+        pattern=r"DBMS_SCHEDULER\s*\.\s*CREATE_JOB[^;]+job_action\s*=>\s*[^,)]+\|\|",
         remediation="Nunca construa job_action por concatenação. Use templates fixos: DBMS_SCHEDULER.CREATE_JOB(job_name=>'FIXED_JOB', job_type=>'STORED_PROCEDURE', job_action=>'pkg.safe_procedure', enabled=>TRUE). Para parâmetros variáveis, use DBMS_SCHEDULER.SET_JOB_ARGUMENT_VALUE após criar o job.",
         cwe="CWE-94",
         owasp="A03:2021",
@@ -95,7 +96,7 @@ PLSQL_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.PLSQL,
-        pattern=r'FROM\s+DBA_(?:USERS|TABLES|OBJECTS|SOURCE|COLUMNS|INDEXES|TRIGGERS|PROCEDURES)',
+        pattern=r"FROM\s+DBA_(?:USERS|TABLES|OBJECTS|SOURCE|COLUMNS|INDEXES|TRIGGERS|PROCEDURES)",
         remediation="Use USER_ views (contexto do schema atual) ou ALL_ views (objetos acessíveis): FROM USER_TABLES em vez de DBA_TABLES. Para auditoria, use dbms_metadata.get_ddl() com permissões mínimas. Se DBA_ views são necessárias, crie uma procedure em schema dedicado com AUTHID DEFINER.",
         cwe="CWE-284",
         owasp="A01:2021",
@@ -109,7 +110,7 @@ PLSQL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.ERROR_HANDLING,
         language=Language.PLSQL,
-        pattern=r'EXCEPTION\s+WHEN\s+OTHERS\s+THEN\s+(?:NULL\s*;|RETURN\s*;)',
+        pattern=r"EXCEPTION\s+WHEN\s+OTHERS\s+THEN\s+(?:NULL\s*;|RETURN\s*;)",
         remediation="Sempre logue e trate o erro: EXCEPTION WHEN OTHERS THEN INSERT INTO app_error_log(msg, stack) VALUES(SQLERRM, DBMS_UTILITY.FORMAT_ERROR_BACKTRACE); RAISE; Para erros esperados, capture exceções específicas: EXCEPTION WHEN NO_DATA_FOUND THEN ... WHEN DUP_VAL_ON_INDEX THEN ...",
         cwe="CWE-390",
         owasp="A05:2021",
