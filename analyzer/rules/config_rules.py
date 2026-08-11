@@ -2,6 +2,7 @@
 Regras de segurança para arquivos de configuração: YAML, TOML, INI, JSON, .env.
 Detecta credenciais, chaves e configurações inseguras hardcoded em config files.
 """
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -44,7 +45,7 @@ CONFIG_RULES: list[Rule] = [
         category=VulnCategory.HARDCODED_SECRETS,
         language=Language.TOML,
         pattern=r'(?:password|passwd|secret|api_key|token)\s*=\s*["\'][^"\'${}]{6,}["\']',
-        remediation="Use variáveis de ambiente referenciadas no TOML: password = \"${DB_PASSWORD}\". Ou configure via arquivo separado não versionado.",
+        remediation='Use variáveis de ambiente referenciadas no TOML: password = "${DB_PASSWORD}". Ou configure via arquivo separado não versionado.',
         cwe="CWE-798",
         owasp="A02:2021",
         confidence=Confidence.HIGH,
@@ -57,7 +58,7 @@ CONFIG_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.HARDCODED_SECRETS,
         language=Language.INI,
-        pattern=r'(?:password|passwd|secret|api_key|apikey|token|private_key)\s*=\s*(?!\$)[^\s\n]{4,}',
+        pattern=r"(?:password|passwd|secret|api_key|apikey|token|private_key)\s*=\s*(?!\$)[^\s\n]{4,}",
         remediation="Adicione .env ao .gitignore imediatamente. Use .env.example com valores fictícios para documentar variáveis necessárias. Verifique histórico git e rotacione credenciais expostas.",
         cwe="CWE-798",
         owasp="A02:2021",
@@ -85,7 +86,7 @@ CONFIG_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.YAML,
-        pattern=r'(?:debug|DEBUG)\s*:\s*(?:true|True|1|yes|YES)',
+        pattern=r"(?:debug|DEBUG)\s*:\s*(?:true|True|1|yes|YES)",
         remediation="Defina debug: false em configurações de produção. Use variáveis de ambiente para controlar o modo: DEBUG=${APP_DEBUG:-false}",
         cwe="CWE-94",
         owasp="A05:2021",
@@ -98,7 +99,7 @@ CONFIG_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.HARDCODED_SECRETS,
         language=Language.GENERIC,
-        pattern=r'-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----|-----BEGIN\s+EC\s+PRIVATE',
+        pattern=r"-----BEGIN\s+(?:RSA\s+)?PRIVATE\s+KEY-----|-----BEGIN\s+EC\s+PRIVATE",
         remediation="Remova IMEDIATAMENTE a chave do repositório. Gere uma nova chave. Revogue a chave comprometida. Use git-secrets ou pre-commit hooks para prevenir commits de chaves.",
         cwe="CWE-312",
         owasp="A02:2021",
@@ -111,7 +112,7 @@ CONFIG_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.HARDCODED_SECRETS,
         language=Language.GENERIC,
-        pattern=r'(?:postgresql|mysql|mongodb|redis|mssql|oracle)\s*://[^:@/\s]+:[^@\s]{3,}@',
+        pattern=r"(?:postgresql|mysql|mongodb|redis|mssql|oracle)\s*://[^:@/\s]+:[^@\s]{3,}@",
         remediation="Use URLs sem credenciais e configure autenticação separadamente via variáveis de ambiente ou IAM roles. Nunca coloque senha na connection string em configuração versionada.",
         cwe="CWE-798",
         owasp="A02:2021",
