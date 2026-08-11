@@ -1,4 +1,5 @@
 """Regras de segurança para SAS (Statistical Analysis System)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -26,7 +27,7 @@ SAS_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.SAS,
-        pattern=r'\bcall\s+system\s*\(',
+        pattern=r"\bcall\s+system\s*\(",
         remediation="Não construa comandos de sistema a partir de dados de entrada. Valide e faça allow-list de qualquer valor usado.",
         cwe="CWE-78",
         owasp="A03:2021",
@@ -46,7 +47,7 @@ SAS_RULES: list[Rule] = [
         owasp="A07:2021",
         confidence=Confidence.MEDIUM,
         flags=re.IGNORECASE,
-        negative_pattern=r'\{sas\d{3}\}|encoded',
+        negative_pattern=r"\{sas\d{3}\}|encoded",
     ),
     Rule(
         id="SAS-004",
