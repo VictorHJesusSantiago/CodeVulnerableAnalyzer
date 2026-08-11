@@ -1,4 +1,5 @@
 """Regras de segurança para MySQL DDL — 8 regras (MYDDL-001..008)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -12,7 +13,7 @@ MYSQL_DDL_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.SQL,
-        pattern=r'GRANT\s+ALL\s+PRIVILEGES\s+ON\s+\*\s*\.\s*\*',
+        pattern=r"GRANT\s+ALL\s+PRIVILEGES\s+ON\s+\*\s*\.\s*\*",
         remediation="Conceda apenas privilégios necessários por banco: GRANT SELECT, INSERT, UPDATE ON app_db.* TO 'app_user'@'localhost'; Para cada serviço, crie um usuário dedicado com acesso apenas ao banco necessário. Para migrations, crie migration_user com DDL apenas no banco específico.",
         cwe="CWE-269",
         owasp="A01:2021",
@@ -26,7 +27,7 @@ MYSQL_DDL_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.SQL,
-        pattern=r'GRANT\s+(?:[A-Z,\s]*,\s*)?FILE(?:\s*,|\s+ON)',
+        pattern=r"GRANT\s+(?:[A-Z,\s]*,\s*)?FILE(?:\s*,|\s+ON)",
         remediation="Nunca conceda FILE privilege a usuários de aplicação: REVOKE FILE ON *.* FROM 'app_user'@'localhost'. Para importação de dados, use LOAD DATA LOCAL INFILE (mais restritivo) ou importe via aplicação. Configure --secure-file-priv para limitar o diretório de leitura/escrita de arquivos.",
         cwe="CWE-732",
         owasp="A01:2021",
@@ -54,7 +55,7 @@ MYSQL_DDL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.CRYPTO,
         language=Language.SQL,
-        pattern=r'REQUIRE\s+NONE',
+        pattern=r"REQUIRE\s+NONE",
         remediation="Exija SSL: CREATE USER 'app_user'@'%' IDENTIFIED BY '...' REQUIRE SSL; Para certificados: REQUIRE X509 com verificação de CA. Configure my.cnf: require_secure_transport=ON para forçar SSL em todo o servidor. Use ssl-mode=REQUIRED em connection strings de clientes.",
         cwe="CWE-319",
         owasp="A02:2021",
@@ -82,7 +83,7 @@ MYSQL_DDL_RULES: list[Rule] = [
         category=VulnCategory.IMPROPER_VALIDATION,
         language=Language.SQL,
         pattern=r'CREATE\s+USER\s+["\'](?!root)["\'\w@%.-]+\s+IDENTIFIED',
-        negative_pattern=r'MAX_USER_CONNECTIONS|WITH\s+MAX',
+        negative_pattern=r"MAX_USER_CONNECTIONS|WITH\s+MAX",
         remediation="Configure limites por usuário: CREATE USER 'app_user'@'localhost' IDENTIFIED BY '...' WITH MAX_USER_CONNECTIONS 50 MAX_QUERIES_PER_HOUR 10000 MAX_UPDATES_PER_HOUR 1000. Configure globalmente: SET GLOBAL max_connections=500. Use connection pooling (ProxySQL, pgBouncer) para limitar conexões na camada de aplicação.",
         cwe="CWE-400",
         owasp="A04:2021",
@@ -95,7 +96,7 @@ MYSQL_DDL_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.SQL,
-        pattern=r'GRANT\s+(?:[A-Z,\s]*,\s*)?SUPER(?:\s*,|\s+ON)',
+        pattern=r"GRANT\s+(?:[A-Z,\s]*,\s*)?SUPER(?:\s*,|\s+ON)",
         remediation="Substitua SUPER por privileges específicos (MySQL 8.0+): BINLOG_ADMIN, REPLICATION_SLAVE, SET_USER_ID conforme necessário. SUPER foi dividido em múltiplos privileges mais granulares no MySQL 8. Para aplicações, nunca conceda SUPER — apenas para contas de DBA humanas.",
         cwe="CWE-269",
         owasp="A01:2021",
@@ -109,7 +110,7 @@ MYSQL_DDL_RULES: list[Rule] = [
         severity=Severity.LOW,
         category=VulnCategory.TECHNICAL_DEBT,
         language=Language.SQL,
-        pattern=r'ENGINE\s*=\s*MyISAM',
+        pattern=r"ENGINE\s*=\s*MyISAM",
         remediation="Migre para InnoDB: ALTER TABLE my_table ENGINE=InnoDB; InnoDB suporta ACID transactions, foreign keys, row-level locking e crash recovery. Para tabelas full-text search, use InnoDB com FULLTEXT index (disponível desde MySQL 5.6). Configure default_storage_engine=InnoDB no my.cnf.",
         cwe="CWE-1188",
         confidence=Confidence.HIGH,
