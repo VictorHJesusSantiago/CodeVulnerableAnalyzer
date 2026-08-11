@@ -1,4 +1,5 @@
 """Regras de segurança para Azure ARM Templates e Bicep — 9 regras (ARM-001..009)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -118,7 +119,7 @@ ARM_RULES: list[Rule] = [
         category=VulnCategory.CRYPTO,
         language=Language.JSON,
         pattern=r'"Microsoft\.Compute/disks"',
-        negative_pattern=r'diskEncryptionSetId|encryptionSettingsCollection',
+        negative_pattern=r"diskEncryptionSetId|encryptionSettingsCollection",
         remediation="Configure Customer-Managed Keys: encryptionSettingsCollection: { enabled: true, encryptionSettings: [{ diskEncryptionKey: { sourceVault: { id: keyVaultId }, secretUrl: secretUrl } }] }. Para discos OS/data em VMs, use Azure Disk Encryption com chaves no Key Vault.",
         cwe="CWE-311",
         owasp="A02:2021",
