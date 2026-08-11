@@ -20,6 +20,7 @@ em pyast_engine.CFG (não é um compilador completo com renomeação de versões
 numeradas tipo v1/v2/v3 — a inserção de φ e a análise de definite-assignment
 são o núcleo real e verificável entregue aqui).
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -29,6 +30,7 @@ from analyzer.pyast_engine import CFG
 # ════════════════════════════════════════════════════════════════════════════
 #  1. Pós-ordem via DFS a partir da entrada
 # ════════════════════════════════════════════════════════════════════════════
+
 
 def _postorder(cfg: CFG) -> list[int]:
     if cfg.entry is None:
@@ -55,6 +57,7 @@ def _postorder(cfg: CFG) -> list[int]:
 # ════════════════════════════════════════════════════════════════════════════
 #  2. Dominadores (Cooper-Harvey-Kennedy)
 # ════════════════════════════════════════════════════════════════════════════
+
 
 def compute_dominators(cfg: CFG) -> dict[int, int]:
     """Retorna idom[n] = id do dominador imediato de n. idom[entry] = entry."""
@@ -100,6 +103,7 @@ def compute_dominators(cfg: CFG) -> dict[int, int]:
 #  3. Fronteira de dominância (Cytron et al.)
 # ════════════════════════════════════════════════════════════════════════════
 
+
 def compute_dominance_frontier(cfg: CFG, idom: dict[int, int]) -> dict[int, set[int]]:
     df: dict[int, set[int]] = {nid: set() for nid in cfg.nodes}
     for b in cfg.nodes:
@@ -122,10 +126,12 @@ def compute_dominance_frontier(cfg: CFG, idom: dict[int, int]) -> dict[int, set[
 #  4. Inserção de φ-nodes (algoritmo clássico de SSA mínima)
 # ════════════════════════════════════════════════════════════════════════════
 
+
 @dataclass
 class PhiPlacement:
     """φ-nodes necessários por variável: var -> conjunto de node ids onde o
     φ deve ser inserido (porque múltiplas definições convergem ali)."""
+
     phi_sites: dict[str, set[int]] = field(default_factory=dict)
 
 
@@ -167,6 +173,7 @@ def build_ssa(cfg: CFG) -> tuple:
 # ════════════════════════════════════════════════════════════════════════════
 #  5. Definite assignment (atribuição definitiva) — usa os φ-sites reais
 # ════════════════════════════════════════════════════════════════════════════
+
 
 def definite_assignment(cfg: CFG, params: set[str]) -> dict[int, set[str]]:
     """Dataflow forward com meet = INTERSEÇÃO (não união): IN[n] = variáveis
