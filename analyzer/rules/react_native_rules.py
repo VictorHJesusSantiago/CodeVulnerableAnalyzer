@@ -1,4 +1,5 @@
 """Regras de segurança para React Native — 9 regras (RN-001..009)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -26,7 +27,7 @@ REACT_NATIVE_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.XSS,
         language=Language.JAVASCRIPT,
-        pattern=r'WebView\s[^>]*javaScriptEnabled\s*=\s*\{?\s*true\s*\}?[^>]*source\s*=\s*\{\{?\s*uri',
+        pattern=r"WebView\s[^>]*javaScriptEnabled\s*=\s*\{?\s*true\s*\}?[^>]*source\s*=\s*\{\{?\s*uri",
         remediation="Use javaScriptEnabled={false} para conteúdo estático. Para conteúdo dinâmico confiável, configure allowingReadAccessToURL e originsWhitelist. Habilite isolatedWorld: <WebView javaScriptEnabled={true} webviewDebuggingEnabled={false} injectedJavaScriptBeforeContentLoaded='...' />. Use react-native-webview v13+.",
         cwe="CWE-79",
         owasp="A03:2021",
@@ -79,7 +80,7 @@ REACT_NATIVE_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.JAVASCRIPT,
-        pattern=r'allowFileAccess\s*=\s*\{?\s*true\s*\}?',
+        pattern=r"allowFileAccess\s*=\s*\{?\s*true\s*\}?",
         remediation="Defina allowFileAccess={false} (padrão). Se acesso a arquivos locais é necessário, use react-native-fs para ler o arquivo e passar o conteúdo para a WebView via injectJavaScript ou props, sem expor o filesystem diretamente. Nunca combine allowFileAccess com conteúdo web externo.",
         cwe="CWE-73",
         owasp="A01:2021",
@@ -92,8 +93,8 @@ REACT_NATIVE_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.JAVASCRIPT,
-        pattern=r'(?:debugger|DevMenu|reactDevTools|flipper)',
-        negative_pattern=r'__DEV__|process\.env\.NODE_ENV',
+        pattern=r"(?:debugger|DevMenu|reactDevTools|flipper)",
+        negative_pattern=r"__DEV__|process\.env\.NODE_ENV",
         remediation="Sempre guard código de debug: if (__DEV__) { enableDebugFeatures(); }. Use babel-plugin-transform-remove-debugger para produção. Configure flavors de build Android ou schemes iOS para diferentes configurações. Verifique com: npx react-native bundle --dev false.",
         cwe="CWE-94",
         owasp="A05:2021",
@@ -106,8 +107,8 @@ REACT_NATIVE_RULES: list[Rule] = [
         severity=Severity.LOW,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.JAVASCRIPT,
-        pattern=r'NativeModules\.\w+(?!\s*&&|\s*\?|\s*=)',
-        negative_pattern=r'Platform\.OS|Platform\.select',
+        pattern=r"NativeModules\.\w+(?!\s*&&|\s*\?|\s*=)",
+        negative_pattern=r"Platform\.OS|Platform\.select",
         remediation="Verifique a plataforma antes de usar NativeModules específicos: if (Platform.OS === 'android') { NativeModules.AndroidSpecific.doSomething(); }. Use Platform.select para configurações: const config = Platform.select({ ios: iosConfig, android: androidConfig, default: defaultConfig });",
         cwe="CWE-20",
         confidence=Confidence.LOW,
@@ -119,8 +120,8 @@ REACT_NATIVE_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.IMPROPER_VALIDATION,
         language=Language.JAVASCRIPT,
-        pattern=r'Linking\s*\.\s*(?:addEventListener|getInitialURL)\s*\(',
-        negative_pattern=r'validate|sanitize|schema|zod|joi',
+        pattern=r"Linking\s*\.\s*(?:addEventListener|getInitialURL)\s*\(",
+        negative_pattern=r"validate|sanitize|schema|zod|joi",
         remediation="Valide e sanitize todos os parâmetros de deep link: use uma biblioteca de validação de schema (Zod, Joi) para verificar tipos e valores. Implemente confirmação do usuário para ações críticas iniciadas via deep link. Nunca execute ações financeiras ou destrutivas diretamente de deep link params.",
         cwe="CWE-20",
         owasp="A03:2021",
