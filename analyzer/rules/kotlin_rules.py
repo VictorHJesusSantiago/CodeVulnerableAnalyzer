@@ -1,4 +1,5 @@
 """Regras de segurança específicas para Kotlin (Android / JVM)."""
+
 from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
@@ -10,7 +11,7 @@ KOTLIN_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.ERROR_HANDLING,
         language=Language.KOTLIN,
-        pattern=r'!!\s*(?:[.\[(]|$)',
+        pattern=r"!!\s*(?:[.\[(]|$)",
         remediation="Use safe calls (?.), Elvis operator (?:), let { }, ou verifications explícitas. Jamais use !! em dados que vêm de APIs externas, banco de dados ou intent extras.",
         cwe="CWE-476",
         confidence=Confidence.MEDIUM,
@@ -22,7 +23,7 @@ KOTLIN_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.INFO_DISCLOSURE,
         language=Language.KOTLIN,
-        pattern=r'Log\.[dDeEiIwWvV]\s*\([^)]*(?:password|token|secret|key|credential|auth|senha|senha)\b',
+        pattern=r"Log\.[dDeEiIwWvV]\s*\([^)]*(?:password|token|secret|key|credential|auth|senha|senha)\b",
         remediation="Nunca logue dados sensíveis. Use if (BuildConfig.DEBUG) para logs de desenvolvimento. Em produção, use frameworks como Timber com filtro de campos sensíveis.",
         cwe="CWE-532",
         confidence=Confidence.HIGH,
@@ -34,8 +35,8 @@ KOTLIN_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SENSITIVE_DATA,
         language=Language.KOTLIN,
-        pattern=r'getSharedPreferences\b|sharedPreferences\b.*\.edit\s*\(\s*\)',
-        negative_pattern=r'EncryptedSharedPreferences',
+        pattern=r"getSharedPreferences\b|sharedPreferences\b.*\.edit\s*\(\s*\)",
+        negative_pattern=r"EncryptedSharedPreferences",
         remediation="Use EncryptedSharedPreferences da Jetpack Security library para dados sensíveis. Para tokens críticos, prefira Android Keystore System.",
         cwe="CWE-312",
         confidence=Confidence.LOW,
@@ -47,7 +48,7 @@ KOTLIN_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.XSS,
         language=Language.KOTLIN,
-        pattern=r'setJavaScriptEnabled\s*\(\s*true\s*\)',
+        pattern=r"setJavaScriptEnabled\s*\(\s*true\s*\)",
         remediation="Desabilite JavaScript se possível. Se necessário, implemente ShouldOverrideUrlLoading para validar URLs carregadas. Use @JavascriptInterface com cautela.",
         cwe="CWE-79",
         owasp="A03:2021",
@@ -60,7 +61,7 @@ KOTLIN_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.KOTLIN,
-        pattern=r'Intent\s*\(\s*intent\.(?:getStringExtra|getParcelableExtra|data)',
+        pattern=r"Intent\s*\(\s*intent\.(?:getStringExtra|getParcelableExtra|data)",
         remediation="Nunca use dados de Intents externas para construir novas Intents sem validação. Valide URLs e tipos antes de iniciar Activities a partir de dados externos.",
         cwe="CWE-926",
         owasp="A01:2021",
@@ -100,7 +101,7 @@ KOTLIN_RULES: list[Rule] = [
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.KOTLIN,
         pattern=r'android:exported\s*=\s*"true"',
-        negative_pattern=r'android:permission\s*=',
+        negative_pattern=r"android:permission\s*=",
         remediation="Defina android:permission com permissão personalizada ou use SIGNATURE protection level. Exporte apenas componentes que precisam ser acessíveis externamente.",
         cwe="CWE-926",
         owasp="A01:2021",
