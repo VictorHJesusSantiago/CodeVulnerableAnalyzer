@@ -1,4 +1,5 @@
 """Regras de segurança para CoffeeScript — 9 regras (COFFEE-001..009)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -12,7 +13,7 @@ COFFEE_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.CODE_INJECTION,
         language=Language.COFFEESCRIPT,
-        pattern=r'\beval\s*[\(\s]',
+        pattern=r"\beval\s*[\(\s]",
         remediation="Elimine eval() completamente. Para parsing de JSON, use JSON.parse(). Para expressões matemáticas, use uma biblioteca de parsing segura. Em templates CoffeeScript, valide e escape input do usuário antes de qualquer avaliação.",
         cwe="CWE-94",
         owasp="A03:2021",
@@ -25,7 +26,7 @@ COFFEE_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.CODE_INJECTION,
         language=Language.COFFEESCRIPT,
-        pattern=r'`[^`]{3,}`',
+        pattern=r"`[^`]{3,}`",
         remediation="Evite backticks literais em CoffeeScript. Qualquer JavaScript que precise ser incorporado deve ser reescrito em CoffeeScript nativo ou movido para um arquivo .js separado e claramente documentado. Nunca use backticks com input externo.",
         cwe="CWE-94",
         confidence=Confidence.LOW,
@@ -63,7 +64,7 @@ COFFEE_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.XSS,
         language=Language.COFFEESCRIPT,
-        pattern=r'\bdocument\.write\s*\(',
+        pattern=r"\bdocument\.write\s*\(",
         remediation="Nunca use document.write() em código moderno. Use document.createElement() e appendChild(), ou manipule innerHTML/textContent diretamente. Para injeção de scripts dinâmicos, use DOM APIs seguras: script = document.createElement 'script'; script.src = trustedUrl; document.head.appendChild script.",
         cwe="CWE-79",
         owasp="A03:2021",
@@ -76,7 +77,7 @@ COFFEE_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.XSS,
         language=Language.COFFEESCRIPT,
-        pattern=r'\$\s*\([^)]+\)\s*\.html\s*\(\s*[a-zA-Z_$]',
+        pattern=r"\$\s*\([^)]+\)\s*\.html\s*\(\s*[a-zA-Z_$]",
         remediation="Use .text() para conteúdo de texto puro. Para HTML seguro, sanitize antes: $el.html DOMPurify.sanitize(content). Para templating, use Handlebars ou Mustache com escape automático em vez de jQuery .html() manual.",
         cwe="CWE-79",
         owasp="A03:2021",
@@ -102,7 +103,7 @@ COFFEE_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.CODE_INJECTION,
         language=Language.COFFEESCRIPT,
-        pattern=r'\brequire\s*\(\s*[a-zA-Z_$][a-zA-Z0-9_$]*\s*[\+\<]',
+        pattern=r"\brequire\s*\(\s*[a-zA-Z_$][a-zA-Z0-9_$]*\s*[\+\<]",
         remediation="Use require() somente com strings literais fixas. Implemente uma factory com whitelist de módulos: loadPlugin = (name) -> allowed = {utils: true, helpers: true}; throw Error('not allowed') unless allowed[name]; require(\"./plugins/#{name}\").",
         cwe="CWE-94",
         confidence=Confidence.MEDIUM,
