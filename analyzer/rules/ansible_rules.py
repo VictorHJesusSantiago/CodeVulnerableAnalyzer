@@ -1,4 +1,5 @@
 """Regras de segurança para Ansible — 9 regras (ANSIBLE-001..009)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -12,7 +13,7 @@ ANSIBLE_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.YAML,
-        pattern=r'(?:shell|command)\s*:\s*(?:apt|yum|dnf|systemctl|service|mkdir|rm|chmod|chown|cp|mv|find)\b',
+        pattern=r"(?:shell|command)\s*:\s*(?:apt|yum|dnf|systemctl|service|mkdir|rm|chmod|chown|cp|mv|find)\b",
         remediation="Use módulos nativos: apt: {name: nginx, state: present} em vez de shell: apt-get install -y nginx. Módulos nativos são idempotentes, verificam estado antes de agir e retornam erros estruturados. Para casos sem módulo, use command: com args: para evitar shell expansion.",
         cwe="CWE-78",
         owasp="A03:2021",
@@ -25,7 +26,7 @@ ANSIBLE_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SENSITIVE_DATA,
         language=Language.YAML,
-        pattern=r'no_log\s*:\s*false',
+        pattern=r"no_log\s*:\s*false",
         remediation="Use 'no_log: true' em qualquer task que processa credenciais: tasks: - name: Set password; user: { name: deploy, password: '{{ secret_password }}' }; no_log: true. Configure no_log globalmente para plays sensíveis. Use Ansible Vault para criptografar variáveis sensíveis em repouso.",
         cwe="CWE-312",
         owasp="A02:2021",
@@ -65,7 +66,7 @@ ANSIBLE_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.YAML,
-        pattern=r'become\s*:\s*(?:true|yes)(?!\s*\n\s*become_user\s*:)',
+        pattern=r"become\s*:\s*(?:true|yes)(?!\s*\n\s*become_user\s*:)",
         remediation="Especifique sempre o usuário alvo: become: true; become_user: deploy_user. Aplique become no menor escopo possível (task, não play). Configure sudoers com comandos específicos: deploy_user ALL=(root) NOPASSWD: /usr/bin/systemctl restart myapp. Audite uso de become com '--check'.",
         cwe="CWE-269",
         owasp="A01:2021",
@@ -78,7 +79,7 @@ ANSIBLE_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.YAML,
-        pattern=r'ignore_errors\s*:\s*(?:true|yes)',
+        pattern=r"ignore_errors\s*:\s*(?:true|yes)",
         remediation="Remova 'ignore_errors: true'. Para lidar com estados esperados de erro, use 'failed_when:': failed_when: result.rc not in [0, 1]. Use 'register:' e verifique o resultado explicitamente. Para tasks de limpeza, use 'ignore_errors: true' apenas em tasks de limpeza após failed.",
         cwe="CWE-390",
         owasp="A05:2021",
@@ -104,7 +105,7 @@ ANSIBLE_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.CRYPTO,
         language=Language.YAML,
-        pattern=r'validate_certs\s*:\s*(?:false|no)|verify_ssl\s*:\s*(?:false|no)',
+        pattern=r"validate_certs\s*:\s*(?:false|no)|verify_ssl\s*:\s*(?:false|no)",
         remediation="Nunca desabilite validação de certificados em produção. Se o problema é um certificado self-signed interno, configure a CA raiz no sistema: update-ca-certificates e adicione o bundle via 'ca_path:'. Configure ANSIBLE_SSL_CA_CERT na variável de ambiente para apontar para seu bundle de CAs internas.",
         cwe="CWE-295",
         owasp="A02:2021",
@@ -117,7 +118,7 @@ ANSIBLE_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.SENSITIVE_DATA,
         language=Language.YAML,
-        pattern=r'vars_prompt\s*:\s*\n(?:\s+-[^\n]+\n)*(?:\s+[^\n]+\n)*(?!\s+private\s*:\s*yes)',
+        pattern=r"vars_prompt\s*:\s*\n(?:\s+-[^\n]+\n)*(?:\s+[^\n]+\n)*(?!\s+private\s*:\s*yes)",
         remediation="Adicione 'private: yes' em todos os prompts de senha: vars_prompt: - { name: db_password, prompt: 'Database password', private: yes }. Prefira usar Ansible Vault ou variáveis de ambiente injetadas pelo sistema de CI/CD em vez de prompts interativos, especialmente em automação.",
         cwe="CWE-312",
         owasp="A02:2021",

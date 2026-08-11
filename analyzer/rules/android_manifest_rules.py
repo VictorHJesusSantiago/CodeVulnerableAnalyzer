@@ -1,11 +1,12 @@
 """Regras de segurança para Android Manifest (XML) — 9 regras (AXML-001..009)."""
+
 from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 ANDROID_MANIFEST_RULES: list[Rule] = [
     Rule(
         id="AXML-001",
-        name="android:debuggable=\"true\" — App Depurável em Produção",
+        name='android:debuggable="true" — App Depurável em Produção',
         description="'android:debuggable=\"true\"' no elemento <application> permite que o Android Debug Bridge (adb) se conecte ao app em produção. Um atacante com acesso físico ou USB ao dispositivo pode usar adb para inspecionar memória, extrair dados do app sandbox, injetar código e contornar controles de segurança.",
         severity=Severity.CRITICAL,
         category=VulnCategory.SECURITY_MISCONFIG,
@@ -18,7 +19,7 @@ ANDROID_MANIFEST_RULES: list[Rule] = [
     ),
     Rule(
         id="AXML-002",
-        name="android:exported=\"true\" sem android:permission — Exposição de Componente",
+        name='android:exported="true" sem android:permission — Exposição de Componente',
         description="Activities, Services, BroadcastReceivers e ContentProviders com 'android:exported=\"true\"' sem 'android:permission' definida são acessíveis a qualquer app no dispositivo. Apps maliciosos podem invocar esses componentes sem autenticação, potencialmente bypassando o flow de autenticação.",
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_ACCESS,
@@ -31,7 +32,7 @@ ANDROID_MANIFEST_RULES: list[Rule] = [
     ),
     Rule(
         id="AXML-003",
-        name="android:usesCleartextTraffic=\"true\" — Tráfego HTTP Permitido",
+        name='android:usesCleartextTraffic="true" — Tráfego HTTP Permitido',
         description="'android:usesCleartextTraffic=\"true\"' permite que o app faça conexões HTTP não criptografadas. Em Android 9+, o padrão é false. Habilitar cleartext traffic permite MITM em redes Wi-Fi públicas, interceptação de tokens de sessão e dados pessoais transmitidos sem TLS.",
         severity=Severity.HIGH,
         category=VulnCategory.CRYPTO,
@@ -44,7 +45,7 @@ ANDROID_MANIFEST_RULES: list[Rule] = [
     ),
     Rule(
         id="AXML-004",
-        name="android:allowBackup=\"true\" — Backup Permite Extração de Dados",
+        name='android:allowBackup="true" — Backup Permite Extração de Dados',
         description="'android:allowBackup=\"true\"' (padrão até Android 11) permite que dados do app sejam incluídos em backups do ADB e Google Drive. Um atacante com acesso USB pode extrair o backup completo do app: adb backup -f backup.ab com.target.app, obtendo dados de banco SQLite, shared preferences e arquivos privados.",
         severity=Severity.MEDIUM,
         category=VulnCategory.SENSITIVE_DATA,
@@ -75,7 +76,7 @@ ANDROID_MANIFEST_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_AUTH,
         language=Language.XML,
-        pattern=r'<intent-filter>(?:[^<]|<(?!android:autoVerify))*<data\s+android:scheme',
+        pattern=r"<intent-filter>(?:[^<]|<(?!android:autoVerify))*<data\s+android:scheme",
         negative_pattern=r'android:autoVerify\s*=\s*["\']true["\']',
         remediation="Use Android App Links: adicione android:autoVerify='true' no intent-filter e publique o arquivo assetlinks.json em https://yourdomain.com/.well-known/assetlinks.json. Nunca passe tokens sensíveis em deep link URLs. Valide sempre o intent na Activity antes de processar.",
         cwe="CWE-924",
@@ -115,7 +116,7 @@ ANDROID_MANIFEST_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.XML,
-        pattern=r'<application(?![^>]*android:networkSecurityConfig)',
+        pattern=r"<application(?![^>]*android:networkSecurityConfig)",
         remediation="Adicione android:networkSecurityConfig='@xml/network_security_config' e crie res/xml/network_security_config.xml: <network-security-config><domain-config cleartextTrafficPermitted='false'><domain>api.example.com</domain><pin-set expiration='2026-01-01'><pin digest='SHA-256'>BASE64_HASH</pin></pin-set></domain-config></network-security-config>.",
         cwe="CWE-295",
         owasp="A05:2021",
