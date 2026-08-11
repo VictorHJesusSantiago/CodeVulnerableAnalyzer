@@ -125,114 +125,109 @@ CROSS_LANGUAGE_RULES: list[Rule] = (
     + QUALITY_GENERIC_RULES
     + SOLID_RULES
     + [r for r in ARCHITECTURE_RULES if r.language == Language.GENERIC]
-    + [r for r in PERFORMANCE_RULES  if r.language == Language.GENERIC]
-    + [r for r in CONFIG_RULES       if r.language == Language.GENERIC]
+    + [r for r in PERFORMANCE_RULES if r.language == Language.GENERIC]
+    + [r for r in CONFIG_RULES if r.language == Language.GENERIC]
 )
 
 # ── Partições por linguagem de regras mistas ──────────────────────────────────
-_ARCH_PYTHON  = [r for r in ARCHITECTURE_RULES if r.language == Language.PYTHON]
-_PERF_PYTHON  = [r for r in PERFORMANCE_RULES  if r.language == Language.PYTHON]
-_PERF_JAVA    = [r for r in PERFORMANCE_RULES  if r.language == Language.JAVA]
-_PERF_CSHARP  = [r for r in PERFORMANCE_RULES  if r.language == Language.CSHARP]
-_PERF_SQL     = [r for r in PERFORMANCE_RULES  if r.language == Language.SQL]
-_CONC_JAVA    = [r for r in CONCURRENCY_RULES  if r.language == Language.JAVA]
-_CONC_JS      = [r for r in CONCURRENCY_RULES  if r.language == Language.JAVASCRIPT]
-_CONC_GO      = [r for r in CONCURRENCY_RULES  if r.language == Language.GO]
-_CONC_PYTHON  = [r for r in CONCURRENCY_RULES  if r.language == Language.PYTHON]
-_CONC_CSHARP  = [r for r in CONCURRENCY_RULES  if r.language == Language.CSHARP]
-_CFG_YAML     = [r for r in CONFIG_RULES if r.language == Language.YAML]
-_CFG_TOML     = [r for r in CONFIG_RULES if r.language == Language.TOML]
-_CFG_INI      = [r for r in CONFIG_RULES if r.language == Language.INI]
-_CFG_JSON     = [r for r in CONFIG_RULES if r.language == Language.JSON]
+_ARCH_PYTHON = [r for r in ARCHITECTURE_RULES if r.language == Language.PYTHON]
+_PERF_PYTHON = [r for r in PERFORMANCE_RULES if r.language == Language.PYTHON]
+_PERF_JAVA = [r for r in PERFORMANCE_RULES if r.language == Language.JAVA]
+_PERF_CSHARP = [r for r in PERFORMANCE_RULES if r.language == Language.CSHARP]
+_PERF_SQL = [r for r in PERFORMANCE_RULES if r.language == Language.SQL]
+_CONC_JAVA = [r for r in CONCURRENCY_RULES if r.language == Language.JAVA]
+_CONC_JS = [r for r in CONCURRENCY_RULES if r.language == Language.JAVASCRIPT]
+_CONC_GO = [r for r in CONCURRENCY_RULES if r.language == Language.GO]
+_CONC_PYTHON = [r for r in CONCURRENCY_RULES if r.language == Language.PYTHON]
+_CONC_CSHARP = [r for r in CONCURRENCY_RULES if r.language == Language.CSHARP]
+_CFG_YAML = [r for r in CONFIG_RULES if r.language == Language.YAML]
+_CFG_TOML = [r for r in CONFIG_RULES if r.language == Language.TOML]
+_CFG_INI = [r for r in CONFIG_RULES if r.language == Language.INI]
+_CFG_JSON = [r for r in CONFIG_RULES if r.language == Language.JSON]
 
 # ── F# e OCaml separados da mesma lista de regras ─────────────────────────────
-_FS_ONLY  = [r for r in FSHARP_RULES if r.language == Language.FSHARP]
-_ML_ONLY  = [r for r in FSHARP_RULES if r.language == Language.OCAML]
+_FS_ONLY = [r for r in FSHARP_RULES if r.language == Language.FSHARP]
+_ML_ONLY = [r for r in FSHARP_RULES if r.language == Language.OCAML]
 
 # ── Dicionário principal: linguagem → regras específicas ─────────────────────
 LANGUAGE_RULES: dict[Language, list[Rule]] = {
     # ── JVM / .NET ─────────────────────────────────────────────────────────────
-    Language.PYTHON:       PYTHON_RULES + QUALITY_PYTHON_RULES + _PERF_PYTHON + _CONC_PYTHON + _ARCH_PYTHON + ML_SECURITY_RULES + NOTEBOOK_RULES + PULUMI_RULES,
-    Language.JAVASCRIPT:   JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS + REACT_NATIVE_RULES,
-    Language.TYPESCRIPT:   JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS + REACT_NATIVE_RULES,
+    Language.PYTHON: PYTHON_RULES
+    + QUALITY_PYTHON_RULES
+    + _PERF_PYTHON
+    + _CONC_PYTHON
+    + _ARCH_PYTHON
+    + ML_SECURITY_RULES
+    + NOTEBOOK_RULES
+    + PULUMI_RULES,
+    Language.JAVASCRIPT: JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS + REACT_NATIVE_RULES,
+    Language.TYPESCRIPT: JAVASCRIPT_RULES + QUALITY_JS_RULES + _CONC_JS + REACT_NATIVE_RULES,
     Language.COFFEESCRIPT: COFFEE_RULES + JAVASCRIPT_RULES + QUALITY_JS_RULES,
-    Language.JAVA:         JAVA_RULES + QUALITY_JAVA_RULES + _PERF_JAVA + _CONC_JAVA,
-    Language.KOTLIN:       JAVA_RULES + QUALITY_JAVA_RULES + _CONC_JAVA + KOTLIN_RULES,
-    Language.SCALA:        JAVA_RULES + QUALITY_JAVA_RULES + SCALA_RULES,
-    Language.GROOVY:       JAVA_RULES + GROOVY_RULES,
-    Language.CLOJURE:      JAVA_RULES + CLOJURE_RULES,
-    Language.CSHARP:       CSHARP_RULES + QUALITY_CSHARP_RULES + _PERF_CSHARP + _CONC_CSHARP,
-    Language.FSHARP:       _FS_ONLY,
-    Language.OCAML:        _ML_ONLY,
-    Language.VBNET:        VB_RULES + VBA_RULES,
-
+    Language.JAVA: JAVA_RULES + QUALITY_JAVA_RULES + _PERF_JAVA + _CONC_JAVA,
+    Language.KOTLIN: JAVA_RULES + QUALITY_JAVA_RULES + _CONC_JAVA + KOTLIN_RULES,
+    Language.SCALA: JAVA_RULES + QUALITY_JAVA_RULES + SCALA_RULES,
+    Language.GROOVY: JAVA_RULES + GROOVY_RULES,
+    Language.CLOJURE: JAVA_RULES + CLOJURE_RULES,
+    Language.CSHARP: CSHARP_RULES + QUALITY_CSHARP_RULES + _PERF_CSHARP + _CONC_CSHARP,
+    Language.FSHARP: _FS_ONLY,
+    Language.OCAML: _ML_ONLY,
+    Language.VBNET: VB_RULES + VBA_RULES,
     # ── Web / Backend ─────────────────────────────────────────────────────────
-    Language.PHP:          PHP_RULES,
-    Language.RUBY:         RUBY_RULES,
-    Language.GO:           GO_RULES + _CONC_GO,
-    Language.PERL:         PERL_RULES,
-    Language.ELM:          ELM_RULES,
-
+    Language.PHP: PHP_RULES,
+    Language.RUBY: RUBY_RULES,
+    Language.GO: GO_RULES + _CONC_GO,
+    Language.PERL: PERL_RULES,
+    Language.ELM: ELM_RULES,
     # ── Sistemas ──────────────────────────────────────────────────────────────
-    Language.C:            C_CPP_RULES,
-    Language.CPP:          C_CPP_RULES,
-    Language.RUST:         RUST_RULES,
-    Language.ZIG:          ZIG_RULES,
-    Language.NIM:          NIM_RULES,
-    Language.CRYSTAL:      CRYSTAL_RULES,
-    Language.OBJECTIVEC:   OBJC_RULES,
-
+    Language.C: C_CPP_RULES,
+    Language.CPP: C_CPP_RULES,
+    Language.RUST: RUST_RULES,
+    Language.ZIG: ZIG_RULES,
+    Language.NIM: NIM_RULES,
+    Language.CRYSTAL: CRYSTAL_RULES,
+    Language.OBJECTIVEC: OBJC_RULES,
     # ── Mobile ────────────────────────────────────────────────────────────────
-    Language.SWIFT:        SWIFT_RULES,
-    Language.DART:         DART_RULES + FLUTTER_RULES,
-
+    Language.SWIFT: SWIFT_RULES,
+    Language.DART: DART_RULES + FLUTTER_RULES,
     # ── Scripting ─────────────────────────────────────────────────────────────
-    Language.LUA:          LUA_RULES,
-    Language.JULIA:        JULIA_RULES,
-    Language.SHELL:        SHELL_RULES,
-    Language.BASH:         SHELL_RULES,
-    Language.POWERSHELL:   POWERSHELL_RULES,
-
+    Language.LUA: LUA_RULES,
+    Language.JULIA: JULIA_RULES,
+    Language.SHELL: SHELL_RULES,
+    Language.BASH: SHELL_RULES,
+    Language.POWERSHELL: POWERSHELL_RULES,
     # ── Funcionais / Académicas ───────────────────────────────────────────────
-    Language.ELIXIR:       ELIXIR_RULES,
-    Language.ERLANG:       ERLANG_RULES,
-    Language.HASKELL:      HASKELL_RULES,
-
+    Language.ELIXIR: ELIXIR_RULES,
+    Language.ERLANG: ERLANG_RULES,
+    Language.HASKELL: HASKELL_RULES,
     # ── DB / Query ────────────────────────────────────────────────────────────
-    Language.SQL:          SQL_RULES + _PERF_SQL + PG_DDL_RULES + MYSQL_DDL_RULES,
-    Language.PLSQL:        SQL_RULES + PLSQL_RULES,
-    Language.TSQL:         SQL_RULES + TSQL_PROC_RULES,
-    Language.COBOL:        COBOL_RULES,
-    Language.GRAPHQL:      GRAPHQL_RULES + GRAPHQL_SECURITY_RULES,
-    Language.PROTOBUF:     PROTO_RULES + GRPC_RULES,
-
+    Language.SQL: SQL_RULES + _PERF_SQL + PG_DDL_RULES + MYSQL_DDL_RULES,
+    Language.PLSQL: SQL_RULES + PLSQL_RULES,
+    Language.TSQL: SQL_RULES + TSQL_PROC_RULES,
+    Language.COBOL: COBOL_RULES,
+    Language.GRAPHQL: GRAPHQL_RULES + GRAPHQL_SECURITY_RULES,
+    Language.PROTOBUF: PROTO_RULES + GRPC_RULES,
     # ── Enterprise ────────────────────────────────────────────────────────────
-    Language.APEX:         APEX_RULES,
-    Language.ABAP:         ABAP_RULES,
-
+    Language.APEX: APEX_RULES,
+    Language.ABAP: ABAP_RULES,
     # ── IaC / DevOps ─────────────────────────────────────────────────────────
-    Language.TERRAFORM:    TERRAFORM_RULES,
-    Language.DOCKERFILE:   DOCKER_RULES,
-
+    Language.TERRAFORM: TERRAFORM_RULES,
+    Language.DOCKERFILE: DOCKER_RULES,
     # ── Blockchain ────────────────────────────────────────────────────────────
-    Language.SOLIDITY:     SOLIDITY_RULES,
-    Language.VYPER:        VYPER_RULES,
-    Language.MOVE:         MOVE_RULES,
-    Language.CAIRO:        CAIRO_RULES,
-
+    Language.SOLIDITY: SOLIDITY_RULES,
+    Language.VYPER: VYPER_RULES,
+    Language.MOVE: MOVE_RULES,
+    Language.CAIRO: CAIRO_RULES,
     # ── Web / Frontend ───────────────────────────────────────────────────────
-    Language.HTML:         HTML_RULES,
-    Language.XML:          ANDROID_MANIFEST_RULES + IOS_PLIST_RULES,
-
+    Language.HTML: HTML_RULES,
+    Language.XML: ANDROID_MANIFEST_RULES + IOS_PLIST_RULES,
     # ── Dados / Config ────────────────────────────────────────────────────────
-    Language.YAML:         _CFG_YAML + K8S_RULES + GHA_RULES + GITLAB_CI_RULES + CFN_RULES + ANSIBLE_RULES + OPENAPI_RULES,
-    Language.TOML:         _CFG_TOML,
-    Language.INI:          _CFG_INI,
-    Language.JSON:         _CFG_JSON + ARM_RULES,
-
+    Language.YAML: _CFG_YAML + K8S_RULES + GHA_RULES + GITLAB_CI_RULES + CFN_RULES + ANSIBLE_RULES + OPENAPI_RULES,
+    Language.TOML: _CFG_TOML,
+    Language.INI: _CFG_INI,
+    Language.JSON: _CFG_JSON + ARM_RULES,
     # ── Científico ───────────────────────────────────────────────────────────
-    Language.R:            R_RULES,
-    Language.SAS:          SAS_RULES,
+    Language.R: R_RULES,
+    Language.SAS: SAS_RULES,
 }
 
 # ── Expansão (Batch 7): mescla preservando regras já existentes por linguagem ──

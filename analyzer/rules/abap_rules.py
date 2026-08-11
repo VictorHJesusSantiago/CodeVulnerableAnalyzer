@@ -1,4 +1,5 @@
 """Regras de segurança para ABAP (SAP) — 9 regras (ABAP-001..009)."""
+
 from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
@@ -10,7 +11,7 @@ ABAP_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.SQL_INJECTION,
         language=Language.ABAP,
-        pattern=r'\bEXEC\s+SQL\b',
+        pattern=r"\bEXEC\s+SQL\b",
         remediation="Substitua EXEC SQL por Open SQL com binding parameters: SELECT * FROM mara INTO TABLE lt_mara WHERE matnr = @lv_matnr. Use ADBC (ABAP Database Connectivity) com prepared statements se SQL nativo for necessário. Valide e sanitize todos os inputs com ABAP_ALPHANUM ou regex antes de usar.",
         cwe="CWE-89",
         owasp="A03:2021",
@@ -36,7 +37,7 @@ ABAP_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.COMMAND_INJECTION,
         language=Language.ABAP,
-        pattern=r'\bSUBMIT\s+\([^)]*\)',
+        pattern=r"\bSUBMIT\s+\([^)]*\)",
         remediation="Use SUBMIT com nome de programa literal sempre que possível. Para programas dinâmicos, implemente whitelist: IF prog_name NOT IN lt_allowed_programs. RAISE cx_unauthorized. ENDIF. Verifique AUTHORITY-CHECK para o objeto S_PROGRAM antes de submeter.",
         cwe="CWE-94",
         owasp="A03:2021",
@@ -49,7 +50,7 @@ ABAP_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.SQL_INJECTION,
         language=Language.ABAP,
-        pattern=r'\bSELECT\b[^.]*\bWHERE\s+\([a-zA-Z_][a-zA-Z0-9_]*\)',
+        pattern=r"\bSELECT\b[^.]*\bWHERE\s+\([a-zA-Z_][a-zA-Z0-9_]*\)",
         remediation="Construa a cláusula WHERE com partes hardcoded e valores bindados: DATA(lv_where) = |matnr = '{ cl_abap_dyn_prog=>escape_string( lv_matnr ) }'|. Use cl_abap_dyn_prog=>check_whitelist_tab() para validar nomes de campo e tabela dinâmicos.",
         cwe="CWE-89",
         owasp="A03:2021",
@@ -62,8 +63,8 @@ ABAP_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.BROKEN_ACCESS,
         language=Language.ABAP,
-        pattern=r'(?:MODIFY|DELETE|INSERT|UPDATE)\s+(?:DATABASE\s+)?[A-Z][A-Z0-9_]+',
-        negative_pattern=r'AUTHORITY-CHECK',
+        pattern=r"(?:MODIFY|DELETE|INSERT|UPDATE)\s+(?:DATABASE\s+)?[A-Z][A-Z0-9_]+",
+        negative_pattern=r"AUTHORITY-CHECK",
         remediation="Adicione AUTHORITY-CHECK antes de cada operação crítica: AUTHORITY-CHECK OBJECT 'S_TABU_DIS' ID 'DICBERCLS' FIELD 'SS' ID 'ACTVT' FIELD '02'. IF sy-subrc <> 0. RAISE EXCEPTION TYPE cx_sy_no_authorization. ENDIF.",
         cwe="CWE-284",
         owasp="A01:2021",
@@ -102,7 +103,7 @@ ABAP_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.CODE_INJECTION,
         language=Language.ABAP,
-        pattern=r'\bPERFORM\s*\([a-zA-Z_][a-zA-Z0-9_]*\)',
+        pattern=r"\bPERFORM\s*\([a-zA-Z_][a-zA-Z0-9_]*\)",
         remediation="Elimine PERFORM dinâmico com input externo. Para despacho dinâmico legítimo, use uma tabela de despacho com whitelist de form names permitidos. Implemente AUTHORITY-CHECK para verificar que o usuário pode executar a operação representada pelo form.",
         cwe="CWE-94",
         owasp="A03:2021",
@@ -115,7 +116,7 @@ ABAP_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SENSITIVE_DATA,
         language=Language.ABAP,
-        pattern=r'cl_http_client\s*=>\s*create(?:_by_url|_by_destination)?\s*\(',
+        pattern=r"cl_http_client\s*=>\s*create(?:_by_url|_by_destination)?\s*\(",
         remediation="Configure a classe de proxy SSL correta e verifique que ssl_id está configurado com um PSE válido. Use cl_http_client=>create_by_destination com destino RFC configurado com SSL ativo no SM59. Implemente verificação de certificado no callback handle_request.",
         cwe="CWE-295",
         owasp="A02:2021",
