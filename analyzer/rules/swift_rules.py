@@ -1,4 +1,5 @@
 """Regras de segurança para Swift / iOS."""
+
 from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
@@ -10,7 +11,7 @@ SWIFT_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.ERROR_HANDLING,
         language=Language.SWIFT,
-        pattern=r'(?<!\!)\!(?!\s*=)',
+        pattern=r"(?<!\!)\!(?!\s*=)",
         remediation="Use guard let, if let, ?? (nil coalescing) ou optional chaining (?.). Jamais force-unwrap dados que vêm de input externo, rede ou banco de dados.",
         cwe="CWE-476",
         confidence=Confidence.LOW,
@@ -22,7 +23,7 @@ SWIFT_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.ERROR_HANDLING,
         language=Language.SWIFT,
-        pattern=r'\bas!\s+\w',
+        pattern=r"\bas!\s+\w",
         remediation="Use as? para optional cast seguido de guard let / if let. Valide o tipo antes de usar o valor.",
         cwe="CWE-704",
         confidence=Confidence.MEDIUM,
@@ -34,7 +35,7 @@ SWIFT_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.INFO_DISCLOSURE,
         language=Language.SWIFT,
-        pattern=r'(?:NSLog|print)\s*\([^)]*(?:password|token|secret|key|credential|auth|PIN|senha)\b',
+        pattern=r"(?:NSLog|print)\s*\([^)]*(?:password|token|secret|key|credential|auth|PIN|senha)\b",
         remediation="Remova logs com dados sensíveis. Em debug, use #if DEBUG guards. Considere um framework de logging que respeita níveis (os_log com privacidade de dados).",
         cwe="CWE-532",
         confidence=Confidence.HIGH,
@@ -84,7 +85,7 @@ SWIFT_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.CRYPTO,
         language=Language.SWIFT,
-        pattern=r'(?:CC_MD5|CC_SHA1|kCCDigestMD5|kCCDigestSHA1)\s*\(',
+        pattern=r"(?:CC_MD5|CC_SHA1|kCCDigestMD5|kCCDigestSHA1)\s*\(",
         remediation="Use bcrypt, scrypt ou PBKDF2 para senhas. Para checksums não-criptográficos use SHA-256+ (CC_SHA256). Use CryptoKit para implementações modernas.",
         cwe="CWE-327",
         owasp="A02:2021",
@@ -97,7 +98,7 @@ SWIFT_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.BROKEN_AUTH,
         language=Language.SWIFT,
-        pattern=r'didReceive\s+challenge.*completionHandler\s*\(\s*\.useCredential',
+        pattern=r"didReceive\s+challenge.*completionHandler\s*\(\s*\.useCredential",
         remediation="Implemente certificate pinning verificando o certificado do servidor contra um hash conhecido. Use URLSession delegate com validação customizada ou TrustKit.",
         cwe="CWE-295",
         owasp="A07:2021",
@@ -110,7 +111,7 @@ SWIFT_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.WEAK_RANDOMNESS,
         language=Language.SWIFT,
-        pattern=r'\barc4random(?:_uniform)?\s*\(',
+        pattern=r"\barc4random(?:_uniform)?\s*\(",
         remediation="Use SecRandomCopyBytes para bytes aleatórios criptograficamente seguros. Para Swift moderno, use SystemRandomNumberGenerator ou CryptoKit.generateSymmetricKey().",
         cwe="CWE-338",
         confidence=Confidence.HIGH,
@@ -122,7 +123,7 @@ SWIFT_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.XSS,
         language=Language.SWIFT,
-        pattern=r'WKWebView\b|WKUserContentController|addScriptMessageHandler',
+        pattern=r"WKWebView\b|WKUserContentController|addScriptMessageHandler",
         remediation="Carregue apenas conteúdo confiável em WKWebView. Implemente um WKNavigationDelegate que valida URLs antes de carregar. Sanitize qualquer HTML dinâmico.",
         cwe="CWE-79",
         owasp="A03:2021",
