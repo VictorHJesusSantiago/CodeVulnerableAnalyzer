@@ -1,4 +1,5 @@
 """Regras de segurança para Python ML/AI — 9 regras (MLSEC-001..009)."""
+
 import re
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
@@ -12,7 +13,7 @@ ML_SECURITY_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.INSECURE_DESER,
         language=Language.PYTHON,
-        pattern=r'pickle\s*\.\s*load\s*\(',
+        pattern=r"pickle\s*\.\s*load\s*\(",
         remediation="Use formatos seguros: joblib.load() para sklearn models com weights_only=True onde disponível. Para PyTorch: torch.load(path, weights_only=True). Verifique integridade antes de carregar: hashlib.sha256(file_bytes).hexdigest() deve coincidir com hash publicado. Use ONNX format para modelos de produção.",
         cwe="CWE-502",
         owasp="A08:2021",
@@ -25,8 +26,8 @@ ML_SECURITY_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.INSECURE_DESER,
         language=Language.PYTHON,
-        pattern=r'torch\s*\.\s*load\s*\([^)]*\)(?!\s*#.*safe)',
-        negative_pattern=r'weights_only\s*=\s*True',
+        pattern=r"torch\s*\.\s*load\s*\([^)]*\)(?!\s*#.*safe)",
+        negative_pattern=r"weights_only\s*=\s*True",
         remediation="Use torch.load(path, weights_only=True) para carregar apenas tensors sem execução de código. Para modelos que usam classes customizadas, registre-as explicitamente com safe_globals. Verifique hash SHA256 do arquivo antes de carregar. Use safetensors format como alternativa sem execução de código.",
         cwe="CWE-502",
         owasp="A08:2021",
@@ -52,7 +53,7 @@ ML_SECURITY_RULES: list[Rule] = [
         severity=Severity.CRITICAL,
         category=VulnCategory.CODE_INJECTION,
         language=Language.PYTHON,
-        pattern=r'eval\s*\(\s*(?:user_input|prompt|query|message|request|llm_output)',
+        pattern=r"eval\s*\(\s*(?:user_input|prompt|query|message|request|llm_output)",
         remediation="Nunca use eval() em código de AI/ML com input externo. Use sandboxes isoladas para code execution: Docker containers efêmeros, subprocess com timeout e capabilities limitadas, ou serviços como AWS Lambda com permissões mínimas. Para interpretar expressões, use ast.literal_eval() que executa apenas literals.",
         cwe="CWE-94",
         owasp="A03:2021",
@@ -65,7 +66,7 @@ ML_SECURITY_RULES: list[Rule] = [
         severity=Severity.MEDIUM,
         category=VulnCategory.IMPROPER_VALIDATION,
         language=Language.PYTHON,
-        pattern=r'model\s*\.\s*predict\s*\(\s*(?:request\.|user_input|data\[)',
+        pattern=r"model\s*\.\s*predict\s*\(\s*(?:request\.|user_input|data\[)",
         remediation="Valide todos os inputs: assert input_tensor.shape == expected_shape; assert not torch.isnan(input_tensor).any(); assert not torch.isinf(input_tensor).any(); values = torch.clamp(input_tensor, min=MIN_VAL, max=MAX_VAL). Use pydantic com validators de campo para APIs de ML. Implemente input preprocessing pipeline.",
         cwe="CWE-20",
         owasp="A03:2021",
@@ -91,7 +92,7 @@ ML_SECURITY_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SENSITIVE_DATA,
         language=Language.PYTHON,
-        pattern=r'(?:logging|logger|mlflow)\s*\.\s*(?:info|debug|warning|log_param|log_artifact)\s*\([^)]*(?:email|cpf|nome|name|phone|address|ssn)',
+        pattern=r"(?:logging|logger|mlflow)\s*\.\s*(?:info|debug|warning|log_param|log_artifact)\s*\([^)]*(?:email|cpf|nome|name|phone|address|ssn)",
         remediation="Implemente mascaramento de PII antes de logging: from presidio_analyzer import AnalyzerEngine; analyzer = AnalyzerEngine(); results = analyzer.analyze(text=data). Separe logs de debug (sem PII) de logs de auditoria (anonimizados). Use synthetic data para desenvolvimento e testes em vez de dados reais.",
         cwe="CWE-312",
         owasp="A02:2021",
@@ -105,8 +106,8 @@ ML_SECURITY_RULES: list[Rule] = [
         severity=Severity.HIGH,
         category=VulnCategory.SECURITY_MISCONFIG,
         language=Language.PYTHON,
-        pattern=r'requests\s*\.\s*get\s*\([^)]*(?:model|weights|checkpoint|onnx)[^)]*\)',
-        negative_pattern=r'sha256|sha512|md5|hash|checksum',
+        pattern=r"requests\s*\.\s*get\s*\([^)]*(?:model|weights|checkpoint|onnx)[^)]*\)",
+        negative_pattern=r"sha256|sha512|md5|hash|checksum",
         remediation="Verifique integridade após download: import hashlib; expected = 'sha256:abc123...'; actual = 'sha256:' + hashlib.sha256(content).hexdigest(); assert actual == expected, f'Hash mismatch: {actual}'. Use hf_hub_download do Hugging Face que verifica hashes automaticamente. Publique e verifique hashes SBOM de modelos.",
         cwe="CWE-494",
         owasp="A08:2021",
