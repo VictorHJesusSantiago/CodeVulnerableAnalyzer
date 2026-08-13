@@ -123,11 +123,9 @@ def test_reviewed_persistence_roundtrip(tmp_path):
     assert app._is_reviewed(v) is True
     assert (tmp_path / ".vulnscan_reviewed.json").exists()
 
-    # Nova instância no mesmo dir carrega o estado persistido
     app2 = TUIApp(tmp_path)
     assert app2._is_reviewed(v) is True
 
-    # Destogglar remove e apaga o arquivo (set vazio)
     app2._toggle_reviewed(v)
     assert app2._is_reviewed(v) is False
     assert not (tmp_path / ".vulnscan_reviewed.json").exists()
@@ -140,7 +138,6 @@ def test_cycle_sev(tmp_path):
     assert app.sev_filter == Severity.CRITICAL
     app._cycle_sev()
     assert app.sev_filter == Severity.HIGH
-    # dá a volta completa até None de novo
     for _ in range(4):
         app._cycle_sev()
     assert app.sev_filter is None

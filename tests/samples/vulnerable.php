@@ -1,5 +1,4 @@
 <?php
-// Vulnerable PHP sample
 
 $password = "hardcoded_pass123";
 

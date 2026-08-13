@@ -47,7 +47,7 @@ def test_cli_full_lifecycle(vault_env, capsys):
     assert run_vault_cli(_args(path, vault_set="api_key", vault_value="s3cr3t-value")) == 0
     assert run_vault_cli(_args(path, vault_list=True)) == 0
 
-    capsys.readouterr()  # limpa
+    capsys.readouterr()
     assert run_vault_cli(_args(path, vault_get="api_key")) == 0
     out = capsys.readouterr().out
     assert "s3cr3t-value" in out
@@ -71,7 +71,6 @@ def test_cli_change_password(vault_env, monkeypatch):
     run_vault_cli(_args(vault_env, vault_set="k", vault_value="v"))
     monkeypatch.setenv("VULNVAULT_NEW_PASSWORD", "nova-senha-mestre-456")
     assert run_vault_cli(_args(vault_env, vault_passwd=True)) == 0
-    # Reabrir com a nova senha deve funcionar
     monkeypatch.setenv("VULNVAULT_PASSWORD", "nova-senha-mestre-456")
     assert run_vault_cli(_args(vault_env, vault_get="k")) == 0
 
@@ -99,14 +98,12 @@ def _req(method, url, token=None, body=None):
 
 
 def test_rest_server_roundtrip(vault_env, monkeypatch):
-    # Cofre precisa existir para o servidor abrir
     run_vault_cli(_args(vault_env, vault_init=True))
     port = _free_port()
     t = threading.Thread(target=run_vault_server, args=(str(vault_env), port), daemon=True)
     t.start()
 
     base = f"http://127.0.0.1:{port}"
-    # Espera o servidor subir
     up = False
     for _ in range(40):
         try:
@@ -117,26 +114,20 @@ def test_rest_server_roundtrip(vault_env, monkeypatch):
             time.sleep(0.05)
     assert up, "servidor REST não subiu"
 
-    # Sem token → 401
     code, _ = _req("GET", base + "/secrets")
     assert code == 401
 
-    # POST autenticado cria segredo
     code, body = _req("POST", base + "/secrets/db", token=_PWD, body={"value": "p@ss"})
     assert code == 200 and body["ok"] is True
 
-    # GET recupera
     code, body = _req("GET", base + "/secrets/db", token=_PWD)
     assert code == 200 and body["value"] == "p@ss"
 
-    # Lista
     code, body = _req("GET", base + "/secrets", token=_PWD)
     assert "db" in body["names"]
 
-    # DELETE remove
     code, body = _req("DELETE", base + "/secrets/db", token=_PWD)
     assert code == 200 and body["deleted"] == "db"
 
-    # GET inexistente → 404
     code, _ = _req("GET", base + "/secrets/db", token=_PWD)
     assert code == 404

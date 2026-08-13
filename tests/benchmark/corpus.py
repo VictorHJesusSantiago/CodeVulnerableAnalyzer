@@ -16,7 +16,7 @@ from dataclasses import dataclass
 @dataclass
 class BenchmarkCase:
     name: str
-    language: str  # extensão do arquivo, ex.: "py", "js", "php"
+    language: str
     cwe: str
     bad_code: str
     good_code: str
