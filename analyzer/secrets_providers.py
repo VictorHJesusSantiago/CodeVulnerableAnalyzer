@@ -18,7 +18,7 @@ class ProviderSignature:
     secret_type: str
     pattern: re.Pattern
     revoke_url: str
-    confidence: str = "HIGH"  # HIGH | MEDIUM | LOW
+    confidence: str = "HIGH"
 
 
 def _p(provider: str, secret_type: str, regex: str, revoke_url: str, confidence: str = "HIGH") -> ProviderSignature:
@@ -26,7 +26,6 @@ def _p(provider: str, secret_type: str, regex: str, revoke_url: str, confidence:
 
 
 PROVIDER_SIGNATURES: list[ProviderSignature] = [
-    # ── Cloud (AWS/GCP/Azure) ──────────────────────────────────────────────────
     _p(
         "AWS", "Access Key ID", r"\bAKIA[0-9A-Z]{16}\b", "https://console.aws.amazon.com/iam/home#/security_credentials"
     ),
@@ -93,7 +92,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
         r'(?i)cf[_-]?api[_-]?key\s*[:=]\s*["\']?[a-f0-9]{37}',
         "https://dash.cloudflare.com/profile/api-tokens",
     ),
-    # ── VCS / CI ──────────────────────────────────────────────────────────────
     _p("GitHub", "Personal Access Token", r"\bghp_[A-Za-z0-9]{36}\b", "https://github.com/settings/tokens"),
     _p("GitHub", "OAuth Token", r"\bgho_[A-Za-z0-9]{36}\b", "https://github.com/settings/applications"),
     _p("GitHub", "App Token", r"\b(?:ghu|ghs)_[A-Za-z0-9]{36}\b", "https://github.com/settings/apps"),
@@ -139,7 +137,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
         r"\bdckr_pat_[A-Za-z0-9_-]{27}\b",
         "https://hub.docker.com/settings/security",
     ),
-    # ── Comunicação ───────────────────────────────────────────────────────────
     _p("Slack", "Bot/User Token", r"\bxox[baprs]-[A-Za-z0-9-]{10,72}\b", "https://api.slack.com/apps"),
     _p(
         "Slack",
@@ -182,7 +179,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
         r'(?i)zoom[_-]?api[_-]?secret\s*[:=]\s*["\']?[A-Za-z0-9]{32}',
         "https://marketplace.zoom.us/develop/apps",
     ),
-    # ── Pagamentos ────────────────────────────────────────────────────────────
     _p("Stripe", "Live Secret Key", r"\bsk_live_[A-Za-z0-9]{24,247}\b", "https://dashboard.stripe.com/apikeys"),
     _p(
         "Stripe",
@@ -203,7 +199,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
     _p("Shopify", "Access Token", r"\bshpat_[a-f0-9]{32}\b", "https://www.shopify.com/admin/settings/apps"),
     _p("Shopify", "Custom App Token", r"\bshpca_[a-f0-9]{32}\b", "https://www.shopify.com/admin/settings/apps"),
     _p("Shopify", "Private App Password", r"\bshppa_[a-f0-9]{32}\b", "https://www.shopify.com/admin/settings/apps"),
-    # ── Dados / Infra ─────────────────────────────────────────────────────────
     _p(
         "MongoDB",
         "Connection String c/ senha",
@@ -261,7 +256,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
         r'(?i)algolia[_-]?(?:admin[_-]?)?(?:api[_-]?)?key\s*[:=]\s*["\']?[a-f0-9]{32}',
         "https://www.algolia.com/account/api-keys/",
     ),
-    # ── AI / LLM ──────────────────────────────────────────────────────────────
     _p("OpenAI", "API Key", r"\bsk-[A-Za-z0-9]{20}T3BlbkFJ[A-Za-z0-9]{20}\b", "https://platform.openai.com/api-keys"),
     _p("OpenAI", "Project API Key", r"\bsk-proj-[A-Za-z0-9_-]{20,}\b", "https://platform.openai.com/api-keys"),
     _p(
@@ -285,7 +279,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
         r'(?i)mistral[_-]?api[_-]?key\s*[:=]\s*["\']?[A-Za-z0-9]{32}',
         "https://console.mistral.ai/api-keys",
     ),
-    # ── Monitoramento / Observabilidade ─────────────────────────────────────────
     _p("Sentry", "Auth Token", r"\bsntrys_[A-Za-z0-9_]{40,}\b", "https://sentry.io/settings/account/api/auth-tokens/"),
     _p(
         "Datadog",
@@ -323,7 +316,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
         r'(?i)honeybadger[_-]?api[_-]?key\s*[:=]\s*["\']?[a-f0-9]{32}',
         "https://app.honeybadger.io/",
     ),
-    # ── Analytics / Produto ───────────────────────────────────────────────────
     _p(
         "Segment",
         "Write Key",
@@ -342,7 +334,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
         r'(?i)amplitude[_-]?api[_-]?key\s*[:=]\s*["\']?[a-f0-9]{32}',
         "https://analytics.amplitude.com/",
     ),
-    # ── Identidade / Auth ─────────────────────────────────────────────────────
     _p(
         "Auth0",
         "Client Secret",
@@ -370,7 +361,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
         "https://developer.twitter.com/en/portal/dashboard",
         confidence="MEDIUM",
     ),
-    # ── Colaboração / Suporte ──────────────────────────────────────────────────
     _p(
         "Atlassian/Jira",
         "API Token",
@@ -398,7 +388,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
         r'(?i)box[_-]?developer[_-]?token\s*[:=]\s*["\']?[A-Za-z0-9]{32}',
         "https://app.box.com/developers/console",
     ),
-    # ── Genéricos ─────────────────────────────────────────────────────────────
     _p(
         "JWT",
         "Token genérico",
@@ -432,7 +421,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
         "N/A — remova credenciais embutidas na URL",
         confidence="LOW",
     ),
-    # ── Expansão adicional de provedores ────────────────────────────────────────
     _p(
         "Vercel",
         "Access Token",
@@ -580,8 +568,6 @@ PROVIDER_SIGNATURES: list[ProviderSignature] = [
     ),
 ]
 
-# Assinaturas contextuais (confiança média): serviços cujas chaves não possuem
-# prefixo público estável, mas aparecem em atribuições nomeadas.
 _CONTEXTUAL_PROVIDERS = [
     "Aiven",
     "Akamai",

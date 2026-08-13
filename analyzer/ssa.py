@@ -27,9 +27,6 @@ from dataclasses import dataclass, field
 
 from analyzer.pyast_engine import CFG
 
-# ════════════════════════════════════════════════════════════════════════════
-#  1. Pós-ordem via DFS a partir da entrada
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def _postorder(cfg: CFG) -> list[int]:
@@ -46,17 +43,12 @@ def _postorder(cfg: CFG) -> list[int]:
         order.append(nid)
 
     dfs(cfg.entry)
-    # Inclui nós porventura não alcançáveis a partir da entrada (dead code)
-    # numa pós-ordem própria, para que o algoritmo de dominadores não falhe.
     for nid in cfg.nodes:
         if nid not in visited:
             dfs(nid)
     return order
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  2. Dominadores (Cooper-Harvey-Kennedy)
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def compute_dominators(cfg: CFG) -> dict[int, int]:
@@ -99,9 +91,6 @@ def compute_dominators(cfg: CFG) -> dict[int, int]:
     return {n: d for n, d in idom.items() if d is not None}
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  3. Fronteira de dominância (Cytron et al.)
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def compute_dominance_frontier(cfg: CFG, idom: dict[int, int]) -> dict[int, set[int]]:
@@ -116,15 +105,12 @@ def compute_dominance_frontier(cfg: CFG, idom: dict[int, int]) -> dict[int, set[
             runner = p
             while runner != idom.get(b) and runner in idom:
                 df[runner].add(b)
-                if idom[runner] == runner:  # evita loop infinito na raiz
+                if idom[runner] == runner:
                     break
                 runner = idom[runner]
     return df
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  4. Inserção de φ-nodes (algoritmo clássico de SSA mínima)
-# ════════════════════════════════════════════════════════════════════════════
 
 
 @dataclass
@@ -170,9 +156,6 @@ def build_ssa(cfg: CFG) -> tuple:
     return idom, df, phi
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  5. Definite assignment (atribuição definitiva) — usa os φ-sites reais
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def definite_assignment(cfg: CFG, params: set[str]) -> dict[int, set[str]]:
@@ -188,7 +171,7 @@ def definite_assignment(cfg: CFG, params: set[str]) -> dict[int, set[str]]:
     IN: dict[int, set[str]] = {nid: set(all_nodes) if nid != cfg.entry else set(params) for nid in cfg.nodes}
     OUT: dict[int, set[str]] = {nid: set() for nid in cfg.nodes}
 
-    order = _postorder(cfg)  # qualquer ordem estável funciona com fixed-point
+    order = _postorder(cfg)
     changed = True
     while changed:
         changed = False

@@ -38,7 +38,7 @@ class SecretBaselineEntry:
     provider: str
     secret_type: str
     masked_value: str
-    status: str = "accepted"  # accepted | rotated | false_positive
+    status: str = "accepted"
 
 
 @dataclass

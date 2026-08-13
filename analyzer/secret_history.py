@@ -149,7 +149,6 @@ def scan_git_history(directory: str, max_commits: int | None = None, since: str 
     return {"ok": True, "error": None, "findings": findings, "commits_scanned": commits_scanned}
 
 
-# ── Compatibilidade retroativa: análise de um patch já fornecido ─────────────
 
 
 def scan_patch_history(patch_text: str) -> list[dict[str, Any]]:
