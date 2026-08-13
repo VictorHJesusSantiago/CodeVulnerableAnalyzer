@@ -36,7 +36,6 @@ def test_shutdown_and_exit_stop_running():
 
 def test_did_open_stores_document():
     srv, _ = _server_capturing()
-    # Evita o scan real em thread: substitui o publisher
     srv._publish_diagnostics = lambda uri, text: None  # type: ignore[assignment]
     srv._handle(
         {
@@ -66,7 +65,6 @@ def test_did_change_and_close():
         }
     )
     assert "file:///x.py" not in srv._open_docs
-    # didClose limpa diagnósticos
     assert sent[-1]["params"] == {"uri": "file:///x.py", "diagnostics": []}
 
 
@@ -130,5 +128,5 @@ def test_run_loop_processes_then_stops():
     srv, sent = _server_capturing()
     msgs = iter([{"id": 1, "method": "initialize", "params": {}}, None])
     srv._read_message = lambda: next(msgs)  # type: ignore[assignment]
-    srv.run()  # processa initialize, depois None → encerra
+    srv.run()
     assert any("result" in m and "capabilities" in m.get("result", {}) for m in sent)

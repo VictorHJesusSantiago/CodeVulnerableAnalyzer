@@ -44,7 +44,7 @@ def test_detect_language_by_special_name(path, expected):
         ("Main.java", Language.JAVA),
         ("main.go", Language.GO),
         ("lib.rs", Language.RUST),
-        ("script.fish", Language.FISH),  # regressão: override de extensão duplicada
+        ("script.fish", Language.FISH),
         ("infra.pp", Language.PUPPET),
     ],
 )

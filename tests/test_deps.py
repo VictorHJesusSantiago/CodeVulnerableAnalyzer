@@ -26,7 +26,6 @@ from analyzer.deps import (
     scan_manifest_dir_osv,
 )
 
-# ── Comparação de versão ──────────────────────────────────────────────────────
 
 
 def test_parse_ver_and_lt():
@@ -39,13 +38,10 @@ def test_parse_ver_and_lt():
 def test_check_matches_known_cve():
     vulns = _check("requests", "2.30.0", "requirements.txt", 1)
     assert any(v.cve_id == "CVE-2023-32681" for v in vulns)
-    # Versão já corrigida → sem achado
     assert _check("requests", "2.31.0", "requirements.txt", 1) == []
-    # Pacote desconhecido → sem achado
     assert _check("pacote-inexistente-xyz", "1.0", "x", 1) == []
 
 
-# ── Parsers de manifesto ──────────────────────────────────────────────────────
 
 
 def test_parse_requirements():
@@ -101,7 +97,6 @@ def test_scan_manifest_dir(tmp_path):
     assert any(v.package == "requests" for v in vulns)
 
 
-# ── Scoring CVSS v3 ───────────────────────────────────────────────────────────
 
 
 def test_cvss_v3_base_critical():
@@ -127,7 +122,6 @@ def test_label_from_score_bands():
     assert _label_from_score(0.0) == "MEDIUM"
 
 
-# ── Interpretação de entradas OSV ─────────────────────────────────────────────
 
 
 def test_osv_severity_text_and_cvss():
@@ -144,7 +138,6 @@ def test_osv_fixed_version():
     assert _osv_fixed_version({}) == "—"
 
 
-# ── query_osv com urlopen mockado ─────────────────────────────────────────────
 
 
 class _FakeResp:
