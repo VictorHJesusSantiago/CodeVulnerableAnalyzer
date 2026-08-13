@@ -77,8 +77,6 @@ def scan_pii(file_path: str, content: str) -> list[PIIFinding]:
     seen: set[tuple] = set()
     lines = content.splitlines()
 
-    # Definida uma vez fora do loop, com line_no/line ligados como parâmetros
-    # explícitos (evita capturar variáveis de loop numa closure — B023).
     def _add(line_no: int, line: str, pii_type: str, masked: str) -> None:
         key = (file_path, line_no, pii_type, masked)
         if key in seen:

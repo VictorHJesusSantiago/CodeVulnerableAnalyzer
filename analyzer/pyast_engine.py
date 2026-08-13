@@ -40,9 +40,6 @@ from dataclasses import dataclass, field
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory, Vulnerability
 
-# ════════════════════════════════════════════════════════════════════════════
-#  1. Detecção de código morto (unreachable code)
-# ════════════════════════════════════════════════════════════════════════════
 
 _TERMINATORS = (ast.Return, ast.Raise, ast.Break, ast.Continue)
 
@@ -59,8 +56,6 @@ def _find_unreachable(tree: ast.AST) -> list[ast.stmt]:
                 unreachable.append(stmt)
             elif isinstance(stmt, _TERMINATORS):
                 terminated = True
-            # Recorre em sub-blocos independentemente do estado 'terminated'
-            # do bloco pai (cada bloco tem sua própria linearidade).
             for child_body in _sub_bodies(stmt):
                 _scan_body(child_body)
 
@@ -93,9 +88,6 @@ def _find_unreachable(tree: ast.AST) -> list[ast.stmt]:
     return unreachable
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  2. Framework de dataflow genérico (worklist algorithm)
-# ════════════════════════════════════════════════════════════════════════════
 
 
 @dataclass
@@ -104,8 +96,8 @@ class CFGNode:
     stmt: ast.stmt
     succ: set[int] = field(default_factory=set)
     pred: set[int] = field(default_factory=set)
-    defs: set[str] = field(default_factory=set)  # variáveis definidas neste nó
-    uses: set[str] = field(default_factory=set)  # variáveis lidas neste nó
+    defs: set[str] = field(default_factory=set)
+    uses: set[str] = field(default_factory=set)
 
 
 class CFG:
@@ -164,11 +156,11 @@ class CFG:
                 if body_entry is not None:
                     self._link(node.id, body_entry)
                     for be in body_exits or set():
-                        self._link(be, node.id)  # loop back
+                        self._link(be, node.id)
                 prev_exits = {node.id} | (body_exits or set())
             elif isinstance(stmt, (ast.Return, ast.Raise)):
                 self.exits.add(node.id)
-                prev_exits = set()  # sem fall-through
+                prev_exits = set()
             else:
                 prev_exits = {node.id}
 
@@ -194,7 +186,7 @@ def _defs_uses(stmt: ast.stmt) -> tuple[set[str], set[str]]:
                 uses.add(n.id)
 
         def visit_FunctionDef(self, n):
-            pass  # não desce em funções aninhadas
+            pass
 
         def visit_AsyncFunctionDef(self, n):
             pass
@@ -256,7 +248,7 @@ def _worklist(cfg: CFG, forward: bool, gen_kill) -> dict[int, tuple[set, set]]:
 
 def reaching_definitions(cfg: CFG) -> dict[int, tuple[set[str], set[str]]]:
     def gk(node: CFGNode):
-        return set(node.defs), set()  # simplificado: sem 'kill' de defs antigas (over-approx conservador)
+        return set(node.defs), set()
 
     return _worklist(cfg, forward=True, gen_kill=gk)
 
@@ -268,9 +260,6 @@ def live_variables(cfg: CFG) -> dict[int, tuple[set[str], set[str]]]:
     return _worklist(cfg, forward=False, gen_kill=gk)
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  3. Métricas de complexidade via AST
-# ════════════════════════════════════════════════════════════════════════════
 
 _DECISION_NODES = (ast.If, ast.For, ast.While, ast.ExceptHandler, ast.Assert, ast.IfExp)
 if hasattr(ast, "Match"):
@@ -320,7 +309,7 @@ def cognitive_complexity(func: ast.AST) -> int:
                 score += len(child.values) - 1
                 walk(child, nesting)
             elif isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef, ast.Lambda)):
-                pass  # função aninhada tem sua própria pontuação
+                pass
             else:
                 walk(child, nesting)
 
@@ -392,9 +381,6 @@ def halstead_metrics(func: ast.AST) -> dict:
     }
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  4. Detectores de bugs via AST (heurísticas reais, escopo declarado)
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def _self_recursive_without_base_case(func: ast.FunctionDef) -> bool:
@@ -446,7 +432,7 @@ def _use_after_close(func: ast.FunctionDef) -> list[tuple[str, int]]:
                 if isinstance(node, ast.Assign):
                     for t in node.targets:
                         if isinstance(t, ast.Name):
-                            closed.pop(t.id, None)  # reatribuído: reset
+                            closed.pop(t.id, None)
                 if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
                     if node.func.attr == "close" and isinstance(node.func.value, ast.Name):
                         closed[node.func.value.id] = node.lineno
@@ -485,9 +471,6 @@ def _null_deref_candidates(func: ast.FunctionDef) -> list[tuple[str, int]]:
     return findings
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  5. Orquestração: análise de um arquivo Python
-# ════════════════════════════════════════════════════════════════════════════
 
 MAX_CYCLOMATIC_AST = 10
 MAX_COGNITIVE_AST = 15
@@ -507,7 +490,6 @@ def analyze_python_ast(file_path: str, content: str) -> list[Vulnerability]:
     def _line(n: int) -> str:
         return lines[n - 1].rstrip() if 0 < n <= len(lines) else ""
 
-    # ── Código morto ────────────────────────────────────────────────────────
     for stmt in _find_unreachable(tree):
         results.append(
             Vulnerability(
@@ -528,7 +510,6 @@ def analyze_python_ast(file_path: str, content: str) -> list[Vulnerability]:
             )
         )
 
-    # ── Por função: complexidade, dataflow, recursão, TOCTOU, etc. ───────────
     for node in ast.walk(tree):
         if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
             continue
@@ -655,7 +636,6 @@ def analyze_python_ast(file_path: str, content: str) -> list[Vulnerability]:
                 )
             )
 
-        # ── Dataflow: dead store (reaching defs / live variables) ────────────
         cfg = CFG(node.body)
         if cfg.nodes:
             live = live_variables(cfg)
@@ -684,7 +664,6 @@ def analyze_python_ast(file_path: str, content: str) -> list[Vulnerability]:
                         )
                     )
 
-            # ── SSA real (dominadores + φ-nodes) → definite assignment ───────
             from analyzer.ssa import definite_assignment
 
             params = {a.arg for a in node.args.args}
@@ -693,10 +672,6 @@ def analyze_python_ast(file_path: str, content: str) -> list[Vulnerability]:
 
             reported_vars: set = set()
             for nid, cfgnode in cfg.nodes.items():
-                # Só considera nomes que são de fato variáveis locais desta
-                # função (definidas em algum ponto dela) — evita falso
-                # positivo em builtins/globais/imports usados sem serem
-                # atribuídos localmente.
                 candidates = (cfgnode.uses & all_local_defs) - certain.get(nid, set()) - params
                 for varname in candidates:
                     if varname in reported_vars:
