@@ -6,11 +6,6 @@ from dataclasses import dataclass, field
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory
 
-# Regras são singletons compartilhados (ver analyzer.rules.get_rules) e a
-# compilação de regex é preguiçosa. Sob um scan paralelo (futuro --jobs), dois
-# workers poderiam compilar o mesmo Rule simultaneamente. re.compile é
-# idempotente, mas guardamos a atribuição com um lock (double-checked locking)
-# para que a preparação nunca dependa de sorte de agendamento.
 _COMPILE_LOCK = threading.Lock()
 
 
@@ -36,7 +31,6 @@ class Rule:
     _neg_compiled: re.Pattern | None = field(default=None, init=False, repr=False)
 
     def _ensure_compiled(self) -> None:
-        # Fast path sem lock: já compilado (leitura de atributo é atômica).
         if self._compiled is not None and (self._neg_compiled is not None or not self.negative_pattern):
             return
         with _COMPILE_LOCK:

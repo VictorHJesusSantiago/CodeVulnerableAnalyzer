@@ -11,7 +11,6 @@ from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 ARCHITECTURE_RULES: list[Rule] = [
-    # ── Violação de Camadas ───────────────────────────────────────────────────
     Rule(
         id="ARCH-001",
         name="Acesso Direto ao Banco de Dados em Camada de Apresentação",

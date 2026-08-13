@@ -46,9 +46,6 @@ def _reg(lang: Language, rules: list[Rule]) -> None:
     EXPANSION_RULES.setdefault(lang, []).extend(rules)
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  HARDWARE DESCRIPTION — VHDL, Verilog/SystemVerilog
-# ════════════════════════════════════════════════════════════════════════════
 _reg(
     Language.VHDL,
     [
@@ -132,9 +129,6 @@ _reg(
     ],
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-#  BUILD SYSTEMS — Makefile, CMake, Bazel/Starlark, Gradle, sed
-# ════════════════════════════════════════════════════════════════════════════
 _reg(
     Language.MAKEFILE,
     [
@@ -301,10 +295,6 @@ _reg(
     ],
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-#  IaC / CONFIG AVANÇADA — Bicep, Jsonnet, Dhall, CUE, Nix, Puppet, Chef, Salt,
-#                          + HCL2 avançado (Terraform) e PowerShell DSC
-# ════════════════════════════════════════════════════════════════════════════
 _reg(
     Language.BICEP,
     [
@@ -535,7 +525,7 @@ _reg(
 )
 _reg(
     Language.TERRAFORM,
-    [  # HCL2 avançado (acrescenta às regras existentes)
+    [
         _r(
             "TF-ADV-001",
             "Bloco dynamic com for_each sobre dado externo",
@@ -575,7 +565,7 @@ _reg(
 )
 _reg(
     Language.POWERSHELL,
-    [  # PowerShell DSC (acrescenta às regras existentes)
+    [
         _r(
             "DSC-001",
             "PlainTextPassword habilitado em DSC",
@@ -604,10 +594,6 @@ _reg(
     ],
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-#  BLOCKCHAIN ESTENDIDO — Yul, Huff, Cadence, Clarity, Michelson, Ink!, Sway,
-#                         Ride, TEAL
-# ════════════════════════════════════════════════════════════════════════════
 _reg(
     Language.YUL,
     [
@@ -831,9 +817,6 @@ _reg(
     ],
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-#  GPU / SHADERS — GLSL, HLSL, WGSL, CUDA, OpenCL, Metal
-# ════════════════════════════════════════════════════════════════════════════
 _reg(
     Language.GLSL,
     [
@@ -965,9 +948,6 @@ _reg(
     ],
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-#  SISTEMAS MODERNOS / FUNCIONAIS NOVAS
-# ════════════════════════════════════════════════════════════════════════════
 _reg(
     Language.MOJO,
     [
@@ -1174,9 +1154,6 @@ _reg(
     ],
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-#  PROVAS / DEPENDENTLY-TYPED — Idris, Lean, Coq, Agda
-# ════════════════════════════════════════════════════════════════════════════
 _reg(
     Language.IDRIS,
     [
@@ -1258,9 +1235,6 @@ _reg(
     ],
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-#  QUÂNTICA — Q#, OpenQASM
-# ════════════════════════════════════════════════════════════════════════════
 _reg(
     Language.QSHARP,
     [
@@ -1296,10 +1270,6 @@ _reg(
     ],
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-#  SCRIPTING / LEGADO — Tcl, AWK, Batch, Forth, APL, AutoHotkey, AppleScript,
-#                       Fish, Zsh
-# ════════════════════════════════════════════════════════════════════════════
 _reg(
     Language.TCL,
     [
@@ -1558,9 +1528,6 @@ _reg(
     ],
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-#  LISP FAMILY / LÓGICA — Scheme, Racket, Common Lisp, Prolog
-# ════════════════════════════════════════════════════════════════════════════
 _reg(
     Language.SCHEME,
     [
@@ -1690,9 +1657,6 @@ _reg(
     ],
 )
 
-# ════════════════════════════════════════════════════════════════════════════
-#  LEGADO / ENTERPRISE — Fortran, Ada/SPARK, Pascal/Delphi, RPG, PL/I, Smalltalk
-# ════════════════════════════════════════════════════════════════════════════
 _reg(
     Language.FORTRAN,
     [
