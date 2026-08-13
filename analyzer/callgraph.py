@@ -22,7 +22,6 @@ from pathlib import Path
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory, Vulnerability
 
-# Reaproveita os padrões de taint já usados no engine principal
 _TAINT_SOURCE_RE = re.compile(
     r"\b(\w+)\s*=\s*(?:"
     r"request\.(?:args|form|json|data|values|get|params|cookies|headers)\b|"
@@ -50,20 +49,17 @@ class FuncNode:
     lineno: int
     node: ast.AST
     params: list[str]
-    calls: list[tuple[str, ast.Call]] = field(default_factory=list)  # (callee_name, call_node)
+    calls: list[tuple[str, ast.Call]] = field(default_factory=list)
     tainted_params: set[str] = field(default_factory=set)
     returns_tainted: bool = False
 
 
 class CallGraph:
     def __init__(self):
-        # nome -> lista de FuncNode (pode haver múltiplas defs com mesmo nome)
         self.functions: dict[str, list[FuncNode]] = {}
-        # edges: nome_chamador -> set(nome_chamado)
         self.edges: dict[str, set[str]] = {}
         self.reverse_edges: dict[str, set[str]] = {}
 
-    # ── Construção ──────────────────────────────────────────────────────────
     def add_file(self, file_path: str, content: str) -> None:
         try:
             tree = ast.parse(content, filename=file_path)
@@ -104,7 +100,6 @@ class CallGraph:
             return f.attr
         return None
 
-    # ── Impact analysis ─────────────────────────────────────────────────────
     def callers(self, func_name: str) -> set[str]:
         return set(self.reverse_edges.get(func_name, set()))
 
@@ -156,7 +151,6 @@ class CallGraph:
             "total_edges": sum(len(v) for v in self.edges.values()),
         }
 
-    # ── Taint interprocedural (ponto fixo sobre o grafo) ────────────────────
     def _intraproc_tainted_vars(self, fn: FuncNode) -> set[str]:
         """Variáveis contaminadas dentro do corpo de fn, considerando também
         os parâmetros já marcados como tainted (por chamadas anteriores)."""
@@ -183,7 +177,6 @@ class CallGraph:
                 for fn in defs:
                     tainted_vars = self._intraproc_tainted_vars(fn)
 
-                    # Retorno contaminado?
                     for node in ast.walk(fn.node):
                         if isinstance(node, ast.Return) and node.value is not None:
                             ret_names = {n.id for n in ast.walk(node.value) if isinstance(n, ast.Name)}
@@ -191,7 +184,6 @@ class CallGraph:
                                 fn.returns_tainted = True
                                 changed = True
 
-                    # Propaga para os calees: argumento tainted -> parâmetro do calee
                     for callee_name, call_node in fn.calls:
                         callee_defs = self.functions.get(callee_name, [])
                         if not callee_defs:
@@ -211,7 +203,6 @@ class CallGraph:
             if not changed:
                 break
 
-        # ── Geração dos achados: parâmetro tainted alcançando sink no calee ──
         seen_keys: set[tuple] = set()
         for _fname, defs in self.functions.items():
             for fn in defs:

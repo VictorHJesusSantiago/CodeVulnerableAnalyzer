@@ -22,9 +22,6 @@ from pathlib import Path
 from analyzer.entropy import scan_entropy
 from analyzer.secrets_providers import classify_secret
 
-# ════════════════════════════════════════════════════════════════════════════
-#  Extração de strings de binários (equivalente a `strings`)
-# ════════════════════════════════════════════════════════════════════════════
 
 _MIN_STRING_LEN = 6
 _ASCII_RUN_RE = re.compile(rb"[\x20-\x7e]{%d,}" % _MIN_STRING_LEN)
@@ -41,7 +38,6 @@ def extract_strings(data: bytes, min_len: int = _MIN_STRING_LEN) -> list[str]:
         except UnicodeDecodeError:
             continue
 
-    # UTF-16LE: bytes intercalados com \x00
     utf16_pattern = re.compile(rb"(?:[\x20-\x7e]\x00){%d,}" % min_len)
     for m in utf16_pattern.finditer(data):
         try:
@@ -85,9 +81,6 @@ def scan_binary_for_secrets(file_path: str, data: bytes) -> list[dict]:
     return findings
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  EXIF (parser TIFF/IFD mínimo sobre APP1 de JPEG)
-# ════════════════════════════════════════════════════════════════════════════
 
 _EXIF_TAG_NAMES = {
     0x010E: "ImageDescription",
@@ -131,13 +124,13 @@ def extract_exif_strings(jpeg_data: bytes) -> list[str]:
         marker = jpeg_data[offset : offset + 2]
         if marker[0:1] != b"\xff":
             break
-        if marker == b"\xff\xe1":  # APP1
+        if marker == b"\xff\xe1":
             seg_len = struct.unpack(">H", jpeg_data[offset + 2 : offset + 4])[0]
             segment = jpeg_data[offset + 4 : offset + 2 + seg_len]
             if segment[:6] == b"Exif\x00\x00":
                 app1_data = segment[6:]
             break
-        elif marker == b"\xff\xd9":  # EOI
+        elif marker == b"\xff\xd9":
             break
         else:
             if len(jpeg_data) < offset + 4:
@@ -155,7 +148,6 @@ def extract_exif_strings(jpeg_data: bytes) -> list[str]:
     for tag, typ, count, raw in entries:
         if tag not in _EXIF_TAG_NAMES:
             continue
-        # Tipo 2 = ASCII; se count <= 4, o valor está inline em raw; senão é um offset
         if typ == 2:
             if count <= 4:
                 value = raw[:count].rstrip(b"\x00")
@@ -187,9 +179,6 @@ def scan_image_exif_for_secrets(file_path: str, data: bytes) -> list[dict]:
     return findings
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  PDF (extração best-effort de texto, incl. streams FlateDecode)
-# ════════════════════════════════════════════════════════════════════════════
 
 _PDF_STREAM_RE = re.compile(rb"stream\r?\n(.*?)endstream", re.DOTALL)
 _PDF_TEXT_LITERAL_RE = re.compile(rb"\((?:[^()\\]|\\.)*\)")
@@ -214,7 +203,6 @@ def extract_pdf_text(data: bytes) -> str:
             for lit in _PDF_TEXT_LITERAL_RE.finditer(decompressed):
                 raw = lit.group(0)[1:-1]
                 texts.append(raw.decode("latin-1", errors="replace"))
-            # Também roda extração de strings puras no stream descomprimido
             texts.append(decompressed.decode("latin-1", errors="replace"))
         except zlib.error:
             continue
@@ -239,9 +227,6 @@ def scan_pdf_for_secrets(file_path: str, data: bytes) -> list[dict]:
     return findings
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  .env (parsing dedicado KEY=VALUE)
-# ════════════════════════════════════════════════════════════════════════════
 
 _ENV_LINE_RE = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$")
 
@@ -279,7 +264,6 @@ def scan_env_for_secrets(file_path: str, content: str) -> list[dict]:
                 }
             )
         if not findings or findings[-1].get("line_number") != line_number:
-            # Heurística adicional: chave com nome sensível + valor não trivial
             if re.search(r"(?i)(?:secret|password|token|key|credential)", key) and len(value) >= 8:
                 findings.append(
                     {
@@ -295,9 +279,6 @@ def scan_env_for_secrets(file_path: str, content: str) -> list[dict]:
     return findings
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  Orquestração
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def scan_non_text_file(file_path: str) -> list[dict]:
