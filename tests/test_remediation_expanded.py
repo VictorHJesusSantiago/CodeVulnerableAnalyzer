@@ -20,8 +20,8 @@ def test_registered_rule_ids_are_real_not_phantom():
     engine = default_engine()
     assert "PY-EVAL" not in engine.codemods
     assert "PY-YAML-001" not in engine.codemods
-    assert "PY-001" in engine.codemods  # eval() real
-    assert "PY-012" in engine.codemods  # yaml.load real
+    assert "PY-001" in engine.codemods
+    assert "PY-012" in engine.codemods
 
 
 def test_weak_hash_md5_to_sha256():

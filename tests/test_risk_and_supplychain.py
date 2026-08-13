@@ -14,9 +14,6 @@ from analyzer.models import (
     Vulnerability,
 )
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  risk_grade
-# ══════════════════════════════════════════════════════════════════════════════
 from analyzer.risk_grade import compute_risk_grade
 
 
@@ -60,11 +57,10 @@ def test_risk_grade_clean_project_is_a():
     grade = compute_risk_grade(_report([]))
     assert grade.grade == "A"
     assert grade.penalty_total == 0.0
-    assert grade.label  # rótulo i18n preenchido
+    assert grade.label
 
 
 def test_risk_grade_critical_drops_grade():
-    # 1 CRITICAL (peso 10) * confiança HIGH (1.0) / 1 arquivo = 10.0 → F (>10 é F, ==10 é D)
     grade = compute_risk_grade(_report([_vuln(Severity.CRITICAL)]))
     assert grade.grade in ("D", "F")
     assert grade.score >= 5.0
@@ -72,7 +68,6 @@ def test_risk_grade_critical_drops_grade():
 
 
 def test_risk_grade_normalized_by_file_count():
-    # Mesma penalidade diluída por muitos arquivos → nota melhor
     vulns = [_vuln(Severity.LOW, Confidence.LOW) for _ in range(2)]
     good = compute_risk_grade(_report(vulns, files_scanned=100))
     assert good.grade == "A"
@@ -88,9 +83,6 @@ def test_risk_grade_label_localized():
     assert grade.label == "Excelente"
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  supplychain_sources (urlopen mockado — sem rede real)
-# ══════════════════════════════════════════════════════════════════════════════
 import analyzer.supplychain_sources as scs
 
 
@@ -144,7 +136,7 @@ def test_query_github_advisories(monkeypatch):
     _patch(monkeypatch, [{"ghsa_id": "GHSA-xyz", "severity": "high", "summary": "s"}])
     advs = scs.query_github_advisories("pip", "requests", "tok")
     assert advs[0].id == "GHSA-xyz"
-    assert advs[0].severity == "HIGH"  # .upper()
+    assert advs[0].severity == "HIGH"
 
 
 def test_query_oss_index(monkeypatch):

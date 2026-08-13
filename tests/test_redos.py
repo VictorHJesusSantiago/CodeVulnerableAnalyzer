@@ -32,9 +32,6 @@ import pytest
 
 from analyzer.rules import get_all_rules
 
-# Grupo com quantificador ILIMITADO (+ ou *) internamente, re-quantificado por
-# outro quantificador ILIMITADO — o padrão clássico de backtracking exponencial.
-# (Quantificadores limitados {n,m} não causam explosão exponencial.)
 _UNBOUNDED_NESTED = re.compile(r"\((?:\?[:=!])?[^()]*[+*][^()]*\)[+*]")
 
 
@@ -59,13 +56,6 @@ def test_no_multiline_rule_has_unbounded_nested_quantifier():
     )
 
 
-# Regras line-based que já contêm o shape de quantificador aninhado ilimitado
-# e foram VERIFICADAS EMPIRICAMENTE como não-catastróficas (backtracking apenas
-# polinomial, terminando em < 0.5s mesmo numa linha adversária de 2000 chars —
-# medido rodando o match direto contra "a"*2000, "a,"*1000, "{}"*1000 etc.).
-# A maioria também exige `\n` no pattern, o que as torna inertes por linha.
-# Uma regra NOVA com esse shape NÃO entra aqui automaticamente: ela falha o
-# teste abaixo até alguém verificar empiricamente que é polinomial e a revisar.
 _REVIEWED_SAFE_NESTED_QUANT = frozenset(
     {
         "QG-006",
@@ -122,9 +112,9 @@ def test_detector_flags_known_dangerous_shapes(dangerous):
 @pytest.mark.parametrize(
     "safe",
     [
-        r"\w+(?:\.\w+){4,}",  # quantificador externo LIMITADO
-        r"(abc)+",  # sem quantificador interno
-        r"[a-z]+\d+",  # quantificadores sequenciais, não aninhados
+        r"\w+(?:\.\w+){4,}",
+        r"(abc)+",
+        r"[a-z]+\d+",
     ],
 )
 def test_detector_ignores_safe_shapes(safe):
