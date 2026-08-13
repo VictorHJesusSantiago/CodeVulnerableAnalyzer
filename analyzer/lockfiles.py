@@ -27,14 +27,14 @@ class LockedPackage:
     name: str
     version: str
     ecosystem: str
-    dependencies: list[str] = field(default_factory=list)  # nomes de deps diretas (quando disponível)
+    dependencies: list[str] = field(default_factory=list)
     integrity: str | None = None
 
 
 @dataclass
 class DependencyTree:
-    packages: dict[str, LockedPackage] = field(default_factory=dict)  # nome -> pacote
-    edges: dict[str, set[str]] = field(default_factory=dict)  # pai -> filhos
+    packages: dict[str, LockedPackage] = field(default_factory=dict)
+    edges: dict[str, set[str]] = field(default_factory=dict)
 
     def add(self, pkg: LockedPackage) -> None:
         self.packages[pkg.name] = pkg
@@ -87,9 +87,6 @@ class DependencyTree:
         }
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  package-lock.json (npm)
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def parse_package_lock_json(content: str) -> DependencyTree:
@@ -102,7 +99,6 @@ def parse_package_lock_json(content: str) -> DependencyTree:
     version = data.get("lockfileVersion", 1)
 
     if version >= 2 and "packages" in data:
-        # npm v7+: chave é o caminho ("node_modules/pkg"), valor tem version/dependencies
         for path, info in data["packages"].items():
             if not path or path == "":
                 continue
@@ -115,7 +111,6 @@ def parse_package_lock_json(content: str) -> DependencyTree:
                 )
             )
     else:
-        # npm v1: chave "dependencies" recursiva
         def walk(deps: dict) -> None:
             for name, info in deps.items():
                 ver = info.get("version", "")
@@ -133,9 +128,6 @@ def parse_package_lock_json(content: str) -> DependencyTree:
     return tree
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  yarn.lock (formato próprio — blocos separados por linha em branco)
-# ════════════════════════════════════════════════════════════════════════════
 
 _YARN_HEADER_RE = re.compile(r'^"?([^,"]+)@')
 _YARN_VERSION_RE = re.compile(r'^\s+version\s+"([^"]+)"')
@@ -179,9 +171,6 @@ def parse_yarn_lock(content: str) -> DependencyTree:
     return tree
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  poetry.lock (TOML) — parser TOML mínimo suficiente para este formato
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def _parse_toml_simple(content: str) -> list[dict]:
@@ -211,7 +200,6 @@ def _parse_toml_simple(content: str) -> list[dict]:
                 _flush_array()
                 continue
             item = line.rstrip(",").strip().strip('"')
-            # Formatos "nome versão" ou "nome" — mantém só o nome do pacote
             item = item.split(" ")[0].strip('"')
             if item:
                 array_items.append(item)
@@ -245,7 +233,6 @@ def _parse_toml_simple(content: str) -> list[dict]:
             elif value == "[]":
                 current[key] = []
             elif value.startswith("["):
-                # Array multi-linha: acumula até encontrar ']'
                 in_array_key = key
                 array_items = []
             else:
@@ -280,9 +267,6 @@ def parse_cargo_lock(content: str) -> DependencyTree:
     return tree
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  Pipfile.lock (JSON)
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def parse_pipfile_lock(content: str) -> DependencyTree:
@@ -298,9 +282,6 @@ def parse_pipfile_lock(content: str) -> DependencyTree:
     return tree
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  go.sum
-# ════════════════════════════════════════════════════════════════════════════
 
 _GOSUM_LINE_RE = re.compile(r"^(\S+)\s+(v\S+?)(?:/go\.mod)?\s+(h1:\S+)$")
 
@@ -315,9 +296,6 @@ def parse_go_sum(content: str) -> DependencyTree:
     return tree
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  Orquestração
-# ════════════════════════════════════════════════════════════════════════════
 
 _LOCKFILE_PARSERS = {
     "package-lock.json": parse_package_lock_json,

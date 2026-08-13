@@ -18,7 +18,6 @@ class LSPServer:
         self._open_docs: dict[str, str] = {}
         self._lock = threading.Lock()
 
-    # ── Transport ────────────────────────────────────────────────────────────
 
     def _read_message(self) -> dict | None:
         header = b""
@@ -58,7 +57,6 @@ class LSPServer:
     def _error(self, req_id: Any, code: int, message: str) -> None:
         self._send({"jsonrpc": "2.0", "id": req_id, "error": {"code": code, "message": message}})
 
-    # ── Diagnósticos ─────────────────────────────────────────────────────────
 
     def _publish_diagnostics(self, uri: str, _content: str) -> None:
         file_path = uri.replace("file:///", "/").replace("file://", "/")
@@ -93,7 +91,6 @@ class LSPServer:
             )
         self._notify("textDocument/publishDiagnostics", {"uri": uri, "diagnostics": diagnostics})
 
-    # ── Handler de mensagens ──────────────────────────────────────────────────
 
     def _handle(self, msg: dict) -> None:
         method = msg.get("method", "")
@@ -169,7 +166,6 @@ class LSPServer:
         elif req_id is not None:
             self._reply(req_id, None)
 
-    # ── Loop principal ────────────────────────────────────────────────────────
 
     def run(self) -> None:
         while self._running:
