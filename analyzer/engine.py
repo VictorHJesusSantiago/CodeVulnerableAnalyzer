@@ -12,7 +12,6 @@ from analyzer.detector import SKIP_DIRS, detect_language, get_comment_prefix, is
 from analyzer.models import Confidence, Language, ScanReport, ScanResult, Severity, VulnCategory, Vulnerability
 from analyzer.rules import get_rules
 
-# Taint: primitivas compartilhadas (SSOT — ver analyzer.taint)
 from analyzer.taint import TAINT_SINK_RE, TAINT_SINKS, TaintTracker
 
 CONTEXT_LINES = 3
@@ -30,7 +29,6 @@ def _localize_rule(rule_id: str, name: str, description: str, remediation: str) 
         return name, description, remediation
 
 
-# ── Taint analysis ────────────────────────────────────────────────────────────
 
 
 def _analyze_taint(
@@ -52,15 +50,13 @@ def _analyze_taint(
         if len(line) > MAX_LINE_LENGTH:
             continue
 
-        # ── Fontes + propagação por atribuição (estado compartilhado) ──────
         tracker.observe(line)
 
-        # ── Sinks ─────────────────────────────────────────────────────────
         for sink_re, category, severity, label in TAINT_SINKS:
             sm = sink_re.search(line)
             if not sm:
                 continue
-            args = line[sm.end() - 1 :]  # do '(' em diante
+            args = line[sm.end() - 1 :]
             used = next((t for t in tracker.tainted if re.search(r"\b" + re.escape(t) + r"\b", args)), None)
             if not used:
                 continue
@@ -101,7 +97,6 @@ def _analyze_taint(
     return findings
 
 
-# ── Contexto de função ────────────────────────────────────────────────────────
 
 _FUNC_DEF_RE = re.compile(
     r"^\s*(?:def|async def|function|func|fn|method|sub|void|"
@@ -121,7 +116,6 @@ def _get_function_context(lines: list[str], line_idx: int) -> str | None:
     return None
 
 
-# ── Supressão ─────────────────────────────────────────────────────────────────
 
 _SUPPRESS_INLINE_RE = re.compile(r"#\s*vulnscan:\s*ignore\s+(\S+)", re.IGNORECASE)
 
@@ -154,7 +148,6 @@ def _is_globally_suppressed(rule_id: str, file_path: str, suppressed: set[str]) 
     return rule_id in suppressed or f"{Path(file_path).name}:{rule_id}" in suppressed
 
 
-# ── Regras customizadas ───────────────────────────────────────────────────────
 
 
 def _coerce_scalar(raw: str):
@@ -193,7 +186,6 @@ def _parse_simple_yaml_rules(text: str) -> list[dict]:
         if stripped in ("rules:", "---"):
             continue
         if stripped.startswith("- "):
-            # Início de um novo item (a parte após "- " é o primeiro par chave:valor)
             current = {}
             items.append(current)
             stripped = stripped[2:].strip()
@@ -266,7 +258,6 @@ def _load_py_plugin_rules(plugin_dirs: list[Path]) -> list:
                 if isinstance(rules, list):
                     custom.extend(r for r in rules if isinstance(r, Rule))
             except Exception:
-                # Um plugin quebrado não pode derrubar o scan inteiro.
                 pass
     return custom
 
@@ -339,7 +330,6 @@ def _load_custom_rules(extra_dirs: list[str] | None = None, allow_py_plugins: bo
     return custom
 
 
-# ── Config ────────────────────────────────────────────────────────────────────
 
 
 def _load_config() -> dict:
@@ -350,7 +340,7 @@ def _load_config() -> dict:
     if toml_path.exists():
         try:
             try:
-                import tomllib  # Python 3.11+
+                import tomllib
             except ImportError:
                 tomllib = None
             if tomllib:
@@ -401,7 +391,6 @@ def _config_suppressed_ids(config: dict) -> set[str]:
     return {str(x) for x in raw}
 
 
-# ── Engine principal ──────────────────────────────────────────────────────────
 
 
 class ScanEngine:
@@ -438,7 +427,6 @@ class ScanEngine:
         self.cpp_macros = cpp_macros
         self.incremental_cache = incremental_cache
 
-    # ── Arquivo único ─────────────────────────────────────────────────────────
 
     def scan_file(self, file_path: str) -> ScanResult:
         start = time.perf_counter()
@@ -475,7 +463,6 @@ class ScanEngine:
                     self.on_file_done(result)
                 return result
 
-            # ── Cache incremental: reaproveita resultado se o conteúdo não mudou ──
             if self.incremental_cache is not None:
                 cached = self.incremental_cache.get(file_path, content)
                 if cached is not None:
@@ -491,7 +478,6 @@ class ScanEngine:
                         self.on_file_done(result)
                     return result
 
-            # ── Pré-processamento de macros C/C++ (opt-in) ────────────────────────
             scan_content = content
             if self.cpp_macros and language in (Language.C, Language.CPP):
                 from analyzer.cpreprocess import expand_macros
@@ -501,7 +487,6 @@ class ScanEngine:
             vulnerabilities = self._scan_content(file_path, scan_content, language)
             vulnerabilities += analyze_complexity(file_path, scan_content, language)
 
-            # ── Análise AST real para Python (opt-in) ─────────────────────────────
             if self.ast_analysis and language == Language.PYTHON:
                 from analyzer.pyast_engine import analyze_python_ast
 
@@ -533,7 +518,6 @@ class ScanEngine:
             self.on_file_done(result)
         return result
 
-    # ── Conteúdo ──────────────────────────────────────────────────────────────
 
     def _scan_content(self, file_path: str, content: str, language: Language) -> list[Vulnerability]:
         all_rules = get_rules(language) + self._custom_rules
@@ -547,10 +531,8 @@ class ScanEngine:
         single_pfx, blk_start, blk_end = get_comment_prefix(language)
         in_block = False
 
-        # Linhas restritas (modo diff)
         restricted = self.only_lines.get(file_path) or self.only_lines.get(Path(file_path).name)
 
-        # ── Passo 1: regras multiline ─────────────────────────────────────────
         for rule in all_rules:
             if not rule.multiline:
                 continue
@@ -590,7 +572,6 @@ class ScanEngine:
                     )
                 )
 
-        # ── Passo 2: regras linha a linha ─────────────────────────────────────
         for li, line in enumerate(lines):
             if len(line) > MAX_LINE_LENGTH:
                 continue
@@ -608,8 +589,6 @@ class ScanEngine:
 
             is_comment = in_block or bool(single_pfx and stripped.startswith(single_pfx))
 
-            # Taint: rastreia fontes + propagação (Python + PHP/JS) via o mesmo
-            # TaintTracker do analisador dedicado — SSOT, nunca mais diverge.
             tracker.observe(line)
 
             for rule in all_rules:
@@ -636,7 +615,6 @@ class ScanEngine:
                         continue
                     conf = Confidence.MEDIUM if conf == Confidence.HIGH else Confidence.LOW
 
-                # Taint: elevar confiança se var tainted num sink
                 snk = TAINT_SINK_RE.search(line)
                 if snk and snk.group(1) in tracker.tainted:
                     conf = Confidence.HIGH
@@ -666,7 +644,6 @@ class ScanEngine:
                     )
                 )
 
-        # ── Passo 3: taint analysis dedicado (com propagação) ─────────────────
         for tf in _analyze_taint(file_path, lines, language, restricted):
             if _is_globally_suppressed(tf.rule_id, file_path, self._global_suppress):
                 continue
@@ -680,7 +657,6 @@ class ScanEngine:
 
         return vulns
 
-    # ── Diretório ─────────────────────────────────────────────────────────────
 
     def scan_directory(self, directory: str) -> ScanReport:
         start = time.perf_counter()
@@ -744,7 +720,6 @@ class ScanEngine:
         )
 
 
-# ── Watch mode ────────────────────────────────────────────────────────────────
 
 
 def watch_mode(target: str, engine_kwargs: dict, interval: float = 2.0) -> None:

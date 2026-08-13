@@ -21,8 +21,8 @@ class PinningFinding:
     file_path: str
     line_number: int
     package: str
-    issue: str  # "sem_hash" | "versao_nao_fixada" | "sem_checksum"
-    severity: str  # HIGH | MEDIUM | LOW
+    issue: str
+    severity: str
 
 
 _REQ_PINNED_RE = re.compile(r"^([A-Za-z0-9_.\-]+)\s*==\s*[0-9][A-Za-z0-9.\-]*")
@@ -91,7 +91,6 @@ def check_cargo_lock_checksums(content: str) -> list[PinningFinding]:
     for block in blocks[1:]:
         name_m = _CARGO_ENTRY_RE.search(block)
         if name_m and not _CARGO_CHECKSUM_RE.search(block):
-            # Pacotes "path = ..." (dependências locais) legitimamente não têm checksum
             if "source" in block and not _CARGO_CHECKSUM_RE.search(block):
                 findings.append(PinningFinding("Cargo.lock", 0, name_m.group(1), "sem_checksum", "LOW"))
     return findings
