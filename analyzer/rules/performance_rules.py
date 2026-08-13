@@ -11,7 +11,6 @@ from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 PERFORMANCE_RULES: list[Rule] = [
-    # ── SQL / Banco de Dados ──────────────────────────────────────────────────
     Rule(
         id="PERF-001",
         name="SELECT * — Busca de Colunas Desnecessárias",

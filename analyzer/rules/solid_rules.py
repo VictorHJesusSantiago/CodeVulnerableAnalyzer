@@ -10,7 +10,6 @@ from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 SOLID_RULES: list[Rule] = [
-    # ── SRP — Princípio da Responsabilidade Única ─────────────────────────────
     Rule(
         id="SLD-001",
         name="Classe com Muitos Métodos Públicos (God Class — SRP)",
@@ -47,7 +46,6 @@ SOLID_RULES: list[Rule] = [
         cwe="CWE-1121",
         confidence=Confidence.LOW,
     ),
-    # ── OCP — Princípio Aberto/Fechado ────────────────────────────────────────
     Rule(
         id="SLD-004",
         name="if/else Encadeado para Seleção de Comportamento por Tipo (OCP)",
@@ -61,7 +59,6 @@ SOLID_RULES: list[Rule] = [
         confidence=Confidence.MEDIUM,
         flags=re.IGNORECASE,
     ),
-    # ── DIP — Princípio de Inversão de Dependência ───────────────────────────
     Rule(
         id="SLD-005",
         name="Instanciação Direta de Dependência no Construtor (DIP)",
@@ -86,7 +83,6 @@ SOLID_RULES: list[Rule] = [
         cwe="CWE-1047",
         confidence=Confidence.HIGH,
     ),
-    # ── Obsessão por Primitivos ───────────────────────────────────────────────
     Rule(
         id="SLD-007",
         name="Obsessão por Primitivos (Primitive Obsession)",
@@ -99,7 +95,6 @@ SOLID_RULES: list[Rule] = [
         cwe="CWE-1041",
         confidence=Confidence.LOW,
     ),
-    # ── Singleton ─────────────────────────────────────────────────────────────
     Rule(
         id="SLD-008",
         name="Singleton Pattern (Estado Global Oculto)",
@@ -112,7 +107,6 @@ SOLID_RULES: list[Rule] = [
         cwe="CWE-1108",
         confidence=Confidence.MEDIUM,
     ),
-    # ── Data Class / Anemic Domain Model ─────────────────────────────────────
     Rule(
         id="SLD-009",
         name="Modelo de Domínio Anêmico (Apenas Getters/Setters)",
@@ -125,7 +119,6 @@ SOLID_RULES: list[Rule] = [
         cwe="CWE-1093",
         confidence=Confidence.LOW,
     ),
-    # ── Shotgun Surgery ───────────────────────────────────────────────────────
     Rule(
         id="SLD-010",
         name="Mudança Espalhada em Múltiplos Arquivos (Shotgun Surgery)",
@@ -138,7 +131,6 @@ SOLID_RULES: list[Rule] = [
         cwe="CWE-1041",
         confidence=Confidence.LOW,
     ),
-    # ── LSP ───────────────────────────────────────────────────────────────────
     Rule(
         id="SLD-011",
         name="NotImplementedException em Método de Interface Herdada (LSP)",
@@ -151,7 +143,6 @@ SOLID_RULES: list[Rule] = [
         cwe="CWE-1073",
         confidence=Confidence.HIGH,
     ),
-    # ── ISP ───────────────────────────────────────────────────────────────────
     Rule(
         id="SLD-012",
         name="Interface Muito Grande (Interface Segregation)",

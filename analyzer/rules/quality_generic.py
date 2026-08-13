@@ -10,7 +10,6 @@ from analyzer.models import Confidence, Language, Severity, VulnCategory
 from analyzer.rules.base import Rule
 
 QUALITY_GENERIC_RULES: list[Rule] = [
-    # ── Código morto / Dívida técnica ─────────────────────────────────────────
     Rule(
         id="QG-001",
         name="Código Comentado (Dead Code)",
@@ -49,7 +48,6 @@ QUALITY_GENERIC_RULES: list[Rule] = [
         cwe="CWE-532",
         confidence=Confidence.MEDIUM,
     ),
-    # ── Lei de Deméter ────────────────────────────────────────────────────────
     Rule(
         id="QG-004",
         name="Violação da Lei de Deméter (Encadeamento Excessivo)",
@@ -63,7 +61,6 @@ QUALITY_GENERIC_RULES: list[Rule] = [
         cwe="CWE-1041",
         confidence=Confidence.LOW,
     ),
-    # ── Parâmetros / Funções ──────────────────────────────────────────────────
     Rule(
         id="QG-005",
         name="Lista de Parâmetros Longa (5+ parâmetros)",
@@ -88,7 +85,6 @@ QUALITY_GENERIC_RULES: list[Rule] = [
         cwe="CWE-1041",
         confidence=Confidence.LOW,
     ),
-    # ── Nomenclatura ─────────────────────────────────────────────────────────
     Rule(
         id="QG-007",
         name="Nome de Variável Muito Curto (1-2 caracteres, fora de loop)",
@@ -114,7 +110,6 @@ QUALITY_GENERIC_RULES: list[Rule] = [
         cwe="CWE-1078",
         confidence=Confidence.LOW,
     ),
-    # ── Complexidade ──────────────────────────────────────────────────────────
     Rule(
         id="QG-009",
         name="Expressão Booleana Complexa (4+ condições)",
@@ -139,7 +134,6 @@ QUALITY_GENERIC_RULES: list[Rule] = [
         cwe="CWE-1121",
         confidence=Confidence.MEDIUM,
     ),
-    # ── Números mágicos ───────────────────────────────────────────────────────
     Rule(
         id="QG-011",
         name="Número Mágico em Expressão",
@@ -153,7 +147,6 @@ QUALITY_GENERIC_RULES: list[Rule] = [
         cwe="CWE-1109",
         confidence=Confidence.LOW,
     ),
-    # ── URL e Endpoints Hardcoded ─────────────────────────────────────────────
     Rule(
         id="QG-012",
         name="URL de Endpoint Hardcoded",
@@ -166,7 +159,6 @@ QUALITY_GENERIC_RULES: list[Rule] = [
         cwe="CWE-605",
         confidence=Confidence.LOW,
     ),
-    # ── Estado Global ─────────────────────────────────────────────────────────
     Rule(
         id="QG-013",
         name="Mutação de Estado Global",
@@ -179,7 +171,6 @@ QUALITY_GENERIC_RULES: list[Rule] = [
         cwe="CWE-1108",
         confidence=Confidence.HIGH,
     ),
-    # ── DRY ───────────────────────────────────────────────────────────────────
     Rule(
         id="QG-014",
         name="String Literal Duplicada",
@@ -192,7 +183,6 @@ QUALITY_GENERIC_RULES: list[Rule] = [
         cwe="CWE-1041",
         confidence=Confidence.LOW,
     ),
-    # ── Logging ───────────────────────────────────────────────────────────────
     Rule(
         id="QG-015",
         name="Dado Sensível em Log",
@@ -220,7 +210,6 @@ QUALITY_GENERIC_RULES: list[Rule] = [
         owasp="A05:2021",
         confidence=Confidence.MEDIUM,
     ),
-    # ── API Design ───────────────────────────────────────────────────────────
     Rule(
         id="QG-017",
         name="Retorno Nulo sem Documentação",
