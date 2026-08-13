@@ -11,9 +11,6 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  pyast_engine
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_dead_code_detection():
@@ -117,15 +114,12 @@ def test_halstead_and_cyclomatic_are_real_numbers():
 
     tree = ast.parse("def f(a, b):\n    if a > b:\n        return a\n    return b\n")
     func = tree.body[0]
-    assert cyclomatic_complexity(func) == 2  # 1 base + 1 if
+    assert cyclomatic_complexity(func) == 2
     h = halstead_metrics(func)
     assert h["N1"] > 0 and h["N2"] > 0
     assert h["volume"] > 0
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  callgraph
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_callgraph_cross_file_taint(tmp_path):
@@ -172,9 +166,6 @@ def test_callgraph_no_taint_when_sanitized_is_absent(tmp_path):
     assert findings == []
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  cpreprocess
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_macro_object_expansion():
@@ -225,9 +216,6 @@ def test_line_count_preserved():
     assert len(out.splitlines()) == len(src.splitlines())
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  incremental cache
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_incremental_cache_hit_miss(tmp_path):
@@ -281,9 +269,6 @@ def test_incremental_integration_via_engine(tmp_path):
     assert cache.stats()["hits"] == 1
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  Integração com o engine principal (flags novas não quebram o fluxo)
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_engine_with_ast_analysis_flag(tmp_path):

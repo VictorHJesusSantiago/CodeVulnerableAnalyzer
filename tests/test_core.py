@@ -11,14 +11,12 @@ from pathlib import Path
 
 import pytest
 
-# Garante import do pacote a partir da raiz do projeto
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from analyzer.engine import ScanEngine, _analyze_taint, _load_custom_rules, _parse_simple_yaml_rules
 from analyzer.models import Language, Severity
 from analyzer.rules import get_rules, rule_count
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
 
 def _scan(tmp_path: Path, name: str, code: str):
@@ -28,7 +26,6 @@ def _scan(tmp_path: Path, name: str, code: str):
     return eng.scan_file(str(f))
 
 
-# ── 1. Regressão do bug de taint (group(2) → IndexError) ───────────────────────
 
 
 def test_engine_detects_dangerous_calls_without_error(tmp_path):
@@ -48,7 +45,6 @@ def test_rules_load_and_match():
     assert any(r.match('eval(request.form["x"])') for r in rules)
 
 
-# ── 2. Taint analysis: propagação e sanitização ────────────────────────────────
 
 
 def test_taint_propagation_multi_hop():
@@ -72,7 +68,6 @@ def test_taint_sql_category():
     assert findings[0].category.value == "SQL Injection"
 
 
-# ── 3. Regras customizadas: JSON e YAML ────────────────────────────────────────
 
 
 def test_custom_rules_yaml(tmp_path, monkeypatch):
@@ -93,7 +88,7 @@ def test_custom_rules_yaml(tmp_path, monkeypatch):
     assert "CUSTOM-Y1" in ids
     r = next(r for r in rules if r.id == "CUSTOM-Y1")
     assert r.severity == Severity.HIGH
-    assert r.match("xx FOOBAR xx")  # ignorecase aplicado
+    assert r.match("xx FOOBAR xx")
     assert r.match("xx foobar xx")
 
 
@@ -125,7 +120,6 @@ def test_yaml_parser_scalars():
     assert items[0]["num"] == 5
 
 
-# ── 4. SBOM e deps com ranges de versão ─────────────────────────────────────────
 
 
 def test_sbom_parses_version_ranges():
@@ -151,7 +145,6 @@ def test_deps_ignores_comment_and_marker():
     assert any(v.package == "flask" for v in vulns)
 
 
-# ── 5. Exporters ────────────────────────────────────────────────────────────────
 
 
 @pytest.fixture
@@ -188,7 +181,6 @@ def test_json_csv_junit_markdown_badge(sample_report, tmp_path):
     assert "<svg" in (tmp_path / "r.svg").read_text(encoding="utf-8")
 
 
-# ── 6. Entropy e PII ────────────────────────────────────────────────────────────
 
 
 def test_entropy_detects_high_entropy_secret():
@@ -206,7 +198,6 @@ def test_pii_detects_email():
     assert any(f.pii_type == "Email" for f in findings)
 
 
-# ── 7. Baseline ──────────────────────────────────────────────────────────────────
 
 
 def test_baseline_roundtrip(sample_report, tmp_path):
@@ -215,5 +206,5 @@ def test_baseline_roundtrip(sample_report, tmp_path):
     base = tmp_path / "base.json"
     save_baseline(sample_report, str(base))
     diff = compare_with_baseline(sample_report, str(base))
-    assert diff.new_findings == []  # mesmo report → nada novo
+    assert diff.new_findings == []
     assert diff.unchanged_count > 0

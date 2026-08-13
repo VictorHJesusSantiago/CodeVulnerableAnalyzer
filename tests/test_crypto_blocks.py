@@ -18,7 +18,6 @@ from analyzer.vault_advanced import (
     chacha20poly1305_encrypt,
 )
 
-# Tamanhos que exercitam bloco vazio, parcial, exato e múltiplos+resto
 _LENGTHS = [0, 1, 15, 16, 17, 31, 63, 64, 65, 100, 128, 130, 255]
 
 
@@ -36,7 +35,6 @@ def test_chacha20poly1305_roundtrip_partial_blocks(n):
     nonce = bytes(range(12))
     msg = bytes((i * 13) % 256 for i in range(n))
     cipher, tag = chacha20poly1305_encrypt(key, nonce, msg, b"aad")
-    # O ciphertext do stream cipher tem exatamente o tamanho do plaintext
     assert len(cipher) == n
     assert chacha20poly1305_decrypt(key, nonce, cipher, tag, b"aad") == msg
 
