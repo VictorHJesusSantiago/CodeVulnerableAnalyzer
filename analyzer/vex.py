@@ -32,9 +32,9 @@ _JUSTIFICATIONS = {
 
 @dataclass
 class VexStatement:
-    vulnerability: str  # ex.: "CVE-2023-1234"
-    product: str  # nome do pacote/componente afetado
-    status: str  # not_affected | affected | fixed | under_investigation
+    vulnerability: str
+    product: str
+    status: str
     justification: str | None = None
     impact_statement: str | None = None
     timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
