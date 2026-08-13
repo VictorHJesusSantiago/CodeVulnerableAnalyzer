@@ -28,9 +28,6 @@ _CONFIDENCE_WEIGHT = {
     Confidence.LOW: 0.3,
 }
 
-# Limiares de penalidade-por-arquivo -> nota. Calibrado para que um
-# projeto limpo (0 achados) seja A e que poucos CRITICAL por arquivo
-# já derrubem para D/F.
 _GRADE_THRESHOLDS = (
     (0.5, "A"),
     (2.0, "B"),
@@ -42,14 +39,12 @@ _GRADE_THRESHOLDS = (
 @dataclass
 class RiskGrade:
     grade: str
-    score: float  # penalidade ponderada por arquivo (quanto menor, melhor)
+    score: float
     penalty_total: float
     files_scanned: int
 
     @property
     def label(self) -> str:
-        # Delega ao sistema de i18n (SSOT) em vez de duplicar os rótulos aqui,
-        # para respeitar o locale ativo (--locale) e não divergir de reporter.py.
         from analyzer.i18n import t
 
         return t(

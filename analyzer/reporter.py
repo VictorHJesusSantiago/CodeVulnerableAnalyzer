@@ -24,7 +24,6 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-# Palette dinâmica por tema ativo (ver analyzer.theme)
 from analyzer import theme as _theme_mod
 from analyzer.models import (
     Language,
@@ -142,7 +141,6 @@ LANG_SYNTAX_MAP: dict[Language, str] = {
 }
 
 
-# ── Banner ────────────────────────────────────────────────────────────────────
 
 BANNER_LINES = [
     ("  ██████╗ ██╗   ██╗██╗     ███╗   ██╗███████╗ ██████╗ █████╗ ███╗  ██╗  ", "#ff2244"),
@@ -187,7 +185,6 @@ def print_banner(num_rules: int) -> None:
     console.print()
 
 
-# ── Progress ──────────────────────────────────────────────────────────────────
 
 
 def make_progress() -> Progress:
@@ -203,7 +200,6 @@ def make_progress() -> Progress:
     )
 
 
-# ── Severity helpers ──────────────────────────────────────────────────────────
 
 
 def _sev_badge(sev: Severity) -> Text:
@@ -217,7 +213,6 @@ def _sev_dot(sev: Severity) -> Text:
     return Text("●  ", style=f"bold {SEVERITY_COLORS[sev]}")
 
 
-# ── Finding panel ─────────────────────────────────────────────────────────────
 
 
 def _format_snippet(vuln: Vulnerability) -> Syntax | None:
@@ -307,7 +302,6 @@ def print_finding(vuln: Vulnerability, show_snippet: bool = True) -> None:
     )
 
 
-# ── File section header ───────────────────────────────────────────────────────
 
 
 def print_file_header(result: ScanResult) -> None:
@@ -324,7 +318,6 @@ def print_file_header(result: ScanResult) -> None:
     console.print(RichRule(row, style="#333355", align="left"))
 
 
-# ── Summary ───────────────────────────────────────────────────────────────────
 
 
 def _make_bar(count: int, max_count: int, width: int = 28, color: str = "cyan") -> Text:
@@ -344,7 +337,6 @@ def print_summary(report: ScanReport) -> None:
     console.print(RichRule(f"[bold bright_white] {_t('scan_complete')} [/bold bright_white]", style="#444466"))
     console.print()
 
-    # ── Meta info table ───────────────────────────────────────────────────────
     meta = Table(box=box.SIMPLE_HEAVY, border_style="#444466", show_header=False, padding=(0, 2))
     meta.add_column(style="dim", min_width=22)
     meta.add_column(style="bold white")
@@ -380,7 +372,6 @@ def print_summary(report: ScanReport) -> None:
         _t("risk_grade"), f"[bold {grade_color}]{risk.grade}[/]  [dim]({_t(grade_label_key)} · score {risk.score})[/]"
     )
 
-    # ── Severity breakdown ────────────────────────────────────────────────────
     counts = {
         Severity.CRITICAL: report.critical_count,
         Severity.HIGH: report.high_count,
@@ -401,7 +392,6 @@ def print_summary(report: ScanReport) -> None:
         count_text = Text(str(cnt), style=f"bold {SEVERITY_COLORS[sev]}" if cnt > 0 else "dim")
         sev_table.add_row(label, bar, count_text)
 
-    # ── Category breakdown ────────────────────────────────────────────────────
     all_vulns: list[Vulnerability] = [v for r in report.results for v in r.vulnerabilities]
 
     cat_counts: dict[str, int] = defaultdict(int)
@@ -417,7 +407,6 @@ def print_summary(report: ScanReport) -> None:
     for cat, cnt in top_cats:
         cat_table.add_row(f"  {cat}", f"[bold white]{cnt}[/bold white]")
 
-    # ── Layout (stacked for terminal compatibility) ───────────────────────────
     summary_content = Table.grid(padding=(0, 0))
     summary_content.add_column()
     summary_content.add_row(
@@ -475,7 +464,6 @@ def print_summary(report: ScanReport) -> None:
     console.print()
 
 
-# ── Report renderers ──────────────────────────────────────────────────────────
 
 
 def print_report(report: ScanReport, show_snippets: bool = True, group_by_file: bool = True) -> None:
@@ -508,7 +496,6 @@ def print_report(report: ScanReport, show_snippets: bool = True, group_by_file: 
     print_summary(report)
 
 
-# ── JSON export ───────────────────────────────────────────────────────────────
 
 
 def export_json(report: ScanReport, output_path: str) -> None:
@@ -556,7 +543,6 @@ def export_json(report: ScanReport, output_path: str) -> None:
     console.print(f"[bold bright_green]✔[/] JSON report saved → [cyan]{output_path}[/cyan]")
 
 
-# ── HTML export ───────────────────────────────────────────────────────────────
 
 _SEV_HTML_COLORS = {
     "CRITICAL": "#ff2244",
@@ -634,7 +620,6 @@ def export_html(report: ScanReport, output_path: str) -> None:
     console.print(f"[bold bright_green]✔[/] HTML report saved → [cyan]{output_path}[/cyan]")
 
 
-# ── SARIF 2.1 export ─────────────────────────────────────────────────────────
 
 
 def export_sarif(report: ScanReport, output_path: str) -> None:
@@ -742,7 +727,6 @@ def export_sarif(report: ScanReport, output_path: str) -> None:
     console.print(f"[bold bright_green]✔[/] SARIF salvo → [cyan]{output_path}[/cyan]")
 
 
-# ── CSV export ────────────────────────────────────────────────────────────────
 
 
 def export_csv(report: ScanReport, output_path: str) -> None:
@@ -791,7 +775,6 @@ def export_csv(report: ScanReport, output_path: str) -> None:
     console.print(f"[bold bright_green]✔[/] CSV salvo → [cyan]{output_path}[/cyan]")
 
 
-# ── JUnit XML export ──────────────────────────────────────────────────────────
 
 
 def export_junit(report: ScanReport, output_path: str) -> None:
@@ -836,7 +819,6 @@ def export_junit(report: ScanReport, output_path: str) -> None:
     console.print(f"[bold bright_green]✔[/] JUnit XML salvo → [cyan]{output_path}[/cyan]")
 
 
-# ── Markdown export ───────────────────────────────────────────────────────────
 
 
 def export_markdown(report: ScanReport, output_path: str) -> None:
@@ -922,7 +904,6 @@ def export_markdown(report: ScanReport, output_path: str) -> None:
     console.print(f"[bold bright_green]✔[/] Markdown salvo → [cyan]{output_path}[/cyan]")
 
 
-# ── Diff de baseline ──────────────────────────────────────────────────────────
 
 
 def print_baseline_diff(diff) -> None:
@@ -963,7 +944,6 @@ def print_baseline_diff(diff) -> None:
     console.print()
 
 
-# ── Badge SVG ─────────────────────────────────────────────────────────────────
 
 
 def export_badge(report: ScanReport, output_path: str) -> None:
@@ -1014,7 +994,6 @@ def export_badge(report: ScanReport, output_path: str) -> None:
     console.print(f"[bold bright_green]✔[/] Badge SVG salvo → [cyan]{output_path}[/cyan]")
 
 
-# ── Error helper ──────────────────────────────────────────────────────────────
 
 
 def print_error(message: str) -> None:

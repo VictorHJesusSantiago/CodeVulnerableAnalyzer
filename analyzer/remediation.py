@@ -186,24 +186,15 @@ def javascript_dangerously_set_innerhtml_codemod(source: str, finding: dict[str,
 
 def default_engine() -> RemediationEngine:
     e = RemediationEngine()
-    # eval() dinâmico
     for rid in ("PY-001", "TAINT-001"):
         e.register(rid, python_eval_codemod)
-    # yaml.load inseguro (PY-012 é o ID real da regra)
     e.register("PY-012", python_yaml_load_codemod)
-    # DOM XSS via innerHTML (JS-003 é o ID real; WEB-DOMXSS-001 é a
-    # variante multi-linguagem cadastrada em domain_security.py)
     e.register("JS-003", javascript_innerhtml_codemod)
     e.register("WEB-DOMXSS-001", javascript_innerhtml_codemod)
-    # Hash fraco (MD5/SHA1)
     e.register("PY-009", python_weak_hash_codemod)
-    # Verificação SSL/TLS desabilitada
     e.register("PY-016", python_ssl_verify_codemod)
-    # Flask debug mode em produção
     e.register("PY-021", flask_debug_codemod)
-    # Randomness insegura para tokens/segredos
     e.register("PY-011", python_insecure_random_token_codemod)
-    # React dangerouslySetInnerHTML (aviso, não substituição mecânica)
     e.register("JS-006", javascript_dangerously_set_innerhtml_codemod)
     return e
 
