@@ -24,9 +24,9 @@ from dataclasses import dataclass
 class KeyFinding:
     file_path: str
     line_number: int
-    key_type: str  # RSA | EC | Ed25519 | DSA | OPENSSH | PGP | SSH_PUBLIC | UNKNOWN
+    key_type: str
     is_encrypted: bool
-    bits: int | None  # tamanho estimado em bits (quando aplicável, ex. RSA)
+    bits: int | None
     valid_der: bool
     header: str
 
@@ -44,7 +44,6 @@ _SSH_PUB_RE = re.compile(r"\bssh-(?:rsa|ed25519|dss) [A-Za-z0-9+/=]{50,}(?: \S+)
 _ENCRYPTED_MARKERS = ("ENCRYPTED", "Proc-Type: 4,ENCRYPTED", "DEK-Info")
 
 
-# ── Parser DER mínimo (TLV) ────────────────────────────────────────────────────
 
 
 def _parse_der_length(data: bytes, offset: int) -> tuple[int, int]:
@@ -88,10 +87,9 @@ def analyze_der_structure(der_bytes: bytes) -> tuple[bool, int | None]:
     if top is None:
         return False, None
     tag, value, _ = top
-    if tag != 0x30:  # SEQUENCE
+    if tag != 0x30:
         return False, None
 
-    # Tenta navegar como RSAPrivateKey: SEQUENCE { version INTEGER, n INTEGER, ... }
     inner_offset = 0
     ints_found: list[bytes] = []
     while True:
@@ -99,7 +97,7 @@ def analyze_der_structure(der_bytes: bytes) -> tuple[bool, int | None]:
         if item is None:
             break
         itag, ivalue, inext = item
-        if itag == 0x02:  # INTEGER
+        if itag == 0x02:
             ints_found.append(ivalue)
         inner_offset = inext
         if len(ints_found) >= 2:
@@ -109,13 +107,12 @@ def analyze_der_structure(der_bytes: bytes) -> tuple[bool, int | None]:
     if len(ints_found) >= 2:
         modulus_candidate = ints_found[1]
         bit_len = _der_int_bit_length(modulus_candidate)
-        if bit_len >= 512:  # descarta o 'version' int pequeno sendo lido como módulo
+        if bit_len >= 512:
             bits = bit_len
 
     return True, bits
 
 
-# ── Extração e classificação ───────────────────────────────────────────────────
 
 
 def _key_type_from_header(header: str) -> str:
@@ -143,7 +140,6 @@ def scan_key_material(file_path: str, content: str) -> list[KeyFinding]:
         is_encrypted = any(marker in body or marker in m.group(0) for marker in _ENCRYPTED_MARKERS)
 
         b64_clean = re.sub(r"\s+", "", body)
-        # Remove possíveis linhas de cabeçalho de criptografia (Proc-Type/DEK-Info)
         b64_clean = re.sub(r"(?:Proc-Type|DEK-Info)[^,]*,[^\n]*", "", b64_clean)
 
         valid_der = False
@@ -155,7 +151,6 @@ def scan_key_material(file_path: str, content: str) -> list[KeyFinding]:
             except Exception:
                 valid_der = False
         elif header == "OPENSSH PRIVATE KEY":
-            # Formato OpenSSH tem magic "openssh-key-v1" em vez de DER puro
             try:
                 der_bytes = base64.b64decode(b64_clean, validate=False)
                 valid_der = der_bytes.startswith(b"openssh-key-v1\x00")
@@ -183,7 +178,7 @@ def scan_key_material(file_path: str, content: str) -> list[KeyFinding]:
                 key_type="PGP",
                 is_encrypted=("ENCRYPTED" in m.group(1).upper()),
                 bits=None,
-                valid_der=True,  # PGP usa OpenPGP packet format, não DER — assume presente
+                valid_der=True,
                 header="PGP PRIVATE KEY BLOCK",
             )
         )

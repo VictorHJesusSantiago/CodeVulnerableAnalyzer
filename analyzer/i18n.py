@@ -84,21 +84,6 @@ def t(key: str) -> str:
     return _STRINGS.get(_active_locale, _STRINGS["pt"]).get(key, key)
 
 
-# ── i18n de CONTEÚDO de regras (name/description/remediation) ─────────────────
-#
-# As 900+ regras têm texto técnico em inglês (o corpus original). Traduzir
-# manualmente 1:1 aqui, sem revisão de segurança por regra, arriscaria
-# introduzir imprecisão técnica em texto de segurança — pior que não traduzir.
-#
-# Em vez disso, esta é a INFRAESTRUTURA funcional e testada para tradução
-# de conteúdo: qualquer um pode fornecer um arquivo de overrides por rule_id,
-# carregado de (nesta ordem de precedência):
-#   1. ./vulnscan-i18n-<locale>.json           (projeto)
-#   2. ~/.vulnscan/i18n/<locale>.json          (usuário)
-#
-# Formato: {"RULE-ID": {"name": "...", "description": "...", "remediation": "..."}}
-# Chaves parciais são aceitas (ex.: só "description"). Regras sem entrada no
-# arquivo mantêm o texto original em inglês — nunca há tradução "quebrada".
 
 _rule_overrides: dict[str, dict[str, str]] = {}
 _rule_overrides_locale: str | None = None

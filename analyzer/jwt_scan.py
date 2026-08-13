@@ -63,9 +63,9 @@ def _analyze_issues(header: dict[str, Any], payload: dict[str, Any] | None) -> l
     if alg == "none":
         issues.append("alg=none — token não assinado; qualquer cliente pode forjar claims arbitrários")
     elif alg in ("hs256", "hs384", "hs512") and header.get("kid") is None:
-        pass  # não é possível avaliar força da chave sem a chave em si
+        pass
     elif alg in ("rs256", "rs384", "rs512", "es256", "es384", "es512", "ps256", "ps384", "ps512"):
-        pass  # assimétrico — íntegro estruturalmente sem checagem de chave
+        pass
 
     if not alg:
         issues.append("Header sem campo 'alg' — implementação pode aceitar algoritmo arbitrário (algorithm confusion)")
