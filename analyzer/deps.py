@@ -7,7 +7,6 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-# ── Modelo ────────────────────────────────────────────────────────────────────
 
 
 @dataclass
@@ -22,11 +21,8 @@ class DepVuln:
     line_number: int
 
 
-# ── Base CVE local embutida ───────────────────────────────────────────────────
-# Formato: { nome_pacote: [(cve_id, severity, fixed_version, description), ...] }
 
 LOCAL_CVE_DB: dict[str, list[tuple[str, str, str, str]]] = {
-    # ── Python ────────────────────────────────────────────────────────────────
     "pillow": [
         ("CVE-2024-28219", "HIGH", "10.3.0", "Buffer overflow in _imagingcms"),
         ("CVE-2023-50447", "HIGH", "10.2.0", "Arbitrary code execution via putdata()"),
@@ -113,7 +109,6 @@ LOCAL_CVE_DB: dict[str, list[tuple[str, str, str, str]]] = {
     "httpx": [
         ("CVE-2023-40589", "MEDIUM", "0.24.1", "SSRF bypass via redirect handling"),
     ],
-    # ── Node.js (npm) ─────────────────────────────────────────────────────────
     "lodash": [
         ("CVE-2021-23337", "HIGH", "4.17.21", "Command injection via template tags"),
         ("CVE-2020-8203", "HIGH", "4.17.19", "Prototype pollution via zipObjectDeep"),
@@ -168,7 +163,6 @@ LOCAL_CVE_DB: dict[str, list[tuple[str, str, str, str]]] = {
     "undici": [
         ("CVE-2024-30260", "MEDIUM", "6.11.1", "Proxy-Auth não removido em redirect cross-origin"),
     ],
-    # ── Java (Maven artifactId) ────────────────────────────────────────────────
     "log4j-core": [
         ("CVE-2021-44228", "CRITICAL", "2.15.0", "Log4Shell: RCE via JNDI lookup em log message"),
         ("CVE-2021-45046", "CRITICAL", "2.16.0", "Log4Shell bypass via thread context lookup"),
@@ -191,14 +185,12 @@ LOCAL_CVE_DB: dict[str, list[tuple[str, str, str, str]]] = {
     "netty-all": [
         ("CVE-2023-44487", "HIGH", "4.1.100.Final", "HTTP/2 Rapid Reset DoS"),
     ],
-    # ── Rust (crates.io) ──────────────────────────────────────────────────────
     "openssl": [
         ("CVE-2023-0286", "HIGH", "0.10.48", "Confusão de tipo em GeneralName com X.400 em CRL"),
     ],
     "hyper": [
         ("CVE-2023-45405", "HIGH", "0.14.28", "HTTP/2 rapid reset vulnerability"),
     ],
-    # ── .NET (NuGet) ────────────────────────────────────────────────────────────
     "newtonsoft.json": [
         ("CVE-2024-21907", "HIGH", "13.0.1", "DoS via StackOverflow ao desserializar JSON profundamente aninhado"),
     ],
@@ -220,7 +212,6 @@ LOCAL_CVE_DB: dict[str, list[tuple[str, str, str, str]]] = {
 }
 
 
-# ── Comparação de versões ─────────────────────────────────────────────────────
 
 
 def _parse_ver(v: str) -> tuple:
@@ -269,9 +260,8 @@ def _check(name: str, version: str, manifest: str, line_no: int) -> list[DepVuln
     return vulns
 
 
-# ── Parsers de manifesto ──────────────────────────────────────────────────────
 
-# Casa: nome (+ extras opcionais) + operador opcional + versão concreta (limite inferior)
+
 _REQ_RE = re.compile(
     r"^([A-Za-z0-9_.\-]+)\s*(?:\[[^\]]*\])?\s*"
     r"(?:[=<>!~^]=?\s*v?)?\s*([0-9][A-Za-z0-9.\-]*)"
@@ -281,7 +271,7 @@ _REQ_RE = re.compile(
 def _parse_requirements(content: str, filepath: str) -> list[DepVuln]:
     vulns: list[DepVuln] = []
     for line_no, line in enumerate(content.splitlines(), start=1):
-        line = line.split("#", 1)[0].split(";", 1)[0].strip()  # remove comentário e marker
+        line = line.split("#", 1)[0].split(";", 1)[0].strip()
         if not line or line.startswith(("-", "git+")):
             continue
         m = _REQ_RE.match(line)
@@ -349,7 +339,6 @@ def _parse_go_mod(content: str, filepath: str) -> list[DepVuln]:
 def _parse_csproj(content: str, filepath: str) -> list[DepVuln]:
     """Projetos .NET: <PackageReference Include="X" Version="Y" />."""
     vulns: list[DepVuln] = []
-    # Atributos podem vir em qualquer ordem; também suporta <Version> como elemento filho.
     for m in re.finditer(
         r'<PackageReference\b[^>]*?\bInclude\s*=\s*"([^"]+)"[^>]*?'
         r'(?:\bVersion\s*=\s*"([^"]+)"|/?>(?:\s*<Version>\s*([^<]+)\s*</Version>)?)',
@@ -358,7 +347,7 @@ def _parse_csproj(content: str, filepath: str) -> list[DepVuln]:
     ):
         pkg = m.group(1).strip().lower()
         ver = (m.group(2) or m.group(3) or "").strip()
-        ver = re.sub(r"[^\d.].*$", "", ver)  # remove sufixos ([..], -beta, etc.)
+        ver = re.sub(r"[^\d.].*$", "", ver)
         if pkg and ver:
             vulns.extend(_check(pkg, ver, filepath, 0))
     return vulns
@@ -406,8 +395,6 @@ def scan_manifest_dir(directory: str) -> list[DepVuln]:
     return all_vulns
 
 
-# ── Enriquecimento online via OSV.dev (stdlib urllib, opt-in) ──────────────────
-# Mapeia o package_type do SBOM para o ecossistema esperado pela API OSV.
 _OSV_ECOSYSTEM = {
     "pypi": "PyPI",
     "npm": "npm",
@@ -448,7 +435,7 @@ def _cvss_v3_base(vector: str) -> float | None:
     exploitability = 8.22 * av * ac * pr * ui
     raw = (1.08 if scope_changed else 1.0) * (impact + exploitability)
     score = min(raw, 10.0)
-    return math.ceil(score * 10) / 10.0  # roundup para 1 casa decimal
+    return math.ceil(score * 10) / 10.0
 
 
 def _label_from_score(f: float) -> str:
@@ -465,12 +452,10 @@ def _label_from_score(f: float) -> str:
 
 def _osv_severity(vuln: dict) -> str:
     """Extrai um rótulo de severidade de uma entrada OSV (CVSS ou texto)."""
-    # 1) Campo de texto em database_specific (comum em GHSA)
     ds = vuln.get("database_specific") or {}
     txt = str(ds.get("severity", "")).upper()
     if txt in ("CRITICAL", "HIGH", "MEDIUM", "MODERATE", "LOW"):
         return "MEDIUM" if txt == "MODERATE" else txt
-    # 2) CVSS: o campo 'score' do OSV é o vetor (ex.: "CVSS:3.1/AV:N/.../A:H")
     for sv in vuln.get("severity", []) or []:
         score = str(sv.get("score", ""))
         if score.upper().startswith("CVSS:"):
@@ -478,7 +463,7 @@ def _osv_severity(vuln: dict) -> str:
             if base is not None:
                 return _label_from_score(base)
         else:
-            m = re.search(r"(\d+\.\d+)", score)  # alguns formatos trazem número puro
+            m = re.search(r"(\d+\.\d+)", score)
             if m:
                 return _label_from_score(float(m.group(1)))
     return "MEDIUM"

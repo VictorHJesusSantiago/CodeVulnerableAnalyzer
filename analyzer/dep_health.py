@@ -27,9 +27,6 @@ import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
-# ── Top pacotes populares por ecossistema (para comparação de typosquatting) ──
-# Lista curada dos pacotes mais baixados/conhecidos — não é exaustiva, mas
-# cobre os alvos mais comuns de ataques de typosquatting documentados.
 POPULAR_PACKAGES: dict[str, list[str]] = {
     "pypi": [
         "requests",
@@ -105,7 +102,6 @@ POPULAR_PACKAGES: dict[str, list[str]] = {
     ],
 }
 
-# Pacotes conhecidos por licença copyleft forte (amostra curada, não exaustiva)
 _GPL_LICENSED_PACKAGES = {
     "mysql-connector-python": "GPL-2.0",
     "pyqt5": "GPL-3.0",
@@ -143,7 +139,6 @@ class AbandonedFinding:
     days_since_release: int | None
 
 
-# ── Levenshtein (stdlib puro) ──────────────────────────────────────────────────
 
 
 def levenshtein(a: str, b: str) -> int:
@@ -167,7 +162,7 @@ def check_typosquatting(package_name: str, ecosystem: str, max_distance: int = 2
     popular = POPULAR_PACKAGES.get(ecosystem, [])
     name_lower = package_name.lower()
     if name_lower in popular:
-        return None  # é o próprio pacote popular, não um typosquat
+        return None
     best_match, best_dist = None, max_distance + 1
     for candidate in popular:
         dist = levenshtein(name_lower, candidate)
@@ -214,7 +209,6 @@ def check_license(package_name: str, declared_license: str | None = None) -> Lic
     return None
 
 
-# ── Pacotes abandonados (rede, opt-in) ────────────────────────────────────────
 
 
 def query_pypi_last_release(package_name: str, timeout: float = 8.0) -> str | None:

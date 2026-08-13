@@ -98,7 +98,7 @@ def build_bump_plan(manifest_path: str, manifest_content: str, vulns: list[DepVu
     elif name == "package.json":
         updated = _bump_package_json(manifest_content, plan_dict)
     else:
-        updated = manifest_content  # formato sem suporte de auto-edição
+        updated = manifest_content
 
     diff_lines = list(
         difflib.unified_diff(
