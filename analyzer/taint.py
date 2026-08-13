@@ -20,9 +20,8 @@ import re
 
 from analyzer.models import Severity, VulnCategory
 
-# ── Fontes de entrada controlada pelo usuário ─────────────────────────────────
 
-# Python (stdlib / Flask / FastAPI)
+
 TAINT_SOURCE_RE = re.compile(
     r"\b(\w+)\s*=\s*(?:"
     r"request\.(?:args|form|json|data|values|get|params|cookies|headers)\b|"
@@ -36,29 +35,22 @@ TAINT_SOURCE_RE = re.compile(
     r")"
 )
 
-# Fontes adicionais por linguagem (PHP superglobais / Express / Node)
 TAINT_SOURCE_EXTRA_RE = re.compile(
     r"\b(\w+)\s*=\s*(?:"
-    r"\$_(?:GET|POST|REQUEST|COOKIE|SERVER)\b|"  # PHP
-    r"req\.(?:body|query|params|cookies|headers)\b|"  # Express/Node
+    r"\$_(?:GET|POST|REQUEST|COOKIE|SERVER)\b|"
+    r"req\.(?:body|query|params|cookies|headers)\b|"
     r"process\.argv\b"
     r")"
 )
 
-# Atribuição genérica: captura LHS e RHS para propagação de taint.
-# `\$?` permite o sigilo de variável do PHP ($var = ...) sem quebrar Python/JS.
 ASSIGN_RE = re.compile(r"^\s*\$?(\w+)\s*(?:=|\+=)\s*(.+)$")
 
-# Sink genérico usado apenas para elevar a confiança de um achado de regra
-# inline (captura o primeiro identificador dentro dos parênteses do sink).
 TAINT_SINK_RE = re.compile(
     r"(?:eval|exec|os\.system|subprocess\.(?:run|call|Popen)|"
     r"cursor\.execute|engine\.execute|render_template_string|"
     r"__import__)\s*\([^)]*\b(\w+)\b"
 )
 
-# Sinks perigosos para o analisador de taint dedicado:
-#   (regex do sink, categoria, severidade, rótulo)
 TAINT_SINKS = [
     (re.compile(r"\beval\s*\("), VulnCategory.CODE_INJECTION, Severity.CRITICAL, "eval()"),
     (re.compile(r"\bexec\s*\("), VulnCategory.CODE_INJECTION, Severity.CRITICAL, "exec()"),
@@ -123,6 +115,5 @@ class TaintTracker:
             if self.refs_tainted(rhs):
                 self.tainted.add(lhs)
             elif lhs in self.tainted:
-                # Reatribuído a partir de algo não-contaminado → sanitizado
                 self.tainted.discard(lhs)
         return is_source

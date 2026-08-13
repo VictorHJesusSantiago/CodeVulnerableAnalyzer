@@ -130,7 +130,6 @@ def ascii_trend(entries: list[TrendEntry], width: int = 40, height: int = 8) -> 
 
     chart_lines.append("     └" + "─" * cols)
 
-    # Data labels (apenas início, meio e fim)
     label_line = " " * 6
     if dates:
         label_line += dates[0]

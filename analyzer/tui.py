@@ -23,7 +23,6 @@ from rich.text import Text
 from analyzer.detector import SKIP_DIRS, is_scannable
 from analyzer.models import ScanReport, Severity, Vulnerability
 
-# ── Leitura de teclado (cross-platform, stdlib puro) ─────────────────────────
 if sys.platform == "win32":
     import msvcrt
 
@@ -89,7 +88,6 @@ else:
             termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 
-# ── Paleta (dinâmica por tema ativo — ver analyzer.theme) ──────────────────────
 from analyzer import theme as _theme_mod
 
 
@@ -119,46 +117,37 @@ class TUIApp:
         self.con = Console(highlight=False)
         self.screen = "browser"
 
-        # ── Browser ───────────────────────────────────────────────────────
         self.cwd: Path = (start_path or Path.cwd()).resolve()
         self.entries: list[Path] = []
         self.cursor: int = 0
         self.scroll: int = 0
         self.selected: set[Path] = set()
 
-        # ── Resultados ────────────────────────────────────────────────────
         self.report: ScanReport | None = None
         self.res_cursor: int = 0
         self.res_scroll: int = 0
         self.sev_filter: Severity | None = None
         self.min_sev: Severity = Severity.INFO
 
-        # ── Busca em tempo real ───────────────────────────────────────────
         self.search_mode: bool = False
         self.search_query: str = ""
 
-        # ── Ordenação e agrupamento ────────────────────────────────────────
-        self.sort_idx: int = 0  # índice em _SORT_MODES
-        self.group_idx: int = 0  # índice em _GROUP_MODES
+        self.sort_idx: int = 0
+        self.group_idx: int = 0
 
-        # ── Detalhe ───────────────────────────────────────────────────────
         self.det_idx: int = 0
 
-        # ── Revisão de achados (persistida em .vulnscan_reviewed.json) ──────
         self.reviewed: set[tuple] = set()
         self.hide_reviewed: bool = False
         self._reviewed_path: Path = self.cwd / ".vulnscan_reviewed.json"
         self._load_reviewed()
 
-        # ── Histórico ─────────────────────────────────────────────────────
         self.hist_cursor: int = 0
 
-        # ── Config ────────────────────────────────────────────────────────
         self.cfg_cursor: int = 0
 
         self._load()
 
-    # ── Carregamento de entradas ──────────────────────────────────────────────
     def _load(self) -> None:
         items: list[Path] = []
         try:
@@ -186,7 +175,6 @@ class TUIApp:
         lh = self._lh()
         return list(enumerate(self.entries[self.scroll : self.scroll + lh], start=self.scroll))
 
-    # ── Renderização ─────────────────────────────────────────────────────────
     def _draw(self) -> None:
         self.con.clear()
         {
@@ -213,7 +201,6 @@ class TUIApp:
         self.con.print(RichRule(style="#333355"))
         self.con.print(text)
 
-    # ─────────────────────────────────────────────────────────── BROWSER ──
     def _draw_browser(self) -> None:
         w = self.con.size.width
         sel_n = len(self.selected)
@@ -298,7 +285,6 @@ class TUIApp:
         st.append("   [↑↓] mover  [Space] selecionar  [S] scan  [D] dash  [H] hist  [C] config  [Q] sair", style="dim")
         self._statusbar(st)
 
-    # ────────────────────────────────────────────────────────── SCANNING ──
     def _draw_scanning(self) -> None:
         self._topbar("⚡ Analisando código...", "aguarde")
         self.con.print()
@@ -322,7 +308,6 @@ class TUIApp:
             )
         )
 
-    # ─────────────────────────────────────────────────────────── RESULTS ──
     def _draw_results(self) -> None:
         vulns = self._fvulns()
         lh = self._lh()
@@ -339,7 +324,6 @@ class TUIApp:
             f"[/]busca  [O]sort:{sort_lbl}  [G]grup:{group_lbl}  [F]filtro  [R]revisar  [D]dash  [H]hist  [Q]sair",
         )
 
-        # ── Barra de busca inline ──────────────────────────────────────────
         if self.search_mode:
             sb = Text()
             sb.append("  🔍 Busca: ", style="bold bright_yellow")
@@ -391,7 +375,6 @@ class TUIApp:
         vis = vulns[self.res_scroll : self.res_scroll + lh]
         prev_grp = self._group_key(vulns[self.res_scroll - 1]) if (grouped and self.res_scroll > 0) else None
         for rel, vuln in enumerate(vis, start=self.res_scroll):
-            # Cabeçalho de seção quando o grupo muda
             if grouped:
                 gk = self._group_key(vuln)
                 if gk != prev_grp:
@@ -439,7 +422,6 @@ class TUIApp:
         st.append("   [Enter] detalhe  [R] revisar  [J] JSON  [E] HTML  [B] voltar", style="dim")
         self._statusbar(st)
 
-    # ──────────────────────────────────────────────────────────── DETAIL ──
     def _draw_detail(self) -> None:
         vulns = self._fvulns()
         if not vulns:
@@ -515,7 +497,6 @@ class TUIApp:
             except Exception:
                 pass
 
-        # Preview de diff de remediação (linha problemática vs. sugestão)
         if vuln.line_content:
             body.add_row(Text(""))
             body.add_row(Text("Preview de remediação", style="bold dim"))
@@ -528,7 +509,6 @@ class TUIApp:
 
         self.con.print(Panel(body, border_style=sc, padding=(0, 1)))
 
-    # ──────────────────────────────────────────────────────── METRICS ──
     def _draw_metrics(self) -> None:
         self._topbar("⚡ Dashboard de Métricas", "[B] voltar  [Q] sair")
 
@@ -659,7 +639,6 @@ class TUIApp:
         st.append("  [B] voltar   [Q] sair", style="dim")
         self._statusbar(st)
 
-    # ─────────────────────────────────────────────────────────── HISTORY ──
     def _draw_history(self) -> None:
         self._topbar("⚡ Histórico de Scans", "[↑↓] navegar  [B] voltar  [Q] sair")
 
@@ -740,7 +719,6 @@ class TUIApp:
         st.append("  [↑↓] navegar   [B] voltar   [Q] sair", style="dim")
         self._statusbar(st)
 
-    # ──────────────────────────────────────────────────────────── CONFIG ──
     def _draw_config(self) -> None:
         self._topbar("⚡ Configurações", "[↑↓] navegar  [Enter] alterar  [B] salvar/voltar  [Q] sair")
 
@@ -781,21 +759,17 @@ class TUIApp:
         hint.append("  [↑↓] mover   [Enter] alterar valor   [B] voltar   [Q] sair", style="dim")
         self._statusbar(hint)
 
-    # ── Helpers ───────────────────────────────────────────────────────────────
     def _fvulns(self) -> list[Vulnerability]:
         if not self.report:
             return []
         all_v = [v for r in self.report.results for v in r.vulnerabilities]
 
-        # Filtro de severidade
         if self.sev_filter:
             all_v = [v for v in all_v if v.severity == self.sev_filter]
 
-        # Filtro de revisados
         if self.hide_reviewed:
             all_v = [v for v in all_v if not self._is_reviewed(v)]
 
-        # Filtro de busca
         if self.search_query:
             q = self.search_query.lower()
             all_v = [
@@ -808,7 +782,6 @@ class TUIApp:
                 or q in v.category.value.lower()
             ]
 
-        # Ordenação
         sort_mode = _SORT_MODES[self.sort_idx]
         if sort_mode == "severity":
             all_v.sort(key=lambda v: -v.severity.value)
@@ -819,8 +792,6 @@ class TUIApp:
         elif sort_mode == "line":
             all_v.sort(key=lambda v: v.line_number)
 
-        # Agrupamento: reordena para manter itens do mesmo grupo contíguos,
-        # preservando a ordenação escolhida como critério secundário.
         if _GROUP_MODES[self.group_idx] != "flat":
             all_v.sort(key=lambda v: self._group_key(v).lower())
 
@@ -837,7 +808,6 @@ class TUIApp:
             return vuln.language.value
         return ""
 
-    # ── Revisão de achados ───────────────────────────────────────────────────
     @staticmethod
     def _vuln_key(vuln: Vulnerability) -> tuple:
         return (vuln.rule_id, vuln.file_path, vuln.line_number)
@@ -940,7 +910,6 @@ class TUIApp:
         except Exception as e:
             self._notify(f"Erro ao suprimir: {e}", "red")
 
-    # ── Scan ──────────────────────────────────────────────────────────────────
     def _do_scan(self) -> None:
         if not self.selected:
             self._notify("⚠  Nenhum arquivo selecionado.", "yellow")
@@ -966,7 +935,6 @@ class TUIApp:
         self.sev_filter = None
         self.screen = "results"
 
-    # ── Handlers de teclado ───────────────────────────────────────────────────
     def _on_browser(self, k: str) -> bool:
         n = len(self.entries)
         if k == "UP":
@@ -1039,7 +1007,6 @@ class TUIApp:
         return True
 
     def _on_results(self, k: str) -> bool:
-        # ── Modo busca ativa ──────────────────────────────────────────────
         if self.search_mode:
             if k == "ESC":
                 self.search_mode = False
@@ -1084,12 +1051,10 @@ class TUIApp:
             self.search_mode = True
             self.search_query = ""
         elif k == "o":
-            # Ciclar ordenação
             self.sort_idx = (self.sort_idx + 1) % len(_SORT_MODES)
             self.res_cursor = 0
             self.res_scroll = 0
         elif k == "g":
-            # Ciclar agrupamento: flat → file → category → language
             self.group_idx = (self.group_idx + 1) % len(_GROUP_MODES)
             self.res_cursor = 0
             self.res_scroll = 0
@@ -1198,7 +1163,6 @@ class TUIApp:
             return False
         return True
 
-    # ── Loop principal ────────────────────────────────────────────────────────
     def run(self) -> None:
         handlers = {
             "browser": self._on_browser,
@@ -1224,6 +1188,5 @@ class TUIApp:
             self.con.print("[dim]TUI encerrado.[/dim]")
 
 
-# ── Ponto de entrada público ──────────────────────────────────────────────────
 def run_tui(start_path: Path | None = None) -> None:
     TUIApp(start_path).run()
