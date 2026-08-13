@@ -11,7 +11,6 @@ import os
 import sys
 from pathlib import Path
 
-# Force UTF-8 output on Windows
 if sys.platform == "win32":
     try:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
@@ -51,7 +50,6 @@ from analyzer.rules import rule_count
 console = Console(highlight=False)
 
 
-# ── Argument parsing ──────────────────────────────────────────────────────────
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -181,7 +179,6 @@ Exemplos:
         "--osv", action="store_true", help="Com --deps: cruzar também com a base online OSV.dev (requer rede)"
     )
 
-    # ── Dependências / supply chain — expansões ────────────────────────────────
     dg = p.add_argument_group("Dependências / Supply Chain (expansões)")
     dg.add_argument(
         "--deps-ext",
@@ -222,7 +219,6 @@ Exemplos:
         help="Com --deps: gerar plano de atualização (diff) para as dependências vulneráveis, sem tocar em git",
     )
 
-    # ── Detecção de segredos — expansões ────────────────────────────────────────
     sg = p.add_argument_group("Detecção de segredos (expansões)")
     sg.add_argument(
         "--secrets-scan",
@@ -241,7 +237,6 @@ Exemplos:
         "--save-secrets-baseline", metavar="ARQUIVO", help="Salvar os segredos encontrados nesta execução como baseline"
     )
 
-    # ── Cofre de segredos (vault) ──────────────────────────────────────────────
     vg = p.add_argument_group("Cofre de segredos (AES-256)")
     vg.add_argument("--vault", metavar="ARQUIVO", help="Caminho do arquivo de cofre (ativa o modo cofre)")
     vg.add_argument("--vault-init", action="store_true", help="Criar um novo cofre")
@@ -259,7 +254,6 @@ Exemplos:
     p.add_argument("--trend", action="store_true", help="Exibir histórico de scans e gráfico de tendência")
     p.add_argument("--lsp", action="store_true", help="Iniciar servidor LSP sobre stdio (para VS Code/Neovim/Emacs)")
 
-    # ── Motor de análise estática avançada (AST/call graph) ────────────────────
     ag = p.add_argument_group("Motor de análise avançada")
     ag.add_argument(
         "--ast-analysis",
@@ -287,7 +281,6 @@ Exemplos:
     return p
 
 
-# ── List languages ────────────────────────────────────────────────────────────
 
 
 def cmd_list_langs() -> None:
@@ -323,7 +316,6 @@ def cmd_list_langs() -> None:
         console.print()
 
 
-# ── List rules ────────────────────────────────────────────────────────────────
 
 
 def cmd_list_rules() -> None:
@@ -360,7 +352,6 @@ def cmd_list_rules() -> None:
     console.print()
 
 
-# ── Language filter ───────────────────────────────────────────────────────────
 
 _LANG_MAP: dict[str, Language] = {
     "python": Language.PYTHON,
@@ -409,7 +400,6 @@ def parse_languages(names: list[str]) -> list[Language]:
     return result or []
 
 
-# ── Progress tracking ─────────────────────────────────────────────────────────
 
 
 class ScanTracker:
@@ -425,7 +415,6 @@ class ScanTracker:
         self.progress.advance(self.task_id)
 
 
-# ── Stdin mode ────────────────────────────────────────────────────────────────
 
 
 def run_stdin_mode(lang_name: str, min_severity: Severity) -> int:
@@ -472,7 +461,6 @@ def run_stdin_mode(lang_name: str, min_severity: Severity) -> int:
     return 1 if (report.critical_count > 0 or report.high_count > 0) else 0
 
 
-# ── Server mode ───────────────────────────────────────────────────────────────
 
 
 def run_server_mode(port: int) -> None:
@@ -567,7 +555,6 @@ def run_server_mode(port: int) -> None:
     HTTPServer(("0.0.0.0", port), Handler).serve_forever()
 
 
-# ── Pre-commit hook installer ─────────────────────────────────────────────────
 
 
 def install_hook() -> int:
@@ -608,7 +595,6 @@ exit 0
     return 0
 
 
-# ── Trend display ─────────────────────────────────────────────────────────────
 
 
 def cmd_trend() -> None:
@@ -656,7 +642,6 @@ def cmd_trend() -> None:
     console.print()
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 args_global = None
 
@@ -678,13 +663,9 @@ def main() -> int:
         set_locale(args.locale)
 
     num_rules = rule_count()
-    # Em modo LSP o stdout é o canal de protocolo JSON-RPC; em stdin é o pipe
-    # de saída; em modo cofre o --vault-get emite o valor puro no stdout. O
-    # banner corromperia esses canais, então é suprimido nesses modos.
     if not args.lsp and not args.stdin and not args.vault:
         print_banner(num_rules)
 
-    # ── Comandos informativos ─────────────────────────────────────────────────
     if args.rules:
         cmd_list_rules()
         return 0
@@ -699,7 +680,6 @@ def main() -> int:
         run_lsp()
         return 0
 
-    # ── Modo cofre de segredos ─────────────────────────────────────────────────
     if args.vault:
         from analyzer.vault_cli import run_vault_cli
 
@@ -712,7 +692,6 @@ def main() -> int:
         cmd_trend()
         return 0
 
-    # ── Call graph / Impact analysis / Taint interprocedural ──────────────────
     if args.call_graph or args.impact:
         from analyzer.callgraph import build_call_graph
 
@@ -760,7 +739,6 @@ def main() -> int:
             else:
                 console.print("\n[bold bright_green]✅ Nenhum taint interprocedural encontrado.[/]")
 
-        # ── Exportação JSON deste modo (não passa pelo pipeline normal de scan) ──
         if args.json:
             import json as _json
 
@@ -789,21 +767,18 @@ def main() -> int:
             )
         return 0
 
-    # ── Modo stdin ────────────────────────────────────────────────────────────
     if args.stdin:
         if not args.lang:
             print_error("--stdin requer --lang LINGUAGEM (ex: --lang python)")
             return 2
         return run_stdin_mode(args.lang[0], Severity[args.severity])
 
-    # ── Modo servidor ─────────────────────────────────────────────────────────
     if args.serve:
         run_server_mode(args.serve)
         return 0
 
     target = args.target
 
-    # ── TUI interativo ────────────────────────────────────────────────────────
     if target is None or args.interactive:
         from analyzer.tui import run_tui
 
@@ -815,7 +790,6 @@ def main() -> int:
         print_error(f"Alvo não encontrado: {target}")
         return 2
 
-    # ── SBOM ──────────────────────────────────────────────────────────────────
     if args.mobile_archive:
         import json
 
@@ -866,7 +840,6 @@ def main() -> int:
         console.print(f"[bold bright_green]✔[/] SBOM com {len(components)} componentes → [cyan]{args.sbom}[/cyan]")
         return 0
 
-    # ── Dependências CVE ──────────────────────────────────────────────────────
     if args.deps:
         from analyzer.deps import scan_manifest_dir
 
@@ -878,7 +851,6 @@ def main() -> int:
             console.print("[dim]Consultando OSV.dev (requer rede)...[/]")
             osv_vulns = scan_manifest_dir_osv(target)
             if osv_vulns:
-                # Evita duplicar CVEs já encontrados localmente
                 local_keys = {(v.package, v.cve_id) for v in vulns}
                 vulns.extend(v for v in osv_vulns if (v.package, v.cve_id) not in local_keys)
             else:
@@ -940,7 +912,6 @@ def main() -> int:
                         console.print(plan.diff)
         return 0
 
-    # ── Dependências / supply chain: expansões (deps-ext, dep-tree, saúde) ────
     if (
         args.deps_ext
         or args.dep_tree
@@ -1050,7 +1021,6 @@ def main() -> int:
                 console.print(f"[bold bright_green]✔[/] SBOM SPDX JSON salvo → {args.sbom_spdx_json}")
         return 0
 
-    # ── Detecção de segredos: scan completo (provedores/chaves/JWT/binários) ──
     if args.secrets_scan:
         from analyzer.binary_scan import scan_non_text_file
         from analyzer.detector import SKIP_DIRS, is_scannable
@@ -1169,21 +1139,17 @@ def main() -> int:
 
         return 1 if all_findings else 0
 
-    # ── Entropia ──────────────────────────────────────────────────────────────
     if args.entropy:
         _collect_and_scan_entropy(target, target_path)
         return 0
 
-    # ── PII ───────────────────────────────────────────────────────────────────
     if args.pii:
         _collect_and_scan_pii(target, target_path)
         return 0
 
-    # ── Scan principal ────────────────────────────────────────────────────────
     min_severity = Severity[args.severity]
     languages = parse_languages(args.lang) if args.lang else None
 
-    # Coletar arquivos para barra de progresso
     if target_path.is_dir():
         from analyzer.detector import SKIP_DIRS, is_scannable
 
@@ -1242,7 +1208,6 @@ def main() -> int:
 
     console.print()
 
-    # ── Watch mode ────────────────────────────────────────────────────────────
     if args.profile_json:
         import json
 
@@ -1274,7 +1239,6 @@ def main() -> int:
         )
         return 0
 
-    # ── Comparar com baseline ──────────────────────────────────────────────────
     if args.diff:
         from analyzer.baseline import compare_with_baseline
         from analyzer.reporter import print_baseline_diff
@@ -1287,7 +1251,6 @@ def main() -> int:
             save_baseline(report, args.save_baseline)
         return 1 if (diff.new_count > 0 or diff.regression_count > 0) else 0
 
-    # ── Exibir relatório ──────────────────────────────────────────────────────
     if args.summary_only or args.quiet:
         from analyzer.reporter import print_summary
 
@@ -1295,7 +1258,6 @@ def main() -> int:
     else:
         print_report(report, show_snippets=not args.no_snippet, group_by_file=not args.flat)
 
-    # ── Exportar relatórios ───────────────────────────────────────────────────
     if args.education:
         from analyzer.ai_triage import explain_finding
 
@@ -1389,7 +1351,6 @@ def main() -> int:
 
         save_baseline(report, args.save_baseline)
 
-    # ── Registrar no trend DB ─────────────────────────────────────────────────
     try:
         from analyzer.trend import TrendDB
 
@@ -1400,7 +1361,6 @@ def main() -> int:
     return 1 if (report.critical_count > 0 or report.high_count > 0) else 0
 
 
-# ── Helpers extras ────────────────────────────────────────────────────────────
 
 
 def _collect_and_scan_entropy(target: str, target_path: Path) -> None:
