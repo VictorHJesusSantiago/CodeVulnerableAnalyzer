@@ -63,9 +63,6 @@ def _stream(key: bytes, nonce: bytes, data: bytes, counter: int = 1) -> bytes:
     out = bytearray()
     for off in range(0, len(data), 64):
         block = _chacha_block(key, counter + off // 64, nonce)
-        # strict=False é OBRIGATÓRIO: o último bloco de dados é parcial (data não
-        # é múltiplo de 64) e o keystream tem sempre 64 bytes — o zip trunca para
-        # o tamanho dos dados restantes (comportamento correto de stream cipher).
         out.extend(a ^ b for a, b in zip(data[off : off + 64], block, strict=False))
     return bytes(out)
 
@@ -279,7 +276,6 @@ class AdvancedVault:
 
     @classmethod
     def restore(cls, blob: bytes, password: str) -> AdvancedVault:
-        # O salt está dentro do payload; backups devem ser acompanhados pelo salt externo.
         raise VaultSecurityError("Use restore_with_salt para impedir tentativa de derivação ambígua")
 
     @classmethod

@@ -29,9 +29,6 @@ import secrets as _secrets
 from dataclasses import dataclass
 from pathlib import Path
 
-# ════════════════════════════════════════════════════════════════════════════
-#  AES-256 — núcleo em Python puro (FIPS-197)
-# ════════════════════════════════════════════════════════════════════════════
 
 _SBOX = (
     0x63,
@@ -326,20 +323,18 @@ class AES:
         self.nr = {4: 10, 6: 12, 8: 14}[self.nk]
         self._round_keys = self._expand_key(key)
 
-    # ── Expansão de chave ─────────────────────────────────────────────────────
     def _expand_key(self, key: bytes) -> list[list[int]]:
         nk, nr = self.nk, self.nr
         words: list[list[int]] = [list(key[4 * i : 4 * i + 4]) for i in range(nk)]
         for i in range(nk, 4 * (nr + 1)):
             temp = list(words[i - 1])
             if i % nk == 0:
-                temp = temp[1:] + temp[:1]  # RotWord
-                temp = [_SBOX[b] for b in temp]  # SubWord
+                temp = temp[1:] + temp[:1]
+                temp = [_SBOX[b] for b in temp]
                 temp[0] ^= _RCON[i // nk - 1]
             elif nk > 6 and i % nk == 4:
-                temp = [_SBOX[b] for b in temp]  # SubWord
+                temp = [_SBOX[b] for b in temp]
             words.append([words[i - nk][j] ^ temp[j] for j in range(4)])
-        # Agrupa em blocos de 16 bytes por round (coluna-major)
         round_keys: list[list[int]] = []
         for r in range(nr + 1):
             rk: list[int] = []
@@ -348,7 +343,6 @@ class AES:
             round_keys.append(rk)
         return round_keys
 
-    # ── Operações de estado (estado = 16 bytes, índice = linha + 4*coluna) ─────
     @staticmethod
     def _add_round_key(state: list[int], rk: list[int]) -> None:
         for i in range(16):
@@ -395,7 +389,6 @@ class AES:
             state[i + 2] = _gmul(a0, 13) ^ _gmul(a1, 9) ^ _gmul(a2, 14) ^ _gmul(a3, 11)
             state[i + 3] = _gmul(a0, 11) ^ _gmul(a1, 13) ^ _gmul(a2, 9) ^ _gmul(a3, 14)
 
-    # ── Bloco ──────────────────────────────────────────────────────────────────
     def encrypt_block(self, block: bytes) -> bytes:
         state = list(block)
         self._add_round_key(state, self._round_keys[0])
@@ -423,7 +416,6 @@ class AES:
         return bytes(state)
 
 
-# ── PKCS#7 + CBC ────────────────────────────────────────────────────────────
 
 
 def _pkcs7_pad(data: bytes, block: int = 16) -> bytes:
@@ -467,9 +459,6 @@ def aes_cbc_decrypt(key: bytes, iv: bytes, ciphertext: bytes) -> bytes:
     return _pkcs7_unpad(bytes(out))
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  SecretVault
-# ════════════════════════════════════════════════════════════════════════════
 
 _CHECK_CONST = b"vulnvault-check-v1"
 _DEFAULT_ITERS = 200_000
@@ -481,8 +470,8 @@ class VaultError(Exception):
 
 @dataclass
 class _Keys:
-    enc: bytes  # 32 bytes para AES-256
-    mac: bytes  # 32 bytes para HMAC-SHA256
+    enc: bytes
+    mac: bytes
 
 
 def _derive_keys(password: str, salt: bytes, iterations: int) -> _Keys:
@@ -498,9 +487,8 @@ class SecretVault:
         self._keys = keys
         self._salt = salt
         self._iterations = iterations
-        self._secrets = secrets  # nome -> {iv, ct, mac} (hex)
+        self._secrets = secrets
 
-    # ── Criação / abertura ─────────────────────────────────────────────────────
     @classmethod
     def create(cls, path: str, password: str, iterations: int = _DEFAULT_ITERS) -> SecretVault:
         p = Path(path)
@@ -528,14 +516,12 @@ class SecretVault:
         iterations = int(data.get("iterations", _DEFAULT_ITERS))
         keys = _derive_keys(password, salt, iterations)
 
-        # Verifica senha via HMAC de constante conhecida (comparação constante)
         expected = hmac.new(keys.mac, _CHECK_CONST, hashlib.sha256).hexdigest()
         if not hmac.compare_digest(expected, data.get("check", "")):
             raise VaultError("Senha mestre incorreta ou cofre corrompido")
 
         return cls(path, keys, salt, iterations, data.get("secrets", {}))
 
-    # ── Operações ──────────────────────────────────────────────────────────────
     def set_secret(self, name: str, value: str) -> None:
         if not name:
             raise VaultError("Nome do segredo não pode ser vazio")
@@ -550,7 +536,6 @@ class SecretVault:
             raise VaultError(f"Segredo não encontrado: {name}")
         iv = bytes.fromhex(entry["iv"])
         ct = bytes.fromhex(entry["ct"])
-        # Verifica integridade (encrypt-then-MAC) antes de decifrar
         expected = hmac.new(self._keys.mac, iv + ct, hashlib.sha256).hexdigest()
         if not hmac.compare_digest(expected, entry.get("mac", "")):
             raise VaultError(f"Segredo '{name}' falhou na verificação de integridade (adulterado?)")
@@ -575,7 +560,6 @@ class SecretVault:
         for name, value in plain.items():
             self.set_secret(name, value)
 
-    # ── Persistência ───────────────────────────────────────────────────────────
     def save(self) -> None:
         check = hmac.new(self._keys.mac, _CHECK_CONST, hashlib.sha256).hexdigest()
         doc = {
@@ -588,4 +572,4 @@ class SecretVault:
         }
         tmp = self.path.with_suffix(self.path.suffix + ".tmp")
         tmp.write_text(json.dumps(doc, indent=2), encoding="utf-8")
-        tmp.replace(self.path)  # escrita atômica
+        tmp.replace(self.path)

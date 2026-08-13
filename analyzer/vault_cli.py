@@ -16,7 +16,7 @@ from analyzer.vault import SecretVault, VaultError
 
 try:
     from analyzer.reporter import console
-except Exception:  # fallback mínimo
+except Exception:
 
     class _C:
         def print(self, *a, **k):
@@ -25,7 +25,6 @@ except Exception:  # fallback mínimo
     console = _C()
 
 
-# ── Helpers ────────────────────────────────────────────────────────────────
 
 
 def _master_password(confirm: bool = False, prompt: str = "Senha mestre: ") -> str:
@@ -41,7 +40,6 @@ def _master_password(confirm: bool = False, prompt: str = "Senha mestre: ") -> s
     return pwd
 
 
-# ── CLI ──────────────────────────────────────────────────────────────────────
 
 
 def run_vault_cli(args) -> int:
@@ -71,7 +69,6 @@ def run_vault_cli(args) -> int:
         if args.vault_get:
             pwd = _master_password()
             vault = SecretVault.open(path, pwd)
-            # Valor puro no stdout (para uso em scripts/pipes)
             sys.stdout.write(vault.get_secret(args.vault_get) + "\n")
             return 0
 
@@ -123,7 +120,6 @@ def run_vault_cli(args) -> int:
         return 2
 
 
-# ── API REST ───────────────────────────────────────────────────────────────
 
 
 def run_vault_server(path: str, port: int) -> int:
@@ -157,7 +153,7 @@ def run_vault_server(path: str, port: int) -> int:
     console.print("[dim]Auth: header X-Vault-Token: <senha mestre>  •  Ctrl+C para sair[/dim]")
 
     class Handler(BaseHTTPRequestHandler):
-        def log_message(self, *a):  # silencia log padrão
+        def log_message(self, *a):
             pass
 
         def _send(self, code: int, data: dict) -> None:
