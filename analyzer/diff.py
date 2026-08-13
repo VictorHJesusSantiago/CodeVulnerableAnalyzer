@@ -22,7 +22,6 @@ def parse_unified_diff(diff_text: str) -> dict[str, DiffChunk]:
     current_line: int = 0
 
     for line in diff_text.splitlines():
-        # Cabeçalho de novo arquivo: +++ b/caminho
         m = re.match(r"^\+\+\+ b/(.+)$", line)
         if m:
             current_file = m.group(1)
@@ -30,7 +29,6 @@ def parse_unified_diff(diff_text: str) -> dict[str, DiffChunk]:
                 chunks[current_file] = DiffChunk(file_path=current_file)
             continue
 
-        # Hunk header: @@ -old +new @@
         m = re.match(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
         if m:
             current_line = int(m.group(1))

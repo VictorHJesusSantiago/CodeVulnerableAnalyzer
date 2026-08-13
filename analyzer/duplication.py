@@ -74,7 +74,6 @@ def scan_duplication(file_path: str, content: str) -> list[DuplicationFinding]:
                 continue
             seen_pairs.add(pair)
 
-            # Estender o bloco
             ext = BLOCK_MIN_LINES
             while i + ext < n and j + ext < n and hashes[i + ext] == hashes[j + ext]:
                 ext += 1
