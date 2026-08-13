@@ -28,7 +28,7 @@ _TIMEOUT = 8.0
 @dataclass
 class ValidationResult:
     provider: str
-    status: str  # VALID | INVALID | UNKNOWN
+    status: str
     detail: str
 
 
@@ -226,11 +226,6 @@ def validate_linode_token(token: str) -> ValidationResult:
     return r
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  AWS Signature Version 4 (implementação real via hmac/hashlib, sem boto3)
-#  Usada para chamar sts:GetCallerIdentity — a forma padrão e não-destrutiva
-#  de verificar se uma credencial AWS é válida.
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def _sigv4_sign(key: bytes, msg: str) -> bytes:
@@ -267,7 +262,6 @@ def build_sigv4_headers(
 
     payload_hash = hashlib.sha256(b"").hexdigest()
 
-    # Nomes de headers assinados devem estar em ordem alfabética (exigência SigV4)
     if session_token:
         canonical_headers = f"host:{host}\nx-amz-date:{amz_date}\nx-amz-security-token:{session_token}\n"
         signed_headers = "host;x-amz-date;x-amz-security-token"
@@ -338,7 +332,6 @@ def validate_aws_credentials(
         return ValidationResult("AWS", "UNKNOWN", f"Erro de rede: {e}")
 
 
-# ── Dispatcher genérico ────────────────────────────────────────────────────────
 
 _VALIDATORS = {
     "GitHub": lambda v: validate_github_token(v),
@@ -365,7 +358,7 @@ _VALIDATORS = {
     "Mistral": lambda v: validate_mistral_key(v),
     "Figma": lambda v: validate_figma_token(v),
     "Linode": lambda v: validate_linode_token(v),
-    "AWS": lambda v: None,  # AWS exige access_key+secret_key (2 campos); use validate_aws_credentials diretamente
+    "AWS": lambda v: None,
 }
 
 

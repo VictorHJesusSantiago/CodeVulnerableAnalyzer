@@ -8,14 +8,8 @@ from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Any
 
-# Mapeamentos baseados nas publicações oficiais de cada framework (OWASP Top
-# 10 2021, ASVS v4.0, PCI-DSS v4.0, NIST SP 800-53 Rev.5, ISO/IEC 27001:2022
-# Anexo A, CWE Top 25 2023 da MITRE, MITRE ATT&CK/CAPEC). Cobertura ampliada
-# e real, mas ainda NÃO é exaustiva de toda cláusula/subcontrole de cada
-# norma — isso exigiria manutenção contínua por um time de compliance
-# dedicado, não uma tabela estática de código.
 FRAMEWORKS = {
-    "OWASP": {  # OWASP Top 10 2021 (A01-A10)
+    "OWASP": {
         "A01:2021 Broken Access Control": ["CWE-284", "CWE-639", "CWE-862", "CWE-863", "CWE-306", "CWE-269"],
         "A02:2021 Cryptographic Failures": ["CWE-327", "CWE-328", "CWE-338", "CWE-311", "CWE-319", "CWE-295"],
         "A03:2021 Injection": ["CWE-78", "CWE-89", "CWE-79", "CWE-94", "CWE-95", "CWE-611", "CWE-77"],
@@ -27,7 +21,7 @@ FRAMEWORKS = {
         "A09:2021 Security Logging and Monitoring Failures": ["CWE-778", "CWE-223", "CWE-532"],
         "A10:2021 Server-Side Request Forgery": ["CWE-918"],
     },
-    "ASVS": {  # OWASP ASVS v4.0 (categorias V1-V14, resumidas)
+    "ASVS": {
         "V2 Authentication": ["CWE-287", "CWE-521", "CWE-307", "CWE-798"],
         "V3 Session Management": ["CWE-613", "CWE-614", "CWE-384"],
         "V4 Access Control": ["CWE-284", "CWE-639", "CWE-862", "CWE-863"],
@@ -40,7 +34,7 @@ FRAMEWORKS = {
         "V12 Files and Resources": ["CWE-22", "CWE-434", "CWE-611"],
         "V14 Configuration": ["CWE-16", "CWE-1188", "CWE-489"],
     },
-    "PCI-DSS": {  # PCI-DSS v4.0 (requisitos principais)
+    "PCI-DSS": {
         "3.5 Proteção de dados armazenados (crypto)": ["CWE-311", "CWE-327", "CWE-338"],
         "4.2 Criptografia em trânsito": ["CWE-319", "CWE-295", "CWE-326"],
         "6.2.4 Prevenção de vulnerabilidades comuns (injection)": ["CWE-79", "CWE-89", "CWE-78", "CWE-94"],
@@ -49,26 +43,26 @@ FRAMEWORKS = {
         "8.3 Autenticação forte": ["CWE-287", "CWE-521", "CWE-307"],
         "10.2 Trilhas de auditoria": ["CWE-778", "CWE-223"],
     },
-    "HIPAA": {  # HIPAA Security Rule (45 CFR 164.312)
+    "HIPAA": {
         "164.312(a) Controle de Acesso": ["CWE-284", "CWE-862", "CWE-306"],
         "164.312(b) Auditoria (Audit Controls)": ["CWE-778", "CWE-223"],
         "164.312(c) Integridade": ["CWE-502", "CWE-353"],
         "164.312(d) Autenticação de Pessoa/Entidade": ["CWE-287", "CWE-798"],
         "164.312(e) Segurança de Transmissão": ["CWE-319", "CWE-295"],
     },
-    "GDPR-LGPD": {  # GDPR (UE) / LGPD (Brasil) — artigos correspondentes
+    "GDPR-LGPD": {
         "Art.5 Princípios (minimização/integridade)": ["CWE-359", "CWE-200"],
         "Art.25 Privacy by Design/Default": ["CWE-359", "CWE-284"],
         "Art.32 Segurança do Tratamento": ["CWE-311", "CWE-319", "CWE-327", "CWE-798"],
         "Art.33 Notificação de Violação": ["CWE-778", "CWE-223"],
     },
-    "SOC2": {  # SOC 2 Trust Services Criteria
+    "SOC2": {
         "CC6 Controles de Acesso Lógico": ["CWE-284", "CWE-287", "CWE-862"],
         "CC7 Operações de Sistema (detecção/resposta)": ["CWE-778", "CWE-223"],
         "CC8 Gestão de Mudanças": ["CWE-1104"],
         "CC9 Mitigação de Riscos": ["CWE-937"],
     },
-    "ISO27001": {  # ISO/IEC 27001:2022 Anexo A (controles tecnológicos, seleção)
+    "ISO27001": {
         "A.8.2 Direitos de Acesso Privilegiado": ["CWE-269", "CWE-284"],
         "A.8.5 Autenticação Segura": ["CWE-287", "CWE-521", "CWE-307"],
         "A.8.9 Gestão de Configuração": ["CWE-16", "CWE-1188"],
@@ -77,7 +71,7 @@ FRAMEWORKS = {
         "A.8.26 Requisitos de Segurança em Aplicações": ["CWE-20", "CWE-89", "CWE-79", "CWE-78"],
         "A.8.28 Codificação Segura": ["CWE-94", "CWE-502", "CWE-798"],
     },
-    "NIST": {  # NIST SP 800-53 Rev. 5 (famílias de controle, seleção)
+    "NIST": {
         "AC Access Control": ["CWE-284", "CWE-862", "CWE-863", "CWE-306"],
         "AU Audit and Accountability": ["CWE-778", "CWE-223"],
         "IA Identification and Authentication": ["CWE-287", "CWE-798", "CWE-521"],
@@ -85,20 +79,20 @@ FRAMEWORKS = {
         "SI System and Information Integrity": ["CWE-20", "CWE-502", "CWE-829"],
         "CM Configuration Management": ["CWE-16", "CWE-1188"],
     },
-    "FedRAMP": {  # Baseline construída sobre NIST 800-53 (mesmas famílias)
+    "FedRAMP": {
         "AC Access Control": ["CWE-284", "CWE-862"],
         "SC System and Comms Protection": ["CWE-311", "CWE-319", "CWE-327"],
         "IA Identification and Authentication": ["CWE-287", "CWE-798"],
         "SI System and Information Integrity": ["CWE-502", "CWE-829"],
     },
-    "MITRE": {  # MITRE ATT&CK — técnicas relevantes a vulnerabilidades de código
+    "MITRE": {
         "T1190 Exploit Public-Facing Application": ["CWE-20", "CWE-89", "CWE-79", "CWE-78", "CWE-94"],
         "T1552 Unsecured Credentials": ["CWE-798", "CWE-522", "CWE-256"],
         "T1499 Endpoint Denial of Service": ["CWE-400", "CWE-835"],
         "T1078 Valid Accounts (comprometidas)": ["CWE-287", "CWE-521"],
         "T1611 Escape to Host (containers)": ["CWE-269", "CWE-284"],
     },
-    "CAPEC": {  # Common Attack Pattern Enumeration and Classification
+    "CAPEC": {
         "CAPEC-66 SQL Injection": ["CWE-89"],
         "CAPEC-242 Code Injection": ["CWE-94", "CWE-95"],
         "CAPEC-88 OS Command Injection": ["CWE-78", "CWE-77"],
@@ -107,7 +101,7 @@ FRAMEWORKS = {
         "CAPEC-586 Object Injection": ["CWE-502"],
         "CAPEC-115 Authentication Bypass": ["CWE-287", "CWE-306"],
     },
-    "CWE-TOP-25": {  # CWE Top 25 Most Dangerous Software Weaknesses 2023 (MITRE)
+    "CWE-TOP-25": {
         "1º CWE-787 Out-of-bounds Write": ["CWE-787"],
         "2º CWE-79 Cross-site Scripting": ["CWE-79"],
         "3º CWE-89 SQL Injection": ["CWE-89"],

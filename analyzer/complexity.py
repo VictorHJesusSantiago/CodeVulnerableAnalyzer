@@ -11,15 +11,15 @@ from dataclasses import dataclass
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory, Vulnerability
 
-# ── Thresholds configuráveis ───────────────────────────────────────────────
-MAX_FUNCTION_LINES = 50  # Linhas de código por função
-MAX_CYCLOMATIC = 10  # Pontos de decisão (McCabe Complexity)
-MAX_NESTING_DEPTH = 4  # Nível de aninhamento por bloco
-MAX_PARAMETERS = 5  # Parâmetros por função/método
-MAX_FILE_LINES = 500  # Linhas por arquivo (exceto testes/fixtures)
-MAX_CLASS_METHODS = 15  # Métodos por classe
 
-# ── Padrões por linguagem ──────────────────────────────────────────────────
+MAX_FUNCTION_LINES = 50
+MAX_CYCLOMATIC = 10
+MAX_NESTING_DEPTH = 4
+MAX_PARAMETERS = 5
+MAX_FILE_LINES = 500
+MAX_CLASS_METHODS = 15
+
+
 
 FUNCTION_START: dict[Language, re.Pattern] = {
     Language.PYTHON: re.compile(r"^(\s*)(?:async\s+)?def\s+([_a-zA-Z]\w*)\s*\(([^)]*)\)\s*(?:->.*?)?\s*:"),
@@ -61,7 +61,6 @@ CLASS_START: dict[Language, re.Pattern] = {
     Language.KOTLIN: re.compile(r"^\s*(?:(?:open|abstract|data|sealed)\s+)?class\s+([_a-zA-Z]\w*)"),
 }
 
-# Palavras-chave que aumentam a complexidade ciclomática
 DECISION_PATTERNS: dict[Language, list[str]] = {
     Language.PYTHON: [r"\bif\b", r"\belif\b", r"\bfor\b", r"\bwhile\b", r"\bexcept\b", r"\band\b", r"\bor\b"],
     Language.JAVASCRIPT: [
@@ -132,9 +131,7 @@ class FunctionInfo:
         if not raw or raw in ("self", "this"):
             return 0
         params = [p.strip() for p in raw.split(",") if p.strip()]
-        # Remove 'self' and 'cls' from Python
         params = [p for p in params if p not in ("self", "cls", "this")]
-        # Remove type annotations and defaults for counting
         return len(params)
 
     def line_count(self) -> int:
@@ -191,14 +188,13 @@ class ComplexityAnalyzer:
         results.extend(self._check_god_classes())
         return results
 
-    # ── God Class (excesso de métodos por classe) ─────────────────────────────
     def _check_god_classes(self) -> list[Vulnerability]:
         class_pattern = CLASS_START.get(self.language)
         func_pattern = FUNCTION_START.get(self.language)
         if not class_pattern or not func_pattern:
             return []
 
-        class_starts: list[tuple[int, int, str]] = []  # (line, indent, name)
+        class_starts: list[tuple[int, int, str]] = []
         for i, line in enumerate(self.lines):
             m = class_pattern.match(line)
             if m:
@@ -240,7 +236,6 @@ class ComplexityAnalyzer:
 
         return results
 
-    # ── Comprimento do arquivo ─────────────────────────────────────────────────
     def _check_file_length(self) -> list[Vulnerability]:
         if self.language == Language.UNKNOWN:
             return []
@@ -264,7 +259,6 @@ class ComplexityAnalyzer:
             )
         ]
 
-    # ── Extração de funções ────────────────────────────────────────────────────
     def _extract_functions(self) -> list[FunctionInfo]:
         pattern = FUNCTION_START.get(self.language)
         if not pattern:
@@ -284,7 +278,6 @@ class ComplexityAnalyzer:
             name = match.group(2)
             params = match.group(3) if len(match.groups()) >= 3 else ""
 
-            # Determina fim da função
             if self.language in (Language.PYTHON, Language.RUBY):
                 end_line = self._find_end_python(line_num, indent)
             else:
@@ -328,7 +321,6 @@ class ComplexityAnalyzer:
                 return i + 1
         return len(self.lines)
 
-    # ── Verificações por função ───────────────────────────────────────────────
     def _check_function(self, func: FunctionInfo) -> list[Vulnerability]:
         results: list[Vulnerability] = []
         line_count = func.line_count()
@@ -392,7 +384,6 @@ class ComplexityAnalyzer:
 
         return results
 
-    # ── Aninhamento por linha ─────────────────────────────────────────────────
     def _check_nesting_per_line(self) -> list[Vulnerability]:
         results: list[Vulnerability] = []
         reported: set[int] = set()
@@ -415,7 +406,7 @@ class ComplexityAnalyzer:
                     reported.add(i)
                     results.append(self._nesting_vuln(i + 1, line, depth))
 
-        return results[:5]  # Máximo 5 por arquivo para evitar flood
+        return results[:5]
 
     def _nesting_vuln(self, line_num: int, line: str, depth: int) -> Vulnerability:
         return Vulnerability(

@@ -38,7 +38,7 @@ class Macro:
 
     def __init__(self, name: str, params: list[str] | None, body: str):
         self.name = name
-        self.params = params  # None = macro objeto; [] ou [p1,...] = macro função
+        self.params = params
         self.body = body
 
 
@@ -90,12 +90,10 @@ def _expand_line(line: str, macros: dict[str, Macro], depth: int = 0) -> str:
                     depth_paren -= 1
                 i += 1
             if depth_paren != 0:
-                continue  # chamada multi-linha: não suportado, deixa como está
+                continue
             call_args_str = line[start : i - 1]
             call_args = _split_args(call_args_str)
             body = macro.body
-            # strict=False: params × args podem divergir em código escaneado
-            # (macros variádicas ou invocação com aridade errada) — não deve quebrar.
             for pname, pval in zip(macro.params, call_args, strict=False):
                 body = re.sub(r"\b" + re.escape(pname) + r"\b", pval, body)
             line = line[: m.start()] + body + line[i:]
@@ -114,7 +112,6 @@ def expand_macros(content: str) -> str:
     macros: dict[str, Macro] = {}
     out: list[str] = []
 
-    # Pilha de condicionais: cada item é (currently_active, branch_taken_before)
     cond_stack: list[tuple[bool, bool]] = []
 
     def _active() -> bool:
