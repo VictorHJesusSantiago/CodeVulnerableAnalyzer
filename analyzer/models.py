@@ -62,7 +62,6 @@ class Confidence(Enum):
 
 
 class Language(Enum):
-    # ── Linguagens principais ─────────────────────────────────────────────────
     PYTHON = "Python"
     JAVASCRIPT = "JavaScript"
     TYPESCRIPT = "TypeScript"
@@ -82,7 +81,6 @@ class Language(Enum):
     SCALA = "Scala"
     PERL = "Perl"
 
-    # ── Sistemas / Low-level ──────────────────────────────────────────────────
     ASSEMBLY = "Assembly"
     FORTRAN = "Fortran"
     ADA = "Ada"
@@ -91,7 +89,6 @@ class Language(Enum):
     CRYSTAL = "Crystal"
     VLANG = "V"
 
-    # ── Web / Frontend ────────────────────────────────────────────────────────
     HTML = "HTML"
     CSS = "CSS"
     SCSS = "SCSS"
@@ -101,13 +98,11 @@ class Language(Enum):
     SVG = "SVG"
     WEBASSEMBLY = "WebAssembly"
 
-    # ── Engines de Template ───────────────────────────────────────────────────
     PUG = "Pug"
     HANDLEBARS = "Handlebars"
     EJS = "EJS"
     LIQUID = "Liquid"
 
-    # ── Dados / Configuração ──────────────────────────────────────────────────
     JSON = "JSON"
     YAML = "YAML"
     TOML = "TOML"
@@ -116,14 +111,12 @@ class Language(Enum):
     PROTOBUF = "Protobuf"
     MARKDOWN = "Markdown"
 
-    # ── Query / APIs ──────────────────────────────────────────────────────────
     GRAPHQL = "GraphQL"
     SPARQL = "SPARQL"
     PLSQL = "PL/SQL"
     TSQL = "T-SQL"
     MQL = "MQL"
 
-    # ── Scripting / Shell Avançado ────────────────────────────────────────────
     POWERSHELL = "PowerShell"
     BASH = "Bash"
     AWK = "Awk"
@@ -131,7 +124,6 @@ class Language(Enum):
     LUA = "Lua"
     TCL = "Tcl"
 
-    # ── Funcionais / Acadêmicas ───────────────────────────────────────────────
     HASKELL = "Haskell"
     ERLANG = "Erlang"
     ELIXIR = "Elixir"
@@ -145,16 +137,13 @@ class Language(Enum):
     ELM = "Elm"
     COFFEESCRIPT = "CoffeeScript"
 
-    # ── Mobile ────────────────────────────────────────────────────────────────
     DART = "Dart"
     OBJECTIVEC = "Objective-C"
 
-    # ── JVM / .NET / Desktop ─────────────────────────────────────────────────
     GROOVY = "Groovy"
     VBNET = "VB.NET"
     COLDFUSION = "ColdFusion"
 
-    # ── Legado / Enterprise ───────────────────────────────────────────────────
     PASCAL = "Pascal"
     PLI = "PL/I"
     ABAP = "ABAP"
@@ -164,45 +153,37 @@ class Language(Enum):
     ACTIONSCRIPT = "ActionScript"
     APEX = "Apex"
 
-    # ── IaC / DevOps ──────────────────────────────────────────────────────────
     TERRAFORM = "Terraform"
     DOCKERFILE = "Dockerfile"
 
-    # ── Blockchain ────────────────────────────────────────────────────────────
     SOLIDITY = "Solidity"
     VYPER = "Vyper"
     MOVE = "Move"
     CAIRO = "Cairo"
 
-    # ── Científicas / Acadêmicas ──────────────────────────────────────────────
     MATLAB = "MATLAB"
     R = "R"
     SAS = "SAS"
     SCRATCH = "Scratch"
 
-    # ── Hardware Description ──────────────────────────────────────────────────
     VHDL = "VHDL"
     VERILOG = "Verilog/SystemVerilog"
 
-    # ── Build / Automação de Build ────────────────────────────────────────────
     MAKEFILE = "Makefile"
     CMAKE = "CMake"
     BAZEL = "Bazel/Starlark"
     GRADLE = "Gradle"
     SED = "sed"
 
-    # ── Lisp family / Lógica ──────────────────────────────────────────────────
     RACKET = "Racket"
     FORTH = "Forth"
     APL = "APL/J/K"
 
-    # ── Scripting de Automação ────────────────────────────────────────────────
     AUTOHOTKEY = "AutoHotkey"
     APPLESCRIPT = "AppleScript"
     FISH = "Fish"
     ZSH = "Zsh"
 
-    # ── IaC / Config avançada ─────────────────────────────────────────────────
     BICEP = "Bicep"
     JSONNET = "Jsonnet"
     DHALL = "Dhall"
@@ -212,7 +193,6 @@ class Language(Enum):
     CHEF = "Chef"
     SALTSTACK = "SaltStack"
 
-    # ── Blockchain / Smart Contracts (extensão) ───────────────────────────────
     YUL = "Yul"
     HUFF = "Huff"
     CADENCE = "Cadence"
@@ -223,7 +203,6 @@ class Language(Enum):
     RIDE = "Ride"
     TEAL = "TEAL"
 
-    # ── GPU / Shaders ──────────────────────────────────────────────────────────
     GLSL = "GLSL"
     HLSL = "HLSL"
     WGSL = "WGSL"
@@ -231,7 +210,6 @@ class Language(Enum):
     OPENCL = "OpenCL"
     METAL = "Metal"
 
-    # ── Sistemas modernos / Funcionais novas ──────────────────────────────────
     MOJO = "Mojo"
     CARBON = "Carbon"
     VALE = "Vale"
@@ -243,23 +221,19 @@ class Language(Enum):
     RESCRIPT = "ReScript"
     PURESCRIPT = "PureScript"
 
-    # ── Provas / Dependently-typed ─────────────────────────────────────────────
     IDRIS = "Idris"
     LEAN = "Lean"
     COQ = "Coq"
     AGDA = "Agda"
 
-    # ── Quântica ──────────────────────────────────────────────────────────────
     QSHARP = "Q#"
     OPENQASM = "OpenQASM"
 
-    # ── Meta ──────────────────────────────────────────────────────────────────
     GENERIC = "Generic"
     UNKNOWN = "Unknown"
 
     def color(self) -> str:
         return {
-            # Existentes
             Language.PYTHON: "bright_blue",
             Language.JAVASCRIPT: "yellow",
             Language.TYPESCRIPT: "blue",
@@ -278,7 +252,6 @@ class Language(Enum):
             Language.RUST: "bright_yellow",
             Language.SCALA: "red",
             Language.PERL: "bright_blue",
-            # Sistemas
             Language.ASSEMBLY: "dim green",
             Language.FORTRAN: "dim cyan",
             Language.ADA: "blue",
@@ -286,7 +259,6 @@ class Language(Enum):
             Language.NIM: "bright_yellow",
             Language.CRYSTAL: "bright_white",
             Language.VLANG: "bright_blue",
-            # Web / Frontend
             Language.HTML: "bright_red",
             Language.CSS: "bright_blue",
             Language.SCSS: "bright_magenta",
@@ -295,12 +267,10 @@ class Language(Enum):
             Language.STYLUS: "green",
             Language.SVG: "yellow",
             Language.WEBASSEMBLY: "bright_magenta",
-            # Templates
             Language.PUG: "green",
             Language.HANDLEBARS: "bright_yellow",
             Language.EJS: "yellow",
             Language.LIQUID: "cyan",
-            # Dados / Config
             Language.JSON: "bright_yellow",
             Language.YAML: "cyan",
             Language.TOML: "bright_red",
@@ -308,20 +278,17 @@ class Language(Enum):
             Language.INI: "white",
             Language.PROTOBUF: "bright_blue",
             Language.MARKDOWN: "bright_white",
-            # Query
             Language.GRAPHQL: "bright_magenta",
             Language.SPARQL: "bright_blue",
             Language.PLSQL: "bright_cyan",
             Language.TSQL: "bright_cyan",
             Language.MQL: "bright_yellow",
-            # Shell avançado
             Language.POWERSHELL: "bright_blue",
             Language.BASH: "green",
             Language.AWK: "dim green",
             Language.BATCH: "dim white",
             Language.LUA: "bright_blue",
             Language.TCL: "red",
-            # Funcionais
             Language.HASKELL: "bright_magenta",
             Language.ERLANG: "bright_red",
             Language.ELIXIR: "magenta",
@@ -334,14 +301,11 @@ class Language(Enum):
             Language.JULIA: "bright_magenta",
             Language.ELM: "bright_blue",
             Language.COFFEESCRIPT: "bright_yellow",
-            # Mobile
             Language.DART: "bright_cyan",
             Language.OBJECTIVEC: "bright_blue",
-            # JVM / .NET
             Language.GROOVY: "bright_blue",
             Language.VBNET: "blue",
             Language.COLDFUSION: "bright_red",
-            # Legado
             Language.PASCAL: "dim cyan",
             Language.PLI: "dim white",
             Language.ABAP: "bright_white",
@@ -350,20 +314,16 @@ class Language(Enum):
             Language.SMALLTALK: "bright_blue",
             Language.ACTIONSCRIPT: "bright_red",
             Language.APEX: "bright_blue",
-            # IaC
             Language.TERRAFORM: "bright_magenta",
             Language.DOCKERFILE: "bright_cyan",
-            # Blockchain
             Language.SOLIDITY: "bright_yellow",
             Language.VYPER: "bright_green",
             Language.MOVE: "bright_cyan",
             Language.CAIRO: "bright_magenta",
-            # Científicas
             Language.MATLAB: "bright_red",
             Language.R: "bright_blue",
             Language.SAS: "bright_blue",
             Language.SCRATCH: "bright_yellow",
-            # Meta
             Language.GENERIC: "white",
             Language.UNKNOWN: "dim",
         }.get(self, "white")
@@ -458,7 +418,6 @@ class Language(Enum):
 
 
 class VulnCategory(Enum):
-    # ── Segurança (OWASP / CWE) ───────────────────────────────────────────────
     SQL_INJECTION = "SQL Injection"
     COMMAND_INJECTION = "Command Injection"
     CODE_INJECTION = "Code Injection"
@@ -485,7 +444,6 @@ class VulnCategory(Enum):
     INFO_DISCLOSURE = "Information Disclosure"
     CSRF = "Cross-Site Request Forgery"
     SUPPLY_CHAIN = "Supply Chain Risk"
-    # ── Qualidade de Código ───────────────────────────────────────────────────
     CODE_QUALITY = "Code Quality"
     NAMING = "Naming Convention"
     COMPLEXITY = "Excessive Complexity"
@@ -493,47 +451,35 @@ class VulnCategory(Enum):
     DEAD_CODE = "Dead Code"
     TECHNICAL_DEBT = "Technical Debt"
     DRY_PRINCIPLE = "DRY Principle Violation"
-    # ── Princípios SOLID ─────────────────────────────────────────────────────
     SOLID_SRP = "SOLID: Single Responsibility"
     SOLID_OCP = "SOLID: Open/Closed Principle"
     SOLID_LSP = "SOLID: Liskov Substitution"
     SOLID_ISP = "SOLID: Interface Segregation"
     SOLID_DIP = "SOLID: Dependency Inversion"
-    # ── Anti-patterns de Design ────────────────────────────────────────────────
     ANTI_PATTERN = "Design Anti-pattern"
     GOD_OBJECT = "God Object / God Class"
     PRIMITIVE_OBSESSION = "Primitive Obsession"
     FEATURE_ENVY = "Feature Envy"
     DATA_CLUMP = "Data Clump"
-    # ── Performance ──────────────────────────────────────────────────────────
     PERFORMANCE = "Performance Anti-pattern"
     DATABASE_PERF = "Database Performance"
     MEMORY_LEAK = "Memory Leak"
-    # ── Tratamento de Erros ───────────────────────────────────────────────────
     ERROR_HANDLING = "Error Handling"
     EXCEPTION_ABUSE = "Exception Abuse"
-    # ── Concorrência ─────────────────────────────────────────────────────────
     CONCURRENCY = "Concurrency Issue"
     DEADLOCK = "Deadlock Risk"
-    # ── Arquitetura ───────────────────────────────────────────────────────────
     ARCHITECTURE = "Architecture Violation"
     COUPLING = "High Coupling"
     COHESION = "Low Cohesion"
     LAYER_VIOLATION = "Layer Violation"
-    # ── Documentação e Logging ────────────────────────────────────────────────
     DOCUMENTATION = "Documentation Issue"
     LOGGING = "Logging Issue"
-    # ── API e Banco de Dados ──────────────────────────────────────────────────
     API_DESIGN = "API Design Issue"
     DATABASE = "Database Anti-pattern"
-    # ── Testes ───────────────────────────────────────────────────────────────
     TESTING = "Testing Quality"
-    # ── IaC / DevOps / Infraestrutura ─────────────────────────────────────────
     IAC_SECURITY = "IaC Security"
     CONTAINER_SECURITY = "Container Security"
-    # ── Blockchain ────────────────────────────────────────────────────────────
     SMART_CONTRACT = "Smart Contract Vulnerability"
-    # ── Outros ────────────────────────────────────────────────────────────────
     OTHER = "Other"
 
 

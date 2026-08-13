@@ -20,7 +20,6 @@ from pathlib import Path
 
 from analyzer.sbom import Component, _make_purl
 
-# ── Composer (PHP) ──────────────────────────────────────────────────────────
 
 
 def parse_composer_json(content: str) -> list[Component]:
@@ -57,7 +56,6 @@ def parse_composer_lock(content: str) -> list[Component]:
     return components
 
 
-# ── RubyGems (Gemfile / Gemfile.lock) ────────────────────────────────────────
 
 _GEMFILE_GEM_RE = re.compile(r"""^\s*gem\s+["']([^"']+)["'](?:\s*,\s*["']([^"']+)["'])?""")
 _GEMFILE_LOCK_ENTRY_RE = re.compile(r"^\s{4}([A-Za-z0-9_.-]+)\s+\(([^)]+)\)")
@@ -95,7 +93,6 @@ def parse_gemfile_lock(content: str) -> list[Component]:
     return components
 
 
-# ── NuGet (packages.config) ──────────────────────────────────────────────────
 
 _NUGET_PKG_RE = re.compile(r'<package\s+id="([^"]+)"\s+version="([^"]+)"')
 
@@ -108,7 +105,6 @@ def parse_packages_config(content: str) -> list[Component]:
     return components
 
 
-# ── Dart/Flutter (pubspec.yaml) ──────────────────────────────────────────────
 
 _PUBSPEC_DEP_RE = re.compile(r"^\s{2}([a-zA-Z0-9_]+):\s*\^?([0-9][0-9.]*)")
 
@@ -133,7 +129,6 @@ def parse_pubspec_yaml(content: str) -> list[Component]:
     return components
 
 
-# ── Swift Package Manager (Package.resolved) ─────────────────────────────────
 
 
 def parse_package_resolved(content: str) -> list[Component]:
@@ -154,7 +149,6 @@ def parse_package_resolved(content: str) -> list[Component]:
     return components
 
 
-# ── CocoaPods (Podfile.lock) ──────────────────────────────────────────────────
 
 _PODFILE_LOCK_ENTRY_RE = re.compile(r"^\s*-\s*([A-Za-z0-9_+./-]+)\s*\(([^)]+)\)")
 
@@ -172,14 +166,13 @@ def parse_podfile_lock(content: str) -> list[Component]:
             m = _PODFILE_LOCK_ENTRY_RE.match(line)
             if m:
                 name, ver = m.groups()
-                name = name.split("/")[0]  # remove subspecs (Pod/Subspec)
+                name = name.split("/")[0]
                 components.append(
                     Component(name=name, version=ver, purl=_make_purl("cocoapods", name, ver), package_type="cocoapods")
                 )
     return components
 
 
-# ── Carthage (Cartfile.resolved) ─────────────────────────────────────────────
 
 _CARTFILE_RE = re.compile(r'^(?:github|git|binary)\s+"([^"]+)"\s+"([^"]+)"')
 
@@ -199,7 +192,6 @@ def parse_cartfile_resolved(content: str) -> list[Component]:
     return components
 
 
-# ── Conan (conanfile.txt) ─────────────────────────────────────────────────────
 
 _CONAN_REQ_RE = re.compile(r"^([A-Za-z0-9_.-]+)/([0-9][A-Za-z0-9.+-]*)")
 
@@ -222,7 +214,6 @@ def parse_conanfile_txt(content: str) -> list[Component]:
     return components
 
 
-# ── vcpkg.json ────────────────────────────────────────────────────────────────
 
 
 def parse_vcpkg_json(content: str) -> list[Component]:
@@ -240,7 +231,6 @@ def parse_vcpkg_json(content: str) -> list[Component]:
     return components
 
 
-# ── Hex (Elixir mix.exs) ──────────────────────────────────────────────────────
 
 _MIX_DEP_RE = re.compile(r'\{:([a-z0-9_]+),\s*"~?>?=?\s*([0-9][0-9.]*)"')
 
@@ -253,7 +243,6 @@ def parse_mix_exs(content: str) -> list[Component]:
     return components
 
 
-# ── CPAN (cpanfile) ───────────────────────────────────────────────────────────
 
 _CPANFILE_RE = re.compile(r"""^\s*requires\s+["']([^"']+)["'](?:\s*,\s*["']([^"']+)["'])?""")
 
@@ -271,7 +260,6 @@ def parse_cpanfile(content: str) -> list[Component]:
     return components
 
 
-# ── CRAN (DESCRIPTION) ────────────────────────────────────────────────────────
 
 
 def parse_description_cran(content: str) -> list[Component]:
@@ -294,7 +282,6 @@ def parse_description_cran(content: str) -> list[Component]:
     return components
 
 
-# ── Conda (environment.yml) ───────────────────────────────────────────────────
 
 _CONDA_DEP_RE = re.compile(r"^\s*-\s*([A-Za-z0-9_.-]+)(?:[=<>]+([0-9][0-9.]*))?")
 
@@ -325,7 +312,6 @@ def parse_conda_environment(content: str) -> list[Component]:
     return components
 
 
-# ── Helm (Chart.yaml) ─────────────────────────────────────────────────────────
 
 _HELM_DEP_NAME_RE = re.compile(r"^\s*-?\s*name:\s*(\S+)")
 _HELM_DEP_VER_RE = re.compile(r'^\s*version:\s*"?([^"\s]+)"?')
@@ -362,7 +348,6 @@ def parse_helm_chart_yaml(content: str) -> list[Component]:
     return components
 
 
-# ── Dockerfile (imagem base + pacotes apt/yum/apk) ────────────────────────────
 
 _DOCKER_FROM_RE = re.compile(r"^\s*FROM\s+([^\s:]+)(?::([^\s]+))?", re.MULTILINE)
 _APT_INSTALL_RE = re.compile(r"apt(?:-get)?\s+install\s+(?:-y\s+)?([^\n&|]+)")
@@ -404,9 +389,6 @@ def parse_dockerfile(content: str) -> list[Component]:
     return components
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  Orquestração
-# ════════════════════════════════════════════════════════════════════════════
 
 _MANIFEST_PARSERS = {
     "composer.json": parse_composer_json,

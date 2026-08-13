@@ -59,7 +59,7 @@ class ASTCache:
         with sqlite3.connect(self.path) as db:
             row = db.execute("SELECT dump FROM ast_cache WHERE hash=?", (key,)).fetchone()
             if row:
-                return ast.parse(source)  # parser ainda reconstrói nós; hit evita análises derivadas serializadas
+                return ast.parse(source)
             tree = ast.parse(source)
             db.execute(
                 "INSERT OR REPLACE INTO ast_cache VALUES(?,?,?)",
