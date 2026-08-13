@@ -23,9 +23,8 @@ def _make_purl(pkg_type: str, name: str, version: str) -> str:
     return f"pkg:{pkg_type}/{name}@{version}"
 
 
-# ── Parsers de manifesto ──────────────────────────────────────────────────────
 
-# Casa: nome (+ extras opcionais [x,y]) + operador opcional (==,>=,~=,^,etc) + versão
+
 _REQ_RE = re.compile(
     r"^([A-Za-z0-9_.\-]+)\s*(?:\[[^\]]*\])?\s*"
     r"(?:[=<>!~^]=?\s*v?)?\s*([0-9][A-Za-z0-9.\-]*)"
@@ -35,7 +34,7 @@ _REQ_RE = re.compile(
 def _from_requirements(content: str) -> list[Component]:
     components: list[Component] = []
     for line in content.splitlines():
-        line = line.split("#", 1)[0].split(";", 1)[0].strip()  # remove comentário e marker
+        line = line.split("#", 1)[0].split(";", 1)[0].strip()
         if not line or line.startswith("-"):
             continue
         m = _REQ_RE.match(line)
@@ -197,7 +196,6 @@ def collect_components(directory: str) -> list[Component]:
     return components
 
 
-# ── CycloneDX 1.4 JSON ────────────────────────────────────────────────────────
 
 
 def export_cyclonedx(components: list[Component], output_path: str, project_name: str = "project") -> None:

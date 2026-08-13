@@ -28,9 +28,6 @@ from xml.dom import minidom
 
 from analyzer.sbom import Component
 
-# ════════════════════════════════════════════════════════════════════════════
-#  CycloneDX 1.4 XML
-# ════════════════════════════════════════════════════════════════════════════
 
 _CDX_NS = "http://cyclonedx.org/schema/bom/1.4"
 
@@ -69,9 +66,7 @@ def export_cyclonedx_xml(components: list[Component], output_path: str, project_
     Path(output_path).write_text(pretty, encoding="utf-8")
 
 
-# ════════════════════════════════════════════════════════════════════════════
 #  SPDX 2.3 JSON
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def export_spdx_json(components: list[Component], output_path: str, project_name: str = "project") -> None:
@@ -118,9 +113,6 @@ def export_spdx_json(components: list[Component], output_path: str, project_name
     Path(output_path).write_text(json.dumps(doc, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  Attestation local (formato in-toto Statement, assinatura HMAC-SHA256)
-# ════════════════════════════════════════════════════════════════════════════
 
 _PREDICATE_TYPE = "https://vulnscan.local/attestation/local-hmac/v1"
 
