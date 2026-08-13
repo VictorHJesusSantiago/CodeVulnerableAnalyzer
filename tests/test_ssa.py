@@ -26,7 +26,7 @@ def test_diamond_cfg_requires_phi_node():
     cfg = _cfg_from(code)
     idom, df, phi = build_ssa(cfg)
     assert "x" in phi.phi_sites
-    join_node = max(cfg.nodes.keys())  # nó do 'return x'
+    join_node = max(cfg.nodes.keys())
     assert join_node in phi.phi_sites["x"]
 
 
@@ -67,7 +67,6 @@ def test_definite_assignment_params_are_certain_from_entry():
     assert {"a", "b"}.issubset(result[cfg.entry])
 
 
-# ── Integração com pyast_engine (regra AST-SSA-001) ─────────────────────────
 
 
 def test_ast_ssa_rule_flags_real_bug():

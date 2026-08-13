@@ -13,9 +13,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  secrets_providers
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_provider_signatures_compile():
@@ -24,13 +21,10 @@ def test_provider_signatures_compile():
     from analyzer.secrets_providers import PROVIDER_SIGNATURES
 
     for sig in PROVIDER_SIGNATURES:
-        re.compile(sig.pattern.pattern)  # não deve lançar
+        re.compile(sig.pattern.pattern)
 
 
 def test_classify_secret_finds_aws_and_stripe():
-    # As strings são concatenadas em partes para que o texto-fonte bruto deste
-    # arquivo nunca contenha a sequência contígua no formato de segredo real
-    # (evita falso-positivo do secret scanning / push protection do GitHub).
     from analyzer.secrets_providers import classify_secret
 
     fake_aws = "AKIA" + "ABCDEFGHIJKLMNOP"
@@ -49,19 +43,14 @@ def test_provider_count_substantial():
     assert signature_count() >= 120
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  key_material
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_pkcs8_pem_detected():
-    # PEM sintético (base64 válido, não precisa ser uma chave criptograficamente
-    # correta para o teste de detecção de bloco + tentativa de parse DER)
     import base64
 
     from analyzer.key_material import scan_key_material
 
-    fake_der = b"\x30\x03\x02\x01\x00"  # SEQUENCE { INTEGER 0 }
+    fake_der = b"\x30\x03\x02\x01\x00"
     b64 = base64.encodebytes(fake_der).decode()
     pem = f"-----BEGIN PRIVATE KEY-----\n{b64}-----END PRIVATE KEY-----\n"
     findings = scan_key_material("t.pem", pem)
@@ -91,9 +80,6 @@ def test_der_analysis_rejects_garbage():
     assert valid is False
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  jwt_scan
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def _build_jwt(header: dict, payload: dict) -> str:
@@ -131,9 +117,6 @@ def test_jwt_valid_with_exp_no_issues():
     assert findings[0].issues == []
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  binary_scan
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_extract_strings_from_binary():
@@ -164,9 +147,6 @@ def test_pdf_text_extraction_with_flate():
     assert "secret content here" in text
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  secrets_baseline
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_baseline_roundtrip(tmp_path):
@@ -195,9 +175,6 @@ def test_baseline_detects_new_secret(tmp_path):
     assert len(diff.new_secrets) == 1
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  credential_validators (SigV4 — sem chamadas de rede no teste)
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_sigv4_signature_deterministic_and_key_sensitive():
@@ -213,9 +190,6 @@ def test_sigv4_signature_deterministic_and_key_sensitive():
     assert "Credential=AKIAFAKE" in h1["Authorization"]
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  lockfiles
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_package_lock_json_v3():
@@ -258,9 +232,6 @@ def test_dependency_tree_transitive():
     assert tree.transitive_of("a") == {"b", "c"}
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  manifests_ext
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_composer_json_parser():
@@ -290,9 +261,6 @@ def test_dockerfile_parser_extracts_base_and_packages():
     assert names["curl"] == "7.68.0"
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  vex
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_vex_roundtrip_and_suppression(tmp_path):
@@ -320,9 +288,6 @@ def test_vex_invalid_status_raises():
         VexStatement("CVE-1", "pkg", "invalid_status")
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  dep_health
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_levenshtein_basic():
@@ -361,9 +326,6 @@ def test_license_check_known_gpl_package():
     assert "GPL" in r.license
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  sbom_ext
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_cyclonedx_xml_export(tmp_path):
@@ -402,9 +364,6 @@ def test_local_attestation_verify(tmp_path):
     assert verify_local_attestation(att, b"b" * 32) is False
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  dep_autofix
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_bump_plan_requirements_txt():
@@ -460,9 +419,6 @@ def test_bump_plan_picks_highest_fixed_version():
     assert plan.entries[0].to_version == "4.2.16"
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  hash_pinning
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_pinning_detects_unpinned_and_no_hash():

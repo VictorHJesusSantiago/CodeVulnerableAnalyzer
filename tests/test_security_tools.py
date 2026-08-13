@@ -15,9 +15,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  Vault — AES e SecretVault
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_aes256_fips197_vector():
@@ -76,7 +73,7 @@ def test_vault_tamper_detection(tmp_path):
     v.set_secret("k", "v")
     v.save()
     doc = json.loads(Path(path).read_text(encoding="utf-8"))
-    doc["secrets"]["k"]["ct"] = "00" * 32  # corrompe ciphertext
+    doc["secrets"]["k"]["ct"] = "00" * 32
     Path(path).write_text(json.dumps(doc), encoding="utf-8")
     v2 = SecretVault.open(path, "mestre")
     with pytest.raises(VaultError):
@@ -96,9 +93,6 @@ def test_vault_change_password(tmp_path):
     assert SecretVault.open(path, "nova").get_secret("k") == "segredo"
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  Parser .csproj (NuGet)
-# ════════════════════════════════════════════════════════════════════════════
 
 _CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
   <ItemGroup>
@@ -131,15 +125,11 @@ def test_csproj_routed_by_suffix(tmp_path):
     assert any(v.package == "newtonsoft.json" for v in vulns)
 
 
-# ════════════════════════════════════════════════════════════════════════════
-#  OSV — parsing offline + consulta online (resiliente a falta de rede)
-# ════════════════════════════════════════════════════════════════════════════
 
 
 def test_osv_severity_from_cvss():
     from analyzer.deps import _cvss_v3_base, _osv_severity
 
-    # Vetor real "crítico" (9.8) — AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
     crit = "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H"
     assert abs(_cvss_v3_base(crit) - 9.8) < 0.01
     assert _osv_severity({"severity": [{"type": "CVSS_V3", "score": crit}]}) == "CRITICAL"
