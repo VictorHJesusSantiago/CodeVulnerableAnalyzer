@@ -15,9 +15,6 @@ from types import SimpleNamespace
 
 import pytest
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  duplication
-# ══════════════════════════════════════════════════════════════════════════════
 from analyzer.duplication import (
     _hash8,
     _meaningful,
@@ -27,7 +24,6 @@ from analyzer.duplication import (
 
 
 def test_normalize_masks_strings_and_numbers():
-    # Strings viram "S" e números viram N → linhas equivalentes normalizam igual
     assert _normalize('x = "hello" + 42') == _normalize('x = "world" + 99')
     assert _normalize("  A  =  B  ") == "a = b"
 
@@ -64,9 +60,6 @@ def test_scan_duplication_no_false_positive_unique_code():
     assert scan_duplication("x.py", code) == []
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  diff
-# ══════════════════════════════════════════════════════════════════════════════
 from analyzer.diff import (
     diff_only_lines,
     filter_vulns_to_diff,
@@ -101,18 +94,15 @@ def test_diff_only_lines_matches_by_suffix_and_missing():
 def test_filter_vulns_to_diff():
     chunks = parse_unified_diff(_DIFF)
     vulns = [
-        SimpleNamespace(file_path="foo.py", line_number=2),  # em linha adicionada → mantém
-        SimpleNamespace(file_path="foo.py", line_number=99),  # fora do diff → descarta
-        SimpleNamespace(file_path="other.py", line_number=1),  # arquivo fora do diff → mantém
+        SimpleNamespace(file_path="foo.py", line_number=2),
+        SimpleNamespace(file_path="foo.py", line_number=99),
+        SimpleNamespace(file_path="other.py", line_number=1),
     ]
     kept = filter_vulns_to_diff(vulns, chunks)
     assert len(kept) == 2
     assert SimpleNamespace(file_path="foo.py", line_number=99) not in kept
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  pii
-# ══════════════════════════════════════════════════════════════════════════════
 from analyzer.pii import _luhn, _mask, scan_pii
 
 
@@ -140,8 +130,8 @@ def test_scan_pii_detects_valid_cpf_cnpj_card():
 def test_scan_pii_ignores_comments_and_invalid():
     content = "\n".join(
         [
-            '# cpf = "111.444.777-35"',  # comentário → ignorado
-            'cpf = "000.000.000-00"',  # inválido (todos iguais) → ignorado
+            '# cpf = "111.444.777-35"',
+            'cpf = "000.000.000-00"',
         ]
     )
     assert scan_pii("x.py", content) == []
@@ -159,9 +149,6 @@ def test_scan_pii_email_and_phone():
     assert "TelefoneBR" in types
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  container_security
-# ══════════════════════════════════════════════════════════════════════════════
 from analyzer.container_security import scan_compose, scan_dockerfile
 
 
@@ -196,9 +183,6 @@ def test_scan_compose_yaml_string():
     assert "COMPOSE-001" in ids
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  trend
-# ══════════════════════════════════════════════════════════════════════════════
 from analyzer.models import ScanReport
 from analyzer.trend import TrendDB, ascii_trend
 
@@ -226,7 +210,7 @@ def test_trenddb_record_history_delete_clear(tmp_path):
     hist = db.history()
     assert len(hist) == 1
     assert hist[0].total_vulns == 7 and hist[0].target == "proj"
-    assert "/" in hist[0].dt  # formato "dd/mm HH:MM"
+    assert "/" in hist[0].dt
 
     db.record(_report(total=3))
     assert len(db.history()) == 2
@@ -245,9 +229,6 @@ def test_ascii_trend_empty_and_populated(tmp_path):
     assert "█" in chart
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  hash_pinning
-# ══════════════════════════════════════════════════════════════════════════════
 from analyzer.hash_pinning import (
     check_cargo_lock_checksums,
     check_package_lock_integrity,
@@ -298,8 +279,8 @@ def test_check_cargo_lock_checksums():
         '[[package]]\nname = "localdep"\nversion = "0.1"\n'
     )
     pkgs = {f.package for f in check_cargo_lock_checksums(cargo)}
-    assert "serde" in pkgs  # tem source, sem checksum
-    assert "localdep" not in pkgs  # sem source → dependência local legítima
+    assert "serde" in pkgs
+    assert "localdep" not in pkgs
 
 
 def test_scan_pinning_directory(tmp_path):
@@ -309,9 +290,6 @@ def test_scan_pinning_directory(tmp_path):
     assert findings[0].file_path.endswith("requirements.txt")
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  sbom
-# ══════════════════════════════════════════════════════════════════════════════
 from analyzer.sbom import (
     _from_cargo_toml,
     _from_csproj,
@@ -372,9 +350,6 @@ def test_sbom_collect_and_export(tmp_path):
     assert "PackageName: requests" in text
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  binary_scan
-# ══════════════════════════════════════════════════════════════════════════════
 import zlib
 
 from analyzer.binary_scan import (
@@ -418,7 +393,6 @@ def test_parse_env_file():
 def test_scan_env_for_secrets_generic_heuristic():
     content = "DB_PASSWORD=supersecret123\nAPI_TOKEN=abcdefgh\nPLAIN=hi\n"
     findings = scan_env_for_secrets(".env", content)
-    # DB_PASSWORD e API_TOKEN têm nome sensível + valor >= 8 chars
     assert len(findings) >= 2
     assert any("sensível" in f["secret_type"] for f in findings)
 
@@ -436,9 +410,6 @@ def test_scan_non_text_file_unknown_extension(tmp_path):
     assert scan_non_text_file(str(f)) == []
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  credential_validators (urlopen mockado — sem rede real)
-# ══════════════════════════════════════════════════════════════════════════════
 import analyzer.credential_validators as cv
 
 
@@ -535,7 +506,7 @@ def test_all_single_arg_validators_route(monkeypatch, fn):
     _patch_ok(monkeypatch)
     result = fn("some-token")
     assert result.status == "VALID"
-    assert result.provider  # provider preenchido
+    assert result.provider
 
 
 def test_validate_twilio(monkeypatch):
@@ -558,7 +529,7 @@ def test_build_sigv4_headers():
 
 def test_validate_by_provider_dispatch(monkeypatch):
     assert cv.validate_by_provider("NonexistentProvider", "x") is None
-    assert cv.validate_by_provider("AWS", "x") is None  # AWS exige 2 campos
+    assert cv.validate_by_provider("AWS", "x") is None
     _patch_ok(monkeypatch)
     routed = cv.validate_by_provider("GitHub", "tok")
     assert routed is not None and routed.status == "VALID"

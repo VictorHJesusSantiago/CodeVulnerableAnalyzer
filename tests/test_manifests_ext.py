@@ -83,7 +83,7 @@ def test_podfile_lock_strips_subspec():
     content = "PODS:\n  - Alamofire (5.4.4)\n  - AFNetworking/Core (4.0.1)\n"
     comps = _by_name(parse_podfile_lock(content))
     assert "Alamofire" in comps
-    assert "AFNetworking" in comps  # subspec removido
+    assert "AFNetworking" in comps
 
 
 def test_cartfile_resolved():
