@@ -1,4 +1,3 @@
-;;; vulnscan.el --- CodeVulnerableAnalyzer integration
 (defun vulnscan-buffer ()
   "Scan the current buffer with CodeVulnerableAnalyzer."
   (interactive)
