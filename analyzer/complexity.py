@@ -11,7 +11,6 @@ from dataclasses import dataclass
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory, Vulnerability
 
-
 MAX_FUNCTION_LINES = 50
 MAX_CYCLOMATIC = 10
 MAX_NESTING_DEPTH = 4
