@@ -20,8 +20,6 @@ import re
 
 from analyzer.models import Severity, VulnCategory
 
-
-
 TAINT_SOURCE_RE = re.compile(
     r"\b(\w+)\s*=\s*(?:"
     r"request\.(?:args|form|json|data|values|get|params|cookies|headers)\b|"

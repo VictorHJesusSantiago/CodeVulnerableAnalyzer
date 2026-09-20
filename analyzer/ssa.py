@@ -28,7 +28,6 @@ from dataclasses import dataclass, field
 from analyzer.pyast_engine import CFG
 
 
-
 def _postorder(cfg: CFG) -> list[int]:
     if cfg.entry is None:
         return []
