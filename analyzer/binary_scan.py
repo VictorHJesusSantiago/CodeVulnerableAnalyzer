@@ -22,7 +22,6 @@ from pathlib import Path
 from analyzer.entropy import scan_entropy
 from analyzer.secrets_providers import classify_secret
 
-
 _MIN_STRING_LEN = 6
 _ASCII_RUN_RE = re.compile(rb"[\x20-\x7e]{%d,}" % _MIN_STRING_LEN)
 
