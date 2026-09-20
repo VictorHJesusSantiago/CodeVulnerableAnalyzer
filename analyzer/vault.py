@@ -29,7 +29,6 @@ import secrets as _secrets
 from dataclasses import dataclass
 from pathlib import Path
 
-
 _SBOX = (
     0x63,
     0x7C,

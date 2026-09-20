@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from analyzer.models import Language
 from analyzer.rules.abap_rules import ABAP_RULES
-
 from analyzer.rules.android_manifest_rules import ANDROID_MANIFEST_RULES
 from analyzer.rules.ansible_rules import ANSIBLE_RULES
-
 from analyzer.rules.apex_rules import APEX_RULES
 from analyzer.rules.architecture_rules import ARCHITECTURE_RULES
 from analyzer.rules.arm_rules import ARM_RULES
@@ -25,16 +23,13 @@ from analyzer.rules.docker_rules import DOCKER_RULES
 from analyzer.rules.elixir_rules import ELIXIR_RULES
 from analyzer.rules.elm_rules import ELM_RULES
 from analyzer.rules.erlang_rules import ERLANG_RULES
-
 from analyzer.rules.expansion_rules import EXPANSION_RULES
 from analyzer.rules.flutter_rules import FLUTTER_RULES
 from analyzer.rules.fsharp_rules import FSHARP_RULES
-
 from analyzer.rules.generic import GENERIC_RULES
 from analyzer.rules.gha_rules import GHA_RULES
 from analyzer.rules.gitlab_ci_rules import GITLAB_CI_RULES
 from analyzer.rules.go_rules import GO_RULES
-
 from analyzer.rules.graphql_rules import GRAPHQL_RULES
 from analyzer.rules.graphql_security_rules import GRAPHQL_SECURITY_RULES
 from analyzer.rules.groovy_rules import GROOVY_RULES
@@ -45,24 +40,18 @@ from analyzer.rules.ios_plist_rules import IOS_PLIST_RULES
 from analyzer.rules.java_rules import JAVA_RULES
 from analyzer.rules.javascript_rules import JAVASCRIPT_RULES
 from analyzer.rules.julia_rules import JULIA_RULES
-
 from analyzer.rules.k8s_rules import K8S_RULES
 from analyzer.rules.kotlin_rules import KOTLIN_RULES
-
 from analyzer.rules.lua_rules import LUA_RULES
-
 from analyzer.rules.ml_security_rules import ML_SECURITY_RULES
 from analyzer.rules.move_rules import MOVE_RULES
 from analyzer.rules.mysql_ddl_rules import MYSQL_DDL_RULES
-
 from analyzer.rules.nim_rules import NIM_RULES
 from analyzer.rules.notebook_rules import NOTEBOOK_RULES
 from analyzer.rules.objc_rules import OBJC_RULES
-
 from analyzer.rules.openapi_rules import OPENAPI_RULES
 from analyzer.rules.performance_rules import PERFORMANCE_RULES
 from analyzer.rules.perl_rules import PERL_RULES
-
 from analyzer.rules.pg_ddl_rules import PG_DDL_RULES
 from analyzer.rules.php_rules import PHP_RULES
 from analyzer.rules.plsql_rules import PLSQL_RULES
@@ -71,7 +60,6 @@ from analyzer.rules.proto_rules import PROTO_RULES
 from analyzer.rules.pulumi_rules import PULUMI_RULES
 from analyzer.rules.python_rules import PYTHON_RULES
 from analyzer.rules.quality_csharp import QUALITY_CSHARP_RULES
-
 from analyzer.rules.quality_generic import QUALITY_GENERIC_RULES
 from analyzer.rules.quality_java import QUALITY_JAVA_RULES
 from analyzer.rules.quality_javascript import QUALITY_JS_RULES
@@ -79,13 +67,10 @@ from analyzer.rules.quality_python import QUALITY_PYTHON_RULES
 from analyzer.rules.r_rules import R_RULES
 from analyzer.rules.react_native_rules import REACT_NATIVE_RULES
 from analyzer.rules.ruby_rules import RUBY_RULES
-
 from analyzer.rules.rust_rules import RUST_RULES
 from analyzer.rules.sas_rules import SAS_RULES
-
 from analyzer.rules.scala_rules import SCALA_RULES
 from analyzer.rules.shell_rules import SHELL_RULES
-
 from analyzer.rules.solid_rules import SOLID_RULES
 from analyzer.rules.solidity_rules import SOLIDITY_RULES
 from analyzer.rules.sql_rules import SQL_RULES
@@ -94,7 +79,6 @@ from analyzer.rules.terraform_rules import TERRAFORM_RULES
 from analyzer.rules.tsql_proc_rules import TSQL_PROC_RULES
 from analyzer.rules.vb_rules import VB_RULES
 from analyzer.rules.vba_rules import VBA_RULES
-
 from analyzer.rules.vyper_rules import VYPER_RULES
 from analyzer.rules.zig_rules import ZIG_RULES
 
