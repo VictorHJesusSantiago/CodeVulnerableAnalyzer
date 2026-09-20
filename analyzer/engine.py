@@ -11,7 +11,6 @@ from analyzer.complexity import analyze_complexity
 from analyzer.detector import SKIP_DIRS, detect_language, get_comment_prefix, is_scannable
 from analyzer.models import Confidence, Language, ScanReport, ScanResult, Severity, VulnCategory, Vulnerability
 from analyzer.rules import get_rules
-
 from analyzer.taint import TAINT_SINK_RE, TAINT_SINKS, TaintTracker
 
 CONTEXT_LINES = 3

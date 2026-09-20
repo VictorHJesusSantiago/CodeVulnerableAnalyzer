@@ -21,7 +21,6 @@ from pathlib import Path
 from analyzer.sbom import Component, _make_purl
 
 
-
 def parse_composer_json(content: str) -> list[Component]:
     components = []
     try:
