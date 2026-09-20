@@ -40,7 +40,6 @@ from dataclasses import dataclass, field
 
 from analyzer.models import Confidence, Language, Severity, VulnCategory, Vulnerability
 
-
 _TERMINATORS = (ast.Return, ast.Raise, ast.Break, ast.Continue)
 
 

@@ -28,7 +28,6 @@ from xml.dom import minidom
 
 from analyzer.sbom import Component
 
-
 _CDX_NS = "http://cyclonedx.org/schema/bom/1.4"
 
 
